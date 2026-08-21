@@ -1,9 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Navigate, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import type { SyncStatus, TeamOverview } from '@callout/shared';
+import type { SyncStatus } from '@callout/shared';
 import { recentMatches, strategies } from '../data/mock';
 import { useSession } from '../lib/session';
-import { apiFetch } from '../lib/api';
+import { useAppData, type AppData } from '../lib/appData';
 import { ThemeSettings } from './ThemeSettings';
 
 const NAV_ITEMS = [
@@ -14,17 +14,39 @@ const NAV_ITEMS = [
   { to: '/spots', label: 'Spots', match: (p: string) => p === '/spots' },
 ];
 
-export interface OutletContext {
-  sync: SyncStatus | null;
-  startSync: () => void;
-}
+export type OutletContext = AppData;
 
 function initialsOf(name: string) {
   return name.slice(0, 2).toUpperCase();
 }
 
 function SyncChip({ sync }: { sync: SyncStatus | null }) {
-  if (!sync || sync.state !== 'syncing') return null;
+  if (!sync) return null;
+
+  if (sync.state === 'failed') {
+    return (
+      <div
+        title={sync.reason}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8,
+          padding: '8px 13px',
+          border: '1px solid var(--acc25, rgba(239,73,88,.25))',
+          background: 'var(--acc10, rgba(239,73,88,.1))',
+          borderRadius: 'var(--radius-pill)',
+          fontSize: 12,
+          color: 'var(--acc, #EF4958)',
+          maxWidth: 320,
+        }}
+      >
+        <span style={{ whiteSpace: 'nowrap' }}>Sync falhou</span>
+        {sync.reason && <span style={{ color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>· {sync.reason}</span>}
+      </div>
+    );
+  }
+
+  if (sync.state !== 'syncing') return null;
   const progress = sync.progress;
   return (
     <div
@@ -59,35 +81,9 @@ export function AppShell() {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, loading } = useSession();
-  const [sync, setSync] = useState<SyncStatus | null>(null);
-  const [team, setTeam] = useState<TeamOverview | null>(null);
+  const appData = useAppData(user);
+  const { sync, startSync, team } = appData;
   const [settingsOpen, setSettingsOpen] = useState(false);
-
-  useEffect(() => {
-    if (!user?.riotId) return;
-    apiFetch<SyncStatus>('/sync').then(setSync).catch(() => {});
-    apiFetch<TeamOverview>('/team').then(setTeam).catch(() => {});
-  }, [user]);
-
-  useEffect(() => {
-    if (sync?.state !== 'syncing') return;
-    const interval = setInterval(async () => {
-      try {
-        setSync(await apiFetch<SyncStatus>('/sync'));
-      } catch {
-        // próxima tentativa do intervalo cobre uma falha pontual
-      }
-    }, 1500);
-    return () => clearInterval(interval);
-  }, [sync?.state]);
-
-  async function handleSync() {
-    try {
-      setSync(await apiFetch<SyncStatus>('/sync', { method: 'POST' }));
-    } catch {
-      setSync({ state: 'failed', reason: 'Não deu pra iniciar a sincronização.' });
-    }
-  }
 
   if (loading) return null;
   if (!user) return <Navigate to="/login" replace />;
@@ -252,13 +248,13 @@ export function AppShell() {
           </div>
           <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 12 }}>
             <SyncChip sync={sync} />
-            <button className="btn-icon" title="Sincronizar" onClick={handleSync} disabled={sync?.state === 'syncing'}>
+            <button className="btn-icon" title="Sincronizar" onClick={startSync} disabled={sync?.state === 'syncing'}>
               ◔
             </button>
           </div>
         </header>
 
-        <Outlet context={{ sync, startSync: handleSync } satisfies OutletContext} />
+        <Outlet context={appData satisfies OutletContext} />
       </main>
     </div>
   );

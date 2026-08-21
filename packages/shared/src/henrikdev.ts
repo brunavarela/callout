@@ -281,7 +281,9 @@ const matchKillSchema = z.object({
   killer: matchPlayerRefSchema,
   victim: matchPlayerRefSchema,
   assistants: z.array(matchPlayerRefSchema),
-  weapon: z.object({ id: z.string(), name: z.string(), type: z.string() }),
+  // `name` vem null em kills sem arma "normal" (ex.: bomba, ambiente) —
+  // confirmado com resposta real da HenrikDev em 2026-08-21.
+  weapon: z.object({ id: z.string().nullable(), name: z.string().nullable(), type: z.string().nullable() }),
   secondary_fire_mode: z.boolean(),
   location: locationSchema,
   player_locations: z.array(

@@ -1,6 +1,8 @@
-import { useCallback, useEffect, useState } from 'react';
-import type { TeamMemberCard, TeamOverview } from '@callout/shared';
-import { apiFetch, ApiError } from '../lib/api';
+import { useState } from 'react';
+import { useOutletContext } from 'react-router-dom';
+import type { TeamMemberCard } from '@callout/shared';
+import { apiFetch } from '../lib/api';
+import type { OutletContext } from '../components/AppShell';
 
 const cardStyle: React.CSSProperties = { borderRadius: 'var(--radius-lg)', background: 'var(--surface)', border: '1px solid var(--surface-border)' };
 
@@ -68,43 +70,23 @@ function NoteEditor({ member, onSave }: { member: TeamMemberCard; onSave: (note:
 }
 
 export function Team() {
-  const [team, setTeam] = useState<TeamOverview | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  const load = useCallback(async () => {
-    try {
-      const data = await apiFetch<TeamOverview>('/team');
-      setTeam(data);
-      setError(null);
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Falha ao carregar o time.');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    load();
-  }, [load]);
+  const { team, teamError, reloadTeam, updateTeamMemberNote } = useOutletContext<OutletContext>();
 
   async function saveNote(userId: string, note: string) {
     try {
       await apiFetch(`/team/members/${userId}/note`, { method: 'PATCH', body: JSON.stringify({ note }) });
-      setTeam((prev) => (prev ? { ...prev, members: prev.members.map((m) => (m.userId === userId ? { ...m, note } : m)) } : prev));
+      updateTeamMemberNote(userId, note);
     } catch {
       // falha silenciosa — o campo volta a mostrar o valor anterior na próxima carga
     }
   }
 
-  if (loading) return <div style={{ padding: 26, color: 'var(--text-muted)' }}>Carregando…</div>;
-
-  if (error && !team) {
+  if (teamError && !team) {
     return (
       <div style={{ padding: 26 }}>
         <div style={{ ...cardStyle, padding: 22, display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'flex-start' }}>
-          <div style={{ fontSize: 14, color: 'var(--text-3)' }}>{error}</div>
-          <button className="btn-secondary" onClick={load}>
+          <div style={{ fontSize: 14, color: 'var(--text-3)' }}>{teamError}</div>
+          <button className="btn-secondary" onClick={reloadTeam}>
             Tentar de novo
           </button>
         </div>
@@ -112,7 +94,7 @@ export function Team() {
     );
   }
 
-  if (!team) return null;
+  if (!team) return <div style={{ padding: 26, color: 'var(--text-muted)' }}>Carregando…</div>;
 
   return (
     <div style={{ padding: 26, display: 'flex', flexDirection: 'column', gap: 20 }}>

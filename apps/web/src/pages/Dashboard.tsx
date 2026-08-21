@@ -1,13 +1,12 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useOutletContext } from 'react-router-dom';
-import type { DashboardSummary, RrHistoryPoint, SessionUser, SidesBreakdown } from '@callout/shared';
-import { apiFetch, ApiError } from '../lib/api';
+import type { RrHistoryPoint, SessionUser, SidesBreakdown } from '@callout/shared';
 import type { OutletContext } from '../components/AppShell';
+import type { RrRange } from '../lib/appData';
 import { useSession } from '../lib/session';
 import { strategies } from '../data/mock';
 
 const cardStyle: React.CSSProperties = { borderRadius: 'var(--radius-lg)', background: 'var(--surface)', border: '1px solid var(--surface-border)' };
-const RANGES: Array<{ key: '7d' | '30d' | '90d'; label: string }> = [
+const RANGES: Array<{ key: RrRange; label: string }> = [
   { key: '7d', label: '7D' },
   { key: '30d', label: '30D' },
   { key: '90d', label: '90D' },
@@ -147,46 +146,9 @@ function firstName(user: SessionUser | null): string {
 
 export function Dashboard() {
   const navigate = useNavigate();
-  const { sync, startSync } = useOutletContext<OutletContext>();
+  const { sync, startSync, dashboard: data, dashboardError: error, dashboardLoading: loading, reloadDashboard, sides, rrRange, setRrRange, rrHistory } =
+    useOutletContext<OutletContext>();
   const { user } = useSession();
-  const [data, setData] = useState<DashboardSummary | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [range, setRange] = useState<'7d' | '30d' | '90d'>('30d');
-  const [rrHistory, setRrHistory] = useState<RrHistoryPoint[]>([]);
-  const [sides, setSides] = useState<SidesBreakdown | null>(null);
-  const wasSyncing = useRef(false);
-
-  const load = useCallback(async () => {
-    try {
-      const summary = await apiFetch<DashboardSummary>('/dashboard');
-      setData(summary);
-      setError(null);
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Falha ao carregar o dashboard.');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    load();
-    apiFetch<SidesBreakdown>('/dashboard/sides').then(setSides).catch(() => {});
-  }, [load]);
-
-  useEffect(() => {
-    apiFetch<RrHistoryPoint[]>(`/dashboard/rr-history?range=${range}`).then(setRrHistory).catch(() => {});
-  }, [range]);
-
-  useEffect(() => {
-    if (sync?.state === 'syncing') {
-      wasSyncing.current = true;
-    } else if (wasSyncing.current && sync?.state === 'idle') {
-      wasSyncing.current = false;
-      load();
-      apiFetch<SidesBreakdown>('/dashboard/sides').then(setSides).catch(() => {});
-    }
-  }, [sync, load]);
 
   if (loading) {
     return <div style={{ padding: 26, color: 'var(--text-muted)' }}>Carregando…</div>;
@@ -197,13 +159,7 @@ export function Dashboard() {
       <div style={{ padding: 26 }}>
         <div style={{ ...cardStyle, padding: 22, display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'flex-start' }}>
           <div style={{ fontSize: 14, color: 'var(--text-3)' }}>{error}</div>
-          <button
-            className="btn-secondary"
-            onClick={() => {
-              setLoading(true);
-              load();
-            }}
-          >
+          <button className="btn-secondary" onClick={reloadDashboard}>
             Tentar de novo
           </button>
         </div>
@@ -346,15 +302,15 @@ export function Dashboard() {
                 {RANGES.map((r) => (
                   <button
                     key={r.key}
-                    onClick={() => setRange(r.key)}
+                    onClick={() => setRrRange(r.key)}
                     style={{
                       padding: '5px 11px',
                       borderRadius: 6,
                       border: 'none',
                       cursor: 'pointer',
                       fontSize: 11.5,
-                      background: range === r.key ? 'var(--acc, #EF4958)' : 'transparent',
-                      color: range === r.key ? '#141415' : 'var(--text-muted)',
+                      background: rrRange === r.key ? 'var(--acc, #EF4958)' : 'transparent',
+                      color: rrRange === r.key ? '#141415' : 'var(--text-muted)',
                     }}
                   >
                     {r.label}
@@ -413,7 +369,7 @@ export function Dashboard() {
           <span style={{ fontSize: 13, color: 'var(--text-3)' }}>{error} Os números acima são da última carga que deu certo.</span>
           <button
             style={{ marginLeft: 'auto', padding: '8px 14px', borderRadius: 9, background: 'transparent', border: '1px solid var(--acc25, rgba(239,73,88,.25))', color: 'var(--acc, #EF4958)', fontSize: 12, cursor: 'pointer', whiteSpace: 'nowrap' }}
-            onClick={load}
+            onClick={reloadDashboard}
           >
             Tentar de novo
           </button>

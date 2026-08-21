@@ -1,6 +1,14 @@
+import { ZodError } from "zod";
 import type { MatchV4Data, SyncStatus } from "@callout/shared";
 import { prisma } from "./prisma.js";
-import { getMatchlist } from "./henrikdev.js";
+import { getMatchlist, HenrikDevError } from "./henrikdev.js";
+
+function describeSyncFailure(err: unknown): string {
+  if (err instanceof ZodError) return "A HenrikDev devolveu um formato de dado inesperado.";
+  if (err instanceof HenrikDevError) return err.message;
+  if (err instanceof Error) return err.message;
+  return "erro desconhecido";
+}
 
 // Estado em memória, por processo — suficiente pro tamanho do grupo (<10
 // usuários, um único processo de API). Se algum dia precisar sobreviver a
@@ -31,7 +39,7 @@ export async function syncUserMatches(userId: string, puuid: string, region: str
   } catch (err) {
     progressByUser.set(userId, {
       state: "failed",
-      reason: err instanceof Error ? err.message : "erro desconhecido",
+      reason: describeSyncFailure(err),
     });
     throw err;
   }
