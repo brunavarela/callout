@@ -23,6 +23,14 @@ model User {
   funcaoPreferida  String?
   createdAt        DateTime @default(now())
 
+  // Tema v2 — customizável em runtime (ver design_handoff_callout v2). Cor de
+  // ação e cor "positiva" são independentes de propósito: se fossem a mesma,
+  // vermelho passaria a significar vitória.
+  themeAccent      String  @default("#EF4958")
+  themePositive    String  @default("#18AAB7")
+  themeGlow        Int     @default(70) // 0-100
+  themeTintedCards Boolean @default(true)
+
   teamMemberships TeamMember[]
   ownedTeams      Team[]       @relation("TeamOwner")
   strategiesFeitas Strategy[]  @relation("StrategyAuthor")

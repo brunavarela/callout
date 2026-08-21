@@ -89,6 +89,36 @@ export const mmrV2ResponseSchema = z.object({
 });
 export type MmrV2Response = z.infer<typeof mmrV2ResponseSchema>;
 
+// --- Histórico de MMR (GET /valorant/v2/by-puuid/mmr-history/{affinity}/{platform}/{puuid}) ---
+// Schema verificado em docs.henrikdev.xyz/api-reference/valorant/get-mmr-history-by-puuid-v2
+// em 2026-08-21 — a doc não traz exemplo de resposta, só o shape dos campos.
+
+const mmrHistoryEntrySchema = z.object({
+  date: z.string(),
+  elo: z.number(),
+  last_change: z.number(), // delta de RR daquela partida especificamente
+  map: z.object({ id: z.string(), name: z.string() }),
+  match_id: z.string(),
+  refunded_rr: z.number(),
+  rr: z.number(), // ranking_in_tier no momento dessa entrada
+  season: z.object({ id: z.string(), short: z.string() }),
+  tier: z.object({ id: z.number(), name: z.string() }),
+  was_derank_protected: z.boolean(),
+});
+export type MmrHistoryEntry = z.infer<typeof mmrHistoryEntrySchema>;
+
+export const mmrHistoryV2DataSchema = z.object({
+  account: z.object({ name: z.string(), tag: z.string(), puuid: z.string() }),
+  history: z.array(mmrHistoryEntrySchema),
+});
+export type MmrHistoryV2Data = z.infer<typeof mmrHistoryV2DataSchema>;
+
+export const mmrHistoryV2ResponseSchema = z.object({
+  status: z.number(),
+  data: mmrHistoryV2DataSchema,
+});
+export type MmrHistoryV2Response = z.infer<typeof mmrHistoryV2ResponseSchema>;
+
 // --- Identidade de jogador reaproveitada em vários pontos do payload de partida ---
 
 const matchPlayerRefSchema = z.object({

@@ -47,19 +47,16 @@ export function LoginStep2() {
 
   return (
     <LoginShell>
-      <div style={{ fontFamily: 'Inter,sans-serif', fontSize: 11, letterSpacing: '.14em', color: 'var(--action)', marginBottom: 20 }}>
-        ETAPA 2 DE 2
-      </div>
-      <h1 style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 700, fontSize: 52, lineHeight: 1.05, letterSpacing: '-.03em', margin: '0 0 18px' }}>
+      <div style={{ fontSize: 11, letterSpacing: '.14em', color: 'var(--acc, #EF4958)', marginBottom: 18 }}>ETAPA 2 DE 2</div>
+      <h1 style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 700, fontSize: 50, lineHeight: 1.06, letterSpacing: '-.03em', margin: '0 0 16px' }}>
         Vincule
         <br />
         sua conta.
       </h1>
       <p style={{ fontSize: 16, lineHeight: 1.6, color: 'var(--text-muted)', margin: '0 0 32px', maxWidth: '38ch' }}>
-        Seu Riot ID é o que liga suas partidas ao grupo. Formato{' '}
-        <span style={{ fontFamily: 'Inter,sans-serif', color: 'var(--text)' }}>nome#tag</span>.
+        Seu Riot ID é o que liga suas partidas ao grupo. Formato <span style={{ color: 'var(--text)' }}>nome#tag</span>.
       </p>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         <input
           className="input-field"
           value={riotId}
@@ -67,13 +64,13 @@ export function LoginStep2() {
           placeholder="thiago#BR1"
           disabled={submitting}
         />
-        {error && <div style={{ fontSize: 13, color: 'var(--action)' }}>{error}</div>}
+        {error && <div style={{ fontSize: 13, color: 'var(--acc, #EF4958)' }}>{error}</div>}
         <button className="btn-primary" style={{ justifyContent: 'space-between' }} onClick={handleSubmit} disabled={submitting}>
           <span>{submitting ? 'Vinculando…' : 'Vincular e continuar'}</span>
-          <span style={{ fontFamily: 'Inter,sans-serif' }}>→</span>
+          <span>→</span>
         </button>
       </div>
-      <div style={{ marginTop: 18, fontSize: 13, color: 'var(--text-dim)' }}>
+      <div style={{ marginTop: 16, fontSize: 13, color: 'var(--text-dim)' }}>
         Entrou como <span style={{ color: 'var(--text-muted)' }}>@{user?.discordUsername ?? '…'}</span> ·{' '}
         <a href="#" onClick={handleTrocar}>
           trocar

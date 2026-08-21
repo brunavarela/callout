@@ -6,6 +6,7 @@ import { authRoutes } from "./routes/auth.js";
 import { dashboardRoutes } from "./routes/dashboard.js";
 import { syncRoutes } from "./routes/sync.js";
 import { teamRoutes } from "./routes/team.js";
+import { meRoutes } from "./routes/me.js";
 
 const app = Fastify({ logger: true });
 
@@ -24,6 +25,7 @@ await app.register(authRoutes);
 await app.register(dashboardRoutes);
 await app.register(syncRoutes);
 await app.register(teamRoutes);
+await app.register(meRoutes);
 
 try {
   await app.listen({ port: env.PORT, host: "0.0.0.0" });

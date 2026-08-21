@@ -1,34 +1,15 @@
 import type { FastifyInstance } from "fastify";
 import { randomBytes } from "node:crypto";
 import { z } from "zod";
-import type { SessionUser } from "@callout/shared";
 import { env } from "../lib/env.js";
 import { prisma } from "../lib/prisma.js";
 import { buildAuthorizeUrl, exchangeCodeForToken, fetchDiscordProfile, avatarUrl, findGuildMembership } from "../lib/discord.js";
 import { getAccountByRiotId, HenrikDevError } from "../lib/henrikdev.js";
 import { setSessionCookie, clearSessionCookie, requireAuth, getSessionUser } from "../lib/session.js";
 import { ensureTeamMembership } from "../lib/team.js";
+import { toSessionUser } from "../lib/dto.js";
 
 const STATE_COOKIE = "callout_oauth_state";
-
-function toSessionUser(user: {
-  discordId: string;
-  discordUsername: string;
-  discordAvatarUrl: string | null;
-  riotName: string | null;
-  riotTag: string | null;
-  riotPuuid: string | null;
-}): SessionUser {
-  return {
-    discordId: user.discordId,
-    discordUsername: user.discordUsername,
-    discordAvatarUrl: user.discordAvatarUrl,
-    riotId:
-      user.riotName && user.riotTag && user.riotPuuid
-        ? { name: user.riotName, tag: user.riotTag, puuid: user.riotPuuid }
-        : null,
-  };
-}
 
 const riotIdBodySchema = z.object({
   riotId: z

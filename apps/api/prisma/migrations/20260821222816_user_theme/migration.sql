@@ -1,0 +1,5 @@
+-- AlterTable
+ALTER TABLE "users" ADD COLUMN     "themeAccent" TEXT NOT NULL DEFAULT '#EF4958',
+ADD COLUMN     "themeGlow" INTEGER NOT NULL DEFAULT 70,
+ADD COLUMN     "themePositive" TEXT NOT NULL DEFAULT '#18AAB7',
+ADD COLUMN     "themeTintedCards" BOOLEAN NOT NULL DEFAULT true;

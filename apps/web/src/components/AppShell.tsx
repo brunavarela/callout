@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
-import { Navigate, NavLink, Outlet, useLocation } from 'react-router-dom';
+import { Navigate, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import type { SyncStatus, TeamOverview } from '@callout/shared';
-import { MapSchematic, BIND_RECTS } from './MapSchematic';
 import { recentMatches, strategies } from '../data/mock';
 import { useSession } from '../lib/session';
 import { apiFetch } from '../lib/api';
+import { ThemeSettings } from './ThemeSettings';
 
 const NAV_ITEMS = [
   { to: '/', label: 'Dashboard', match: (p: string) => p === '/' },
@@ -14,13 +14,13 @@ const NAV_ITEMS = [
   { to: '/spots', label: 'Spots', match: (p: string) => p === '/spots' },
 ];
 
-function crumbFor(pathname: string, riotHandle: string, teamName: string) {
-  if (pathname === '/') return `${riotHandle} / VISÃO GERAL`;
-  if (pathname.startsWith('/partida')) return 'PARTIDAS / BIND · ONTEM 23:14';
-  if (pathname === '/time') return `${teamName.toUpperCase()} / MEMBROS`;
-  if (pathname.startsWith('/board')) return 'BOARD / BIND — RUSH B COM MOLLY DUPLA';
-  if (pathname === '/spots') return 'SPOTS / BIBLIOTECA DE LINEUPS';
-  return '';
+export interface OutletContext {
+  sync: SyncStatus | null;
+  startSync: () => void;
+}
+
+function initialsOf(name: string) {
+  return name.slice(0, 2).toUpperCase();
 }
 
 function SyncChip({ sync }: { sync: SyncStatus | null }) {
@@ -32,8 +32,8 @@ function SyncChip({ sync }: { sync: SyncStatus | null }) {
         display: 'flex',
         alignItems: 'center',
         gap: 8,
-        padding: '6px 12px',
-        border: '1px solid rgba(255,255,255,.1)',
+        padding: '8px 13px',
+        border: '1px solid var(--surface-border)',
         borderRadius: 'var(--radius-pill)',
         fontSize: 12,
         color: 'var(--text-muted)',
@@ -41,25 +41,27 @@ function SyncChip({ sync }: { sync: SyncStatus | null }) {
     >
       <span
         style={{
-          width: 9,
-          height: 9,
-          border: '1.5px solid var(--action)',
+          width: 10,
+          height: 10,
+          border: '1.5px solid var(--acc, #EF4958)',
           borderTopColor: 'transparent',
           borderRadius: '50%',
           display: 'block',
           animation: 'spin 900ms linear infinite',
         }}
       />
-      buscando partidas{progress ? ` · ${progress.done} de ${progress.total}` : '…'}
+      sincronizando{progress ? ` · ${progress.done} de ${progress.total}` : '…'}
     </div>
   );
 }
 
 export function AppShell() {
   const location = useLocation();
+  const navigate = useNavigate();
   const { user, loading } = useSession();
   const [sync, setSync] = useState<SyncStatus | null>(null);
   const [team, setTeam] = useState<TeamOverview | null>(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   useEffect(() => {
     if (!user?.riotId) return;
@@ -91,37 +93,40 @@ export function AppShell() {
   if (!user) return <Navigate to="/login" replace />;
   if (!user.riotId) return <Navigate to="/login/vincular" replace />;
 
-  const riotHandle = `${user.riotId.name}#${user.riotId.tag}`.toUpperCase();
-
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '224px 1fr', minHeight: '100vh' }}>
+    <div style={{ display: 'grid', gridTemplateColumns: '232px 1fr', minHeight: '100vh' }}>
       <aside
         style={{
-          borderRight: '1px solid var(--divider)',
-          background: 'var(--surface-sunken)',
+          background: 'var(--surface)',
           display: 'flex',
           flexDirection: 'column',
           position: 'relative',
           overflow: 'hidden',
+          borderRight: '1px solid #202023',
         }}
       >
         <div
           style={{
-            padding: '22px 20px 18px',
-            borderBottom: '1px solid var(--divider)',
-            position: 'relative',
-            zIndex: 1,
+            position: 'absolute',
+            top: -140,
+            left: -90,
+            width: 340,
+            height: 340,
+            borderRadius: '50%',
+            background: 'radial-gradient(circle, var(--acc18, rgba(239,73,88,.18)) 0%, transparent 70%)',
+            pointerEvents: 'none',
           }}
-        >
+        />
+        <div style={{ position: 'relative', padding: '24px 22px 16px' }}>
           <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 700, fontSize: 22, letterSpacing: '-.02em' }}>
-            callout
+            callout<span style={{ color: 'var(--acc, #EF4958)' }}>.</span>
           </div>
-          <div style={{ fontFamily: 'Inter,sans-serif', fontSize: 10, letterSpacing: '.12em', color: 'var(--text-faint)', marginTop: 2 }}>
+          <div style={{ fontSize: 10, letterSpacing: '.12em', color: 'var(--text-faint)', marginTop: 3 }}>
             {team ? `${team.name.toUpperCase()} · ${team.memberCount} MEMBRO${team.memberCount === 1 ? '' : 'S'}` : '…'}
           </div>
         </div>
 
-        <nav style={{ display: 'flex', flexDirection: 'column', padding: '12px 10px', gap: 2, position: 'relative', zIndex: 1 }}>
+        <nav style={{ position: 'relative', display: 'flex', flexDirection: 'column', padding: '10px 12px', gap: 4 }}>
           {NAV_ITEMS.map((item) => {
             const active = item.match(location.pathname);
             return (
@@ -132,20 +137,23 @@ export function AppShell() {
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: 10,
-                  padding: '10px 12px',
+                  gap: 11,
+                  padding: '11px 12px',
                   borderRadius: 'var(--radius-md)',
                   fontSize: 14,
-                  background: active ? 'var(--nav-active)' : 'transparent',
+                  fontWeight: active ? 600 : 400,
+                  background: active ? 'var(--acc18, rgba(239,73,88,.16))' : 'transparent',
                   color: active ? 'var(--text)' : 'var(--text-muted)',
                 }}
               >
                 <span
                   style={{
-                    width: 6,
-                    height: 6,
-                    borderRadius: 'var(--radius-xs)',
-                    background: active ? 'var(--action)' : 'rgba(255,255,255,.18)',
+                    width: 18,
+                    height: 18,
+                    borderRadius: 5,
+                    border: `1.5px solid ${active ? 'var(--acc, #EF4958)' : 'var(--text-faint)'}`,
+                    display: 'block',
+                    flex: 'none',
                   }}
                 />
                 {item.label}
@@ -154,65 +162,103 @@ export function AppShell() {
           })}
         </nav>
 
-        <div style={{ marginTop: 'auto', padding: '16px 20px', borderTop: '1px solid var(--divider)', position: 'relative', zIndex: 1 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            {user.discordAvatarUrl ? (
-              <img
-                src={user.discordAvatarUrl}
-                alt=""
-                style={{ width: 30, height: 30, borderRadius: 'var(--radius-sm)', border: '1px solid rgba(255,255,255,.1)' }}
-              />
-            ) : (
-              <div style={{ width: 30, height: 30, borderRadius: 'var(--radius-sm)', background: 'var(--avatar-bg)', border: '1px solid rgba(255,255,255,.1)' }} />
-            )}
-            <div>
-              <div style={{ fontSize: 13, fontWeight: 500 }}>{user.discordUsername}</div>
-              <div style={{ fontFamily: 'Inter,sans-serif', fontSize: 10, color: 'var(--text-dim)' }}>
-                {user.riotId.name}#{user.riotId.tag}
-              </div>
+        <div style={{ position: 'relative', marginTop: 'auto', padding: 14 }}>
+          <div
+            style={{
+              borderRadius: 14,
+              padding: 18,
+              background: 'linear-gradient(160deg, var(--acc22, rgba(239,73,88,.22)) 0%, rgba(21,21,23,.4) 70%)',
+              border: '1px solid var(--acc25, rgba(239,73,88,.25))',
+            }}
+          >
+            <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 15 }}>Já revisou a semana?</div>
+            <div style={{ fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.5, marginTop: 6 }}>
+              Dá uma olhada nas estratégias salvas do time antes do próximo jogo.
             </div>
+            <button
+              className="btn-primary"
+              style={{ width: '100%', marginTop: 14, padding: 9, fontSize: 13, justifyContent: 'center' }}
+              onClick={() => navigate(`/board/${strategies[0].id}`)}
+            >
+              Abrir board
+            </button>
           </div>
         </div>
 
-        <MapSchematic
-          rects={BIND_RECTS.slice(0, 7)}
-          stroke="#FCFCFC"
-          strokeWidth={3}
-          style={{
-            position: 'absolute',
-            bottom: -40,
-            left: -90,
-            width: 340,
-            opacity: 0.055,
-            pointerEvents: 'none',
-          }}
-        />
+        <div style={{ position: 'relative' }}>
+          {settingsOpen && <ThemeSettings onClose={() => setSettingsOpen(false)} />}
+          <div
+            style={{
+              padding: '14px 18px 18px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 11,
+              borderTop: '1px solid #202023',
+              cursor: 'pointer',
+            }}
+            onClick={() => setSettingsOpen((v) => !v)}
+          >
+            {user.discordAvatarUrl ? (
+              <img src={user.discordAvatarUrl} alt="" style={{ width: 34, height: 34, borderRadius: 10 }} />
+            ) : (
+              <div
+                style={{
+                  width: 34,
+                  height: 34,
+                  borderRadius: 10,
+                  background: 'var(--avatar-bg)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: 12,
+                  fontWeight: 600,
+                  color: 'var(--text-muted)',
+                }}
+              >
+                {initialsOf(user.discordUsername)}
+              </div>
+            )}
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontSize: 13, fontWeight: 500 }}>
+                {user.riotId.name}#{user.riotId.tag}
+              </div>
+              <div style={{ fontSize: 11, color: 'var(--text-dim)' }}>{user.discordUsername}</div>
+            </div>
+            <span style={{ marginLeft: 'auto', color: 'var(--text-faint)' }}>›</span>
+          </div>
+        </div>
       </aside>
 
       <main style={{ minWidth: 0, display: 'flex', flexDirection: 'column' }}>
-        <header
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 16,
-            padding: '0 28px',
-            height: 60,
-            borderBottom: '1px solid var(--divider)',
-            background: 'var(--bg)',
-          }}
-        >
-          <div style={{ fontFamily: 'Inter,sans-serif', fontSize: 11, letterSpacing: '.14em', color: 'var(--text-dim)' }}>
-            {crumbFor(location.pathname, riotHandle, team?.name ?? '')}
+        <header style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '16px 26px', borderBottom: '1px solid var(--divider)' }}>
+          <div
+            style={{
+              flex: 1,
+              maxWidth: 520,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 10,
+              background: 'var(--control-bg)',
+              border: '1px solid var(--surface-border)',
+              borderRadius: 'var(--radius-md)',
+              padding: '10px 14px',
+            }}
+          >
+            <span style={{ width: 14, height: 14, borderRadius: '50%', border: '1.5px solid #5A5D61', display: 'block' }} />
+            <input
+              placeholder="Buscar partida, mapa, agente ou estratégia…"
+              style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', color: 'var(--text)', fontSize: 13 }}
+            />
           </div>
-          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 14 }}>
+          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 12 }}>
             <SyncChip sync={sync} />
-            <button className="btn-secondary" onClick={handleSync} disabled={sync?.state === 'syncing'}>
-              Sincronizar
+            <button className="btn-icon" title="Sincronizar" onClick={handleSync} disabled={sync?.state === 'syncing'}>
+              ◔
             </button>
           </div>
         </header>
 
-        <Outlet context={{ sync } satisfies { sync: SyncStatus | null }} />
+        <Outlet context={{ sync, startSync: handleSync } satisfies OutletContext} />
       </main>
     </div>
   );

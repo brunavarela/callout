@@ -23,10 +23,11 @@ interface MapSchematicProps {
   rects?: readonly [number, number, number, number][];
   preserveAspectRatio?: string;
   showAccentPoint?: boolean;
+  rounded?: boolean;
 }
 
 export function MapSchematic({
-  stroke = '#18AAB7',
+  stroke = 'var(--pos, #18AAB7)',
   fill = 'none',
   strokeWidth = 1.5,
   style,
@@ -34,6 +35,7 @@ export function MapSchematic({
   rects = BIND_RECTS,
   preserveAspectRatio,
   showAccentPoint = false,
+  rounded = false,
 }: MapSchematicProps) {
   return (
     <svg
@@ -43,10 +45,10 @@ export function MapSchematic({
       style={{ stroke, fill, strokeWidth, ...style }}
     >
       {rects.map(([x, y, w, h], i) => (
-        <rect key={i} x={x} y={y} width={w} height={h} />
+        <rect key={i} x={x} y={y} width={w} height={h} rx={rounded ? 4 : 0} />
       ))}
       {showAccentPoint && (
-        <rect x={170} y={180} width={18} height={18} style={{ fill: 'var(--action)', stroke: 'none' }} />
+        <rect x={170} y={180} width={18} height={18} rx={rounded ? 3 : 0} style={{ fill: 'var(--acc, #EF4958)', stroke: 'none' }} />
       )}
     </svg>
   );

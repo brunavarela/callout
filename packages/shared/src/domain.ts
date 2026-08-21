@@ -49,6 +49,15 @@ export interface AgentAsset {
   cor: string;
 }
 
+// --- Tema (v2 — customização em runtime, ver design_handoff_callout v2) ---
+
+export interface ThemePreferences {
+  accentColor: string;
+  positiveColor: string;
+  glow: number; // 0-100
+  tintedCards: boolean;
+}
+
 // --- Sessão ---
 
 export interface SessionUser {
@@ -56,6 +65,22 @@ export interface SessionUser {
   discordUsername: string;
   discordAvatarUrl: string | null;
   riotId: { name: string; tag: string; puuid: string } | null;
+  theme: ThemePreferences;
+}
+
+// --- Progressão de RR ---
+
+export interface RrHistoryPoint {
+  label: string; // dia formatado, ex.: "seg", "12/08"
+  delta: number; // soma de RR ganho/perdido naquele dia
+}
+
+// --- Lados (ataque/defesa/overtime) ---
+
+export interface SidesBreakdown {
+  attack: { winratePercent: number; wins: number; total: number };
+  defense: { winratePercent: number; wins: number; total: number };
+  overtime: { wins: number; total: number };
 }
 
 // --- Sincronização ---
@@ -74,6 +99,7 @@ export interface SyncStatus {
 export interface KpiValue {
   value: number;
   delta: number;
+  spark: number[]; // últimas partidas, mais antiga primeiro — alimenta o sparkline do card
 }
 
 export interface DashboardKpis {

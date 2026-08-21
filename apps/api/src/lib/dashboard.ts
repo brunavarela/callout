@@ -1,6 +1,6 @@
 import type { DashboardSummary, MatchV4Data } from "@callout/shared";
 import { prisma } from "./prisma.js";
-import { getMmr } from "./henrikdev.js";
+import { getMmr, getMmrHistory } from "./henrikdev.js";
 import { getSyncProgress } from "./sync.js";
 
 const WEEKDAY_LABELS = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
@@ -51,6 +51,15 @@ function aggregate(list: Row[]) {
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
 
+// Sparkline de cada KPI: valor por partida, das últimas N, mais antiga
+// primeiro (a lista de entrada já vem ordenada mais recente primeiro).
+function perMatchSpark(list: Row[], selector: (r: Row) => number, count = 10): number[] {
+  return list
+    .slice(0, count)
+    .reverse()
+    .map(selector);
+}
+
 export async function buildDashboardSummary(userId: string, puuid: string, region: string): Promise<DashboardSummary> {
   const rows = await prisma.matchPlayer.findMany({
     where: { puuid },
@@ -69,10 +78,25 @@ export async function buildDashboardSummary(userId: string, puuid: string, regio
   const p = aggregate(previous);
 
   const kpis: DashboardSummary["kpis"] = {
-    kda: { value: round2(c.kda), delta: round2(c.kda - p.kda) },
-    acs: { value: Math.round(c.acs), delta: Math.round(c.acs - p.acs) },
-    adr: { value: Math.round(c.adr), delta: Math.round(c.adr - p.adr) },
-    hsPercent: { value: round2(c.hsPercent), delta: round2(c.hsPercent - p.hsPercent) },
+    kda: {
+      value: round2(c.kda),
+      delta: round2(c.kda - p.kda),
+      spark: perMatchSpark(current, (r) => (r.deaths > 0 ? (r.kills + r.assists) / r.deaths : r.kills + r.assists)),
+    },
+    acs: { value: Math.round(c.acs), delta: Math.round(c.acs - p.acs), spark: perMatchSpark(current, (r) => r.acs) },
+    adr: {
+      value: Math.round(c.adr),
+      delta: Math.round(c.adr - p.adr),
+      spark: perMatchSpark(current, (r) => (r.roundsPlayed > 0 ? r.damageDealt / r.roundsPlayed : 0)),
+    },
+    hsPercent: {
+      value: round2(c.hsPercent),
+      delta: round2(c.hsPercent - p.hsPercent),
+      spark: perMatchSpark(current, (r) => {
+        const total = r.headshots + r.bodyshots + r.legshots;
+        return total > 0 ? (r.headshots / total) * 100 : 0;
+      }),
+    },
     winrate: {
       value: current.length > 0 ? Math.round((c.wins / current.length) * 100) : 0,
       wins: c.wins,
@@ -126,13 +150,18 @@ export async function buildDashboardSummary(userId: string, puuid: string, regio
   let rank: DashboardSummary["rank"] = { current: "—", rr: 0, rrDelta7d: 0 };
   try {
     const mmr = await getMmr(region, puuid);
+    let rrDelta7d = 0;
+    try {
+      const sevenDaysAgo = new Date(now.getTime() - 7 * 86_400_000);
+      const history = await getMmrHistory(region, puuid);
+      rrDelta7d = history.filter((h) => new Date(h.date) >= sevenDaysAgo).reduce((sum, h) => sum + h.last_change, 0);
+    } catch {
+      // sem histórico — mantém 0
+    }
     rank = {
       current: mmr.current_data.currenttierpatched,
       rr: mmr.current_data.ranking_in_tier,
-      // A HenrikDev só devolve o delta da última partida aqui, não um
-      // acumulado de 7 dias de verdade — precisaria do endpoint -history
-      // pra reconstruir isso direito. Deixado em 0 até implementarmos.
-      rrDelta7d: 0,
+      rrDelta7d,
     };
   } catch {
     // sem MMR disponível (conta nova, região errada, API fora) — mantém o placeholder

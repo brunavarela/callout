@@ -4,9 +4,11 @@ import {
   matchlistV4ResponseSchema,
   matchDetailsV4ResponseSchema,
   mmrV2ResponseSchema,
+  mmrHistoryV2ResponseSchema,
   type AccountV2Data,
   type MatchV4Data,
   type MmrV2Data,
+  type MmrHistoryEntry,
 } from "@callout/shared";
 import { env } from "./env.js";
 
@@ -57,4 +59,9 @@ export async function getMatchDetails(affinity: string, matchId: string): Promis
 export async function getMmr(affinity: string, puuid: string): Promise<MmrV2Data> {
   const json = await henrikFetch(`/valorant/v2/by-puuid/mmr/${affinity}/pc/${puuid}`);
   return mmrV2ResponseSchema.parse(json).data;
+}
+
+export async function getMmrHistory(affinity: string, puuid: string): Promise<MmrHistoryEntry[]> {
+  const json = await henrikFetch(`/valorant/v2/by-puuid/mmr-history/${affinity}/pc/${puuid}`);
+  return mmrHistoryV2ResponseSchema.parse(json).data.history;
 }

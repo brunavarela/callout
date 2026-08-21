@@ -1,8 +1,8 @@
 import { useMemo } from 'react';
-import { matchComments, myMatchStats, roundResults, scoreboard, DIM, POS } from '../data/mock';
+import { matchComments, myMatchStats, roundResults, scoreboard } from '../data/mock';
 
-const cardStyle: React.CSSProperties = { border: '1px solid var(--border)', background: 'var(--surface)' };
-const scoreCols = '1fr 100px 64px 56px 56px 56px 64px';
+const cardStyle: React.CSSProperties = { borderRadius: 'var(--radius-lg)', background: 'var(--surface)', border: '1px solid var(--surface-border)' };
+const scoreCols = '1fr 100px 62px 54px 54px 54px 62px';
 
 export function MatchDetail() {
   const sorted = useMemo(() => {
@@ -12,30 +12,41 @@ export function MatchDetail() {
   }, []);
 
   return (
-    <div style={{ padding: 28, display: 'flex', flexDirection: 'column', gap: 28 }}>
-      <div style={{ display: 'flex', alignItems: 'flex-end', gap: 34, borderBottom: '1px solid var(--border)', paddingBottom: 22 }}>
-        <div>
-          <div style={{ fontFamily: 'Inter,sans-serif', fontSize: 10, letterSpacing: '.14em', color: 'var(--text-dim)' }}>
-            COMPETITIVO · ONTEM 23:14 · 41 MIN
-          </div>
-          <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 700, fontSize: 46, letterSpacing: '-.03em', lineHeight: 1.05, marginTop: 6 }}>
-            Bind
-          </div>
+    <div style={{ padding: 26, display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <div style={{ ...cardStyle, padding: '22px 24px', display: 'flex', alignItems: 'center', gap: 32, flexWrap: 'wrap', position: 'relative', overflow: 'hidden' }}>
+        <div
+          style={{
+            position: 'absolute',
+            top: -140,
+            right: -60,
+            width: 420,
+            height: 420,
+            borderRadius: '50%',
+            background: 'radial-gradient(circle, var(--acc18, rgba(239,73,88,.18)) 0%, transparent 70%)',
+            pointerEvents: 'none',
+          }}
+        />
+        <div style={{ position: 'relative' }}>
+          <div style={{ fontSize: 11, letterSpacing: '.14em', color: 'var(--text-dim)' }}>COMPETITIVO · ONTEM 23:14 · 41 MIN</div>
+          <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 700, fontSize: 38, letterSpacing: '-.03em', lineHeight: 1.1, marginTop: 6 }}>Bind</div>
         </div>
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, fontFamily: 'Inter,sans-serif' }}>
-          <span style={{ fontSize: 44, fontWeight: 600, color: 'var(--positive)' }}>13</span>
-          <span style={{ fontSize: 22, color: 'var(--text-faint)' }}>—</span>
-          <span style={{ fontSize: 44, fontWeight: 600, color: 'var(--text-muted-2)' }}>11</span>
+        <div style={{ position: 'relative', display: 'flex', alignItems: 'baseline', gap: 12 }}>
+          <span style={{ fontFamily: 'Poppins,sans-serif', fontSize: 40, fontWeight: 600, color: 'var(--pos, #18AAB7)' }}>13</span>
+          <span style={{ fontSize: 20, color: 'var(--text-faint)' }}>—</span>
+          <span style={{ fontFamily: 'Poppins,sans-serif', fontSize: 40, fontWeight: 600, color: 'var(--text-muted-2)' }}>11</span>
         </div>
-        <div style={{ marginLeft: 'auto', display: 'flex', gap: 2, alignItems: 'flex-end' }}>
+        <div style={{ position: 'relative', marginLeft: 'auto', display: 'flex', gap: 3, alignItems: 'flex-end' }}>
           {roundResults.map((won, i) => (
-            <div key={i} style={{ width: 13, height: 16 + ((i * 23) % 22), background: won ? POS : DIM }} />
+            <div
+              key={i}
+              style={{ width: 12, borderRadius: 3, height: 18 + ((i * 23) % 24), background: won ? 'var(--pos, #18AAB7)' : 'var(--bar-dim)' }}
+            />
           ))}
         </div>
       </div>
 
-      <div style={cardStyle}>
-        <div style={{ display: 'grid', gridTemplateColumns: scoreCols, padding: '12px 22px', fontFamily: 'Inter,sans-serif', fontSize: 10, letterSpacing: '.12em', color: 'var(--text-dim)' }}>
+      <div style={{ ...cardStyle, overflow: 'hidden' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: scoreCols, padding: '14px 22px', fontSize: 10.5, letterSpacing: '.12em', color: 'var(--text-dim)' }}>
           <div>JOGADOR</div>
           <div>AGENTE</div>
           <div style={{ textAlign: 'right' }}>ACS</div>
@@ -50,35 +61,35 @@ export function MatchDetail() {
             style={{
               display: 'grid',
               gridTemplateColumns: scoreCols,
-              padding: '10px 22px',
-              borderTop: '1px solid var(--divider-soft)',
+              padding: '11px 22px',
+              borderTop: '1px solid var(--divider)',
               fontSize: 13,
-              background: p.name === 'thiago' ? 'var(--action-tint-row)' : 'transparent',
+              background: p.name === 'thiago' ? 'color-mix(in srgb, var(--acc, #EF4958) 9%, transparent)' : 'transparent',
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <span style={{ width: 3, height: 16, background: p.ours ? 'var(--action)' : '#4F5258' }} />
+              <span style={{ width: 3, height: 16, borderRadius: 2, background: p.ours ? 'var(--acc, #EF4958)' : 'var(--text-faint)' }} />
               <span style={{ color: p.ours ? 'var(--text)' : 'var(--text-muted)', fontWeight: p.name === 'thiago' ? 600 : 400 }}>{p.name}</span>
-              <span style={{ fontFamily: 'Inter,sans-serif', fontSize: 10, color: 'var(--text-faint)' }}>{p.tag}</span>
+              <span style={{ fontSize: 10.5, color: 'var(--text-faint)' }}>{p.tag}</span>
             </div>
             <div style={{ color: 'var(--text-muted)' }}>{p.agent}</div>
-            <div style={{ fontFamily: 'Inter,sans-serif', textAlign: 'right' }}>{p.acs}</div>
-            <div style={{ fontFamily: 'Inter,sans-serif', textAlign: 'right' }}>{p.k}</div>
-            <div style={{ fontFamily: 'Inter,sans-serif', textAlign: 'right', color: 'var(--text-muted)' }}>{p.d}</div>
-            <div style={{ fontFamily: 'Inter,sans-serif', textAlign: 'right', color: 'var(--text-muted)' }}>{p.a}</div>
-            <div style={{ fontFamily: 'Inter,sans-serif', textAlign: 'right', color: 'var(--text-muted)' }}>{p.hs}</div>
+            <div style={{ textAlign: 'right' }}>{p.acs}</div>
+            <div style={{ textAlign: 'right' }}>{p.k}</div>
+            <div style={{ textAlign: 'right', color: 'var(--text-muted)' }}>{p.d}</div>
+            <div style={{ textAlign: 'right', color: 'var(--text-muted)' }}>{p.a}</div>
+            <div style={{ textAlign: 'right', color: 'var(--text-muted)' }}>{p.hs}</div>
           </div>
         ))}
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: 28 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 330px', gap: 16 }}>
         <div style={{ ...cardStyle, padding: '20px 22px' }}>
-          <div style={{ fontFamily: 'Inter,sans-serif', fontSize: 10, letterSpacing: '.14em', color: 'var(--text-dim)', marginBottom: 8 }}>
-            COMENTÁRIOS · {matchComments.length}
+          <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 16 }}>
+            Comentários <span style={{ color: 'var(--text-dim)', fontWeight: 400 }}>· {matchComments.length}</span>
           </div>
           {matchComments.map((c, i) => (
-            <div key={i} style={{ display: 'grid', gridTemplateColumns: '28px 1fr', gap: 12, padding: '12px 0', borderTop: '1px solid var(--divider-soft)' }}>
-              <div style={{ width: 28, height: 28, borderRadius: 'var(--radius-sm)', background: 'var(--avatar-bg)' }} />
+            <div key={i} style={{ display: 'grid', gridTemplateColumns: '30px 1fr', gap: 12, padding: '13px 0', borderBottom: '1px solid var(--divider)' }}>
+              <div style={{ width: 30, height: 30, borderRadius: 9, background: 'var(--avatar-bg)' }} />
               <div>
                 <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 4 }}>
                   {c.who} · {c.when}
@@ -87,14 +98,14 @@ export function MatchDetail() {
               </div>
             </div>
           ))}
-          <input className="input-field" placeholder="Escrever um comentário…" style={{ marginTop: 14, padding: '12px 14px', fontSize: 14 }} />
+          <input className="input-field" placeholder="Escrever um comentário…" style={{ marginTop: 14, padding: '13px 15px', fontSize: 14 }} />
         </div>
         <div style={{ ...cardStyle, padding: '20px 22px' }}>
-          <div style={{ fontFamily: 'Inter,sans-serif', fontSize: 10, letterSpacing: '.14em', color: 'var(--text-dim)', marginBottom: 8 }}>MEUS NÚMEROS</div>
+          <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 16 }}>Meus números</div>
           {myMatchStats.map((s) => (
-            <div key={s.label} style={{ display: 'flex', justifyContent: 'space-between', padding: '9px 0', borderTop: '1px solid var(--divider-soft)', fontSize: 13 }}>
+            <div key={s.label} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid var(--divider)', fontSize: 13 }}>
               <span style={{ color: 'var(--text-muted)' }}>{s.label}</span>
-              <span style={{ fontFamily: 'Inter,sans-serif' }}>{s.value}</span>
+              <span>{s.value}</span>
             </div>
           ))}
         </div>

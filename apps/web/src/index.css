@@ -1,49 +1,30 @@
 :root {
-  /* cores — base */
-  --bg: #1d1d1d;
-  --surface: #252525;
-  --surface-sunken: #171717;
-  --input-bg: #141414;
-  --avatar-bg: #333333;
+  /* cores — base (v2: fundo mais escuro, cards com raio) */
+  --bg: #0f0f10;
+  --surface: #151517;
+  --surface-sunken: #121213;
+  --surface-border: #232326;
+  --divider: #1d1d20;
+  --input-bg: #101011;
+  --input-border: #2a2a2d;
+  --control-bg: #17171a; /* busca do header, botão de ícone, busca do Spots — mais clara que input-bg */
+  --avatar-bg: #2a2a2d;
+  --card-hover-bg: rgba(255, 255, 255, 0.035);
 
   /* cores — texto */
   --text: #fcfcfc;
   --text-2: #e4e4e4;
-  --text-3: #d6d6d6;
+  --text-3: #c9cbce;
   --text-muted: #9a9da1;
   --text-muted-2: #8a8d91;
   --text-dim: #7a7e82;
   --text-faint: #4f5258;
+  --track: #212124;
+  --bar-dim: #3a3a3e;
 
-  /* cores — ação e dado */
-  --action: #ef4958;
-  --action-hover: #f4707c;
-  --positive: #18aab7;
-
-  /* cores — conteúdo (agente), variante clara entre parênteses no handoff */
-  --deep-blue: #192573;
+  /* cores — conteúdo (agente) */
   --deep-blue-light: #4c5bc4;
-  --deep-purple: #421662;
   --deep-purple-light: #7b3fa8;
-
-  /* bordas e separadores — sempre branco com alfa */
-  --border: rgba(255, 255, 255, 0.09);
-  --divider: rgba(255, 255, 255, 0.07);
-  --divider-soft: rgba(255, 255, 255, 0.05);
-  --border-control: rgba(255, 255, 255, 0.12);
-  --border-control-strong: rgba(255, 255, 255, 0.14);
-  --track: rgba(255, 255, 255, 0.06);
-  --bar-dim: rgba(255, 255, 255, 0.15);
-  --bar-dim-strong: rgba(255, 255, 255, 0.28);
-  --row-hover: rgba(255, 255, 255, 0.03);
-  --nav-active: rgba(255, 255, 255, 0.07);
-
-  --action-tint-bg: rgba(239, 73, 88, 0.06);
-  --action-tint-border: rgba(239, 73, 88, 0.35);
-  --action-tint-row: rgba(239, 73, 88, 0.07);
-  --action-tint-item-active: rgba(239, 73, 88, 0.08);
-  --action-tint-chip-active: rgba(239, 73, 88, 0.1);
-  --blueprint-fill: rgba(24, 170, 183, 0.08);
 
   /* espaçamento */
   --space-2: 2px;
@@ -58,22 +39,15 @@
   --space-18: 18px;
   --space-20: 20px;
   --space-22: 22px;
-  --space-24: 24px;
   --space-26: 26px;
   --space-28: 28px;
-  --space-34: 34px;
-  --space-40: 40px;
-  --space-64: 64px;
 
   /* raio */
-  --radius-none: 0;
-  --radius-xs: 1px;
-  --radius-sm: 2px;
-  --radius-md: 3px;
+  --radius-sm: 8px;
+  --radius-md: 11px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
   --radius-pill: 99px;
-
-  /* sombra — única do produto */
-  --shadow-piece: 0 6px 14px rgba(0, 0, 0, 0.4);
 
   color-scheme: dark;
 }
@@ -102,12 +76,12 @@ body {
 }
 
 a {
-  color: var(--action);
+  color: var(--acc, #ef4958);
   text-decoration: none;
 }
 
 a:hover {
-  color: var(--action-hover);
+  color: var(--accSoft, #f4707c);
 }
 
 input,
@@ -121,7 +95,18 @@ button {
 }
 
 ::selection {
-  background: rgba(239, 73, 88, 0.3);
+  background: var(--acc25, rgba(239, 73, 88, 0.25));
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #2a2a2c;
+  border-radius: 99px;
+  border: 3px solid var(--bg);
 }
 
 @keyframes spin {
@@ -136,9 +121,9 @@ button {
   display: flex;
   align-items: center;
   gap: var(--space-12);
-  padding: 18px 22px;
-  background: var(--action);
-  color: var(--bg);
+  padding: 17px 22px;
+  background: var(--acc, #ef4958);
+  color: #141415;
   border: none;
   border-radius: var(--radius-md);
   font-weight: 600;
@@ -146,63 +131,81 @@ button {
 }
 
 .btn-primary:hover {
-  background: var(--action-hover);
+  filter: brightness(1.1);
 }
 
 .btn-secondary {
-  padding: 7px 14px;
-  background: transparent;
+  padding: 11px 17px;
+  background: var(--surface);
   color: var(--text);
-  border: 1px solid var(--border-control-strong);
+  border: 1px solid var(--surface-border);
   border-radius: var(--radius-md);
   font-size: 13px;
+  font-weight: 500;
 }
 
 .btn-secondary:hover {
-  border-color: var(--action);
+  border-color: var(--acc, #ef4958);
+}
+
+.btn-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: var(--radius-md);
+  background: var(--control-bg);
+  border: 1px solid var(--surface-border);
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-icon:hover {
+  border-color: var(--acc, #ef4958);
 }
 
 .input-field {
   width: 100%;
-  padding: 18px 20px;
+  padding: 17px 20px;
   background: var(--input-bg);
-  border: 1px solid var(--border-control);
+  border: 1px solid var(--input-border);
   border-radius: var(--radius-md);
   color: var(--text);
   font-family: 'Inter', sans-serif;
-  font-size: 18px;
+  font-size: 17px;
   outline: none;
 }
 
 .input-field:focus {
-  border-color: var(--action);
+  border-color: var(--acc, #ef4958);
 }
 
 .nav-item:hover {
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.045);
 }
 
-.table-row:hover {
-  background: var(--row-hover);
+.table-row:hover,
+.list-row:hover {
+  background: var(--card-hover-bg);
 }
 
 .strat-item:hover {
   background: rgba(255, 255, 255, 0.04);
 }
 
-.spot-card:hover {
-  border-color: rgba(239, 73, 88, 0.4);
+.card-hover-acc:hover {
+  border-color: var(--acc25, rgba(239, 73, 88, 0.25)) !important;
 }
 
 .filter-chip:hover {
-  border-color: var(--action);
+  border-color: var(--acc, #ef4958);
 }
 
 .link-quiet {
-  color: var(--action);
+  color: var(--acc, #ef4958);
   font-size: 12px;
 }
 
 .link-quiet:hover {
-  color: var(--action-hover);
+  color: var(--accSoft, #f4707c);
 }
