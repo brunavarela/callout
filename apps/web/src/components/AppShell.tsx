@@ -1,7 +1,10 @@
 import { useEffect, useState } from 'react';
-import { NavLink, Outlet, useLocation } from 'react-router-dom';
+import { Navigate, NavLink, Outlet, useLocation } from 'react-router-dom';
+import type { SyncStatus } from '@callout/shared';
 import { MapSchematic, BIND_RECTS } from './MapSchematic';
-import { currentUser, team, recentMatches, strategies } from '../data/mock';
+import { team, recentMatches, strategies } from '../data/mock';
+import { useSession } from '../lib/session';
+import { apiFetch } from '../lib/api';
 
 const NAV_ITEMS = [
   { to: '/', label: 'Dashboard', match: (p: string) => p === '/' },
@@ -11,8 +14,8 @@ const NAV_ITEMS = [
   { to: '/spots', label: 'Spots', match: (p: string) => p === '/spots' },
 ];
 
-function crumbFor(pathname: string) {
-  if (pathname === '/') return 'THIAGO#BR1 / VISÃO GERAL';
+function crumbFor(pathname: string, riotHandle: string) {
+  if (pathname === '/') return `${riotHandle} / VISÃO GERAL`;
   if (pathname.startsWith('/partida')) return 'PARTIDAS / BIND · ONTEM 23:14';
   if (pathname === '/time') return 'OS BOYS / MEMBROS';
   if (pathname.startsWith('/board')) return 'BOARD / BIND — RUSH B COM MOLLY DUPLA';
@@ -20,8 +23,9 @@ function crumbFor(pathname: string) {
   return '';
 }
 
-function SyncChip({ syncing }: { syncing: boolean }) {
-  if (!syncing) return null;
+function SyncChip({ sync }: { sync: SyncStatus | null }) {
+  if (!sync || sync.state !== 'syncing') return null;
+  const progress = sync.progress;
   return (
     <div
       style={{
@@ -46,20 +50,46 @@ function SyncChip({ syncing }: { syncing: boolean }) {
           animation: 'spin 900ms linear infinite',
         }}
       />
-      buscando partidas · 14 de 30
+      buscando partidas{progress ? ` · ${progress.done} de ${progress.total}` : '…'}
     </div>
   );
 }
 
 export function AppShell() {
   const location = useLocation();
-  const [syncing, setSyncing] = useState(false);
+  const { user, loading } = useSession();
+  const [sync, setSync] = useState<SyncStatus | null>(null);
 
   useEffect(() => {
-    if (!syncing) return;
-    const t = setTimeout(() => setSyncing(false), 2400);
-    return () => clearTimeout(t);
-  }, [syncing]);
+    if (!user?.riotId) return;
+    apiFetch<SyncStatus>('/sync').then(setSync).catch(() => {});
+  }, [user]);
+
+  useEffect(() => {
+    if (sync?.state !== 'syncing') return;
+    const interval = setInterval(async () => {
+      try {
+        setSync(await apiFetch<SyncStatus>('/sync'));
+      } catch {
+        // próxima tentativa do intervalo cobre uma falha pontual
+      }
+    }, 1500);
+    return () => clearInterval(interval);
+  }, [sync?.state]);
+
+  async function handleSync() {
+    try {
+      setSync(await apiFetch<SyncStatus>('/sync', { method: 'POST' }));
+    } catch {
+      setSync({ state: 'failed', reason: 'Não deu pra iniciar a sincronização.' });
+    }
+  }
+
+  if (loading) return null;
+  if (!user) return <Navigate to="/login" replace />;
+  if (!user.riotId) return <Navigate to="/login/vincular" replace />;
+
+  const riotHandle = `${user.riotId.name}#${user.riotId.tag}`.toUpperCase();
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '224px 1fr', minHeight: '100vh' }}>
@@ -124,10 +154,20 @@ export function AppShell() {
 
         <div style={{ marginTop: 'auto', padding: '16px 20px', borderTop: '1px solid var(--divider)', position: 'relative', zIndex: 1 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ width: 30, height: 30, borderRadius: 'var(--radius-sm)', background: 'var(--avatar-bg)', border: '1px solid rgba(255,255,255,.1)' }} />
+            {user.discordAvatarUrl ? (
+              <img
+                src={user.discordAvatarUrl}
+                alt=""
+                style={{ width: 30, height: 30, borderRadius: 'var(--radius-sm)', border: '1px solid rgba(255,255,255,.1)' }}
+              />
+            ) : (
+              <div style={{ width: 30, height: 30, borderRadius: 'var(--radius-sm)', background: 'var(--avatar-bg)', border: '1px solid rgba(255,255,255,.1)' }} />
+            )}
             <div>
-              <div style={{ fontSize: 13, fontWeight: 500 }}>{currentUser.handle}</div>
-              <div style={{ fontFamily: 'Inter,sans-serif', fontSize: 10, color: 'var(--text-dim)' }}>{currentUser.rank}</div>
+              <div style={{ fontSize: 13, fontWeight: 500 }}>{user.discordUsername}</div>
+              <div style={{ fontFamily: 'Inter,sans-serif', fontSize: 10, color: 'var(--text-dim)' }}>
+                {user.riotId.name}#{user.riotId.tag}
+              </div>
             </div>
           </div>
         </div>
@@ -160,17 +200,17 @@ export function AppShell() {
           }}
         >
           <div style={{ fontFamily: 'Inter,sans-serif', fontSize: 11, letterSpacing: '.14em', color: 'var(--text-dim)' }}>
-            {crumbFor(location.pathname)}
+            {crumbFor(location.pathname, riotHandle)}
           </div>
           <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 14 }}>
-            <SyncChip syncing={syncing} />
-            <button className="btn-secondary" onClick={() => setSyncing(true)} disabled={syncing}>
+            <SyncChip sync={sync} />
+            <button className="btn-secondary" onClick={handleSync} disabled={sync?.state === 'syncing'}>
               Sincronizar
             </button>
           </div>
         </header>
 
-        <Outlet />
+        <Outlet context={{ sync } satisfies { sync: SyncStatus | null }} />
       </main>
     </div>
   );

@@ -1,0 +1,193 @@
+// Schema inicial — ver CONTEXT.md §7 pra intenção original de cada tabela.
+// Nomes de campo em camelCase (convenção Prisma); os nomes do §7 em
+// snake_case mapeiam 1:1 conceitualmente.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id               String   @id @default(cuid())
+  discordId        String   @unique
+  discordUsername  String
+  discordAvatarUrl String?
+  riotPuuid        String?  @unique
+  riotName         String?
+  riotTag          String?
+  riotRegion       String? // affinity retornada pela HenrikDev (na/eu/ap/kr/latam/br) — necessária pro sync
+  funcaoPreferida  String?
+  createdAt        DateTime @default(now())
+
+  teamMemberships TeamMember[]
+  ownedTeams      Team[]       @relation("TeamOwner")
+  strategiesFeitas Strategy[]  @relation("StrategyAuthor")
+  spotsFeitos     Spot[]       @relation("SpotAuthor")
+  comments        Comment[]
+
+  @@map("users")
+}
+
+model MapAsset {
+  id          String  @id @default(cuid())
+  uuid        String  @unique
+  nome        String
+  displayIcon String?
+  xMultiplier Float
+  yMultiplier Float
+  xScalar     Float
+  yScalar     Float
+  callouts    Json
+
+  matches    Match[]
+  strategies Strategy[]
+  spots      Spot[]
+
+  @@map("maps")
+}
+
+model AgentAsset {
+  id          String  @id @default(cuid())
+  uuid        String  @unique
+  nome        String
+  funcao      String?
+  displayIcon String?
+  cor         String?
+
+  @@map("agents")
+}
+
+model Match {
+  id         String   @id // match_id da HenrikDev — partida antiga nunca muda, ver CONTEXT.md §8
+  mapId      String?
+  map        MapAsset? @relation(fields: [mapId], references: [id])
+  modo       String
+  startedAt  DateTime
+  durationMs Int
+  rawJson    Json
+  createdAt  DateTime @default(now())
+
+  players MatchPlayer[]
+
+  @@map("matches")
+}
+
+model MatchPlayer {
+  id             String @id @default(cuid())
+  matchId        String
+  match          Match  @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  puuid          String
+  teamId         String // team_id bruto da HenrikDev (ex.: "Red"/"Blue")
+  won            Boolean
+  agentUuid      String?
+  agentName      String
+  name           String
+  tag            String
+  roundsPlayed   Int
+  acs            Int
+  kills          Int
+  deaths         Int
+  assists        Int
+  headshots      Int
+  bodyshots      Int
+  legshots       Int
+  damageDealt    Int
+  damageReceived Int
+
+  @@unique([matchId, puuid])
+  @@index([puuid])
+  @@map("match_players")
+}
+
+model Team {
+  id      String @id @default(cuid())
+  nome    String
+  ownerId String
+  owner   User   @relation("TeamOwner", fields: [ownerId], references: [id])
+
+  members    TeamMember[]
+  strategies Strategy[]
+
+  @@map("teams")
+}
+
+model TeamMember {
+  id      String  @id @default(cuid())
+  teamId  String
+  team    Team    @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  userId  String
+  user    User    @relation(fields: [userId], references: [id])
+  funcao  String? // controlador | duelista | iniciador | sentinela
+
+  @@unique([teamId, userId])
+  @@map("team_members")
+}
+
+model Strategy {
+  id          String   @id @default(cuid())
+  teamId      String
+  team        Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  mapId       String
+  map         MapAsset @relation(fields: [mapId], references: [id])
+  lado        String // ATK | DEF
+  titulo      String
+  descricao   String   @default("")
+  criadoPorId String
+  criadoPor   User     @relation("StrategyAuthor", fields: [criadoPorId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  items StratItem[]
+
+  @@map("strategies")
+}
+
+model StratItem {
+  id         String   @id @default(cuid())
+  strategyId String
+  strategy   Strategy @relation(fields: [strategyId], references: [id], onDelete: Cascade)
+  tipo       String // agent | smoke | flash | molly | arrow | line
+  x          Float
+  y          Float
+  agentUuid  String?
+  payload    Json?
+
+  @@map("strat_items")
+}
+
+model Spot {
+  id          String   @id @default(cuid())
+  mapId       String
+  map         MapAsset @relation(fields: [mapId], references: [id])
+  agentUuid   String?
+  habilidade  String
+  xOrigem     Float
+  yOrigem     Float
+  xAlvo       Float
+  yAlvo       Float
+  videoUrl    String?
+  notas       String?
+  side        String // ATK | DEF
+  criadoPorId String
+  criadoPor   User     @relation("SpotAuthor", fields: [criadoPorId], references: [id])
+  createdAt   DateTime @default(now())
+
+  @@map("spots")
+}
+
+model Comment {
+  id           String   @id @default(cuid())
+  entidadeTipo String // match | strategy | spot
+  entidadeId   String
+  userId       String
+  user         User     @relation(fields: [userId], references: [id])
+  texto        String
+  createdAt    DateTime @default(now())
+
+  @@index([entidadeTipo, entidadeId])
+  @@map("comments")
+}
