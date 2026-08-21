@@ -122,6 +122,7 @@ model TeamMember {
   userId  String
   user    User    @relation(fields: [userId], references: [id])
   funcao  String? // controlador | duelista | iniciador | sentinela
+  nota    String? // recado social do card ("Segura o mapa inteiro sozinho..."), editável pelo grupo
 
   @@unique([teamId, userId])
   @@map("team_members")

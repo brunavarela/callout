@@ -4,9 +4,10 @@ import { z } from "zod";
 import type { SessionUser } from "@callout/shared";
 import { env } from "../lib/env.js";
 import { prisma } from "../lib/prisma.js";
-import { buildAuthorizeUrl, exchangeCodeForToken, fetchDiscordProfile, avatarUrl, isMemberOfGuild } from "../lib/discord.js";
+import { buildAuthorizeUrl, exchangeCodeForToken, fetchDiscordProfile, avatarUrl, findGuildMembership } from "../lib/discord.js";
 import { getAccountByRiotId, HenrikDevError } from "../lib/henrikdev.js";
 import { setSessionCookie, clearSessionCookie, requireAuth, getSessionUser } from "../lib/session.js";
+import { ensureTeamMembership } from "../lib/team.js";
 
 const STATE_COOKIE = "callout_oauth_state";
 
@@ -58,12 +59,12 @@ export async function authRoutes(app: FastifyInstance) {
 
     try {
       const token = await exchangeCodeForToken(query.code);
-      const [profile, isMember] = await Promise.all([
+      const [profile, membership] = await Promise.all([
         fetchDiscordProfile(token.access_token),
-        isMemberOfGuild(token.access_token),
+        findGuildMembership(token.access_token),
       ]);
 
-      if (!isMember) {
+      if (!membership) {
         return reply.redirect(`${env.WEB_ORIGIN}/login?erro=fora-do-servidor`);
       }
 
@@ -77,6 +78,7 @@ export async function authRoutes(app: FastifyInstance) {
         },
       });
 
+      await ensureTeamMembership(user.id, membership.name);
       setSessionCookie(reply, user.id);
       reply.redirect(user.riotPuuid ? `${env.WEB_ORIGIN}/` : `${env.WEB_ORIGIN}/login/vincular`);
     } catch (err) {

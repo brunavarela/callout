@@ -58,11 +58,16 @@ export function avatarUrl(profile: DiscordProfile): string | null {
   return `https://cdn.discordapp.com/avatars/${profile.id}/${profile.avatar}.png`;
 }
 
-export async function isMemberOfGuild(accessToken: string): Promise<boolean> {
+export interface GuildMembership {
+  id: string;
+  name: string;
+}
+
+export async function findGuildMembership(accessToken: string): Promise<GuildMembership | null> {
   const res = await fetch(`${API_BASE}/users/@me/guilds`, {
     headers: { Authorization: `Bearer ${accessToken}` },
   });
   if (!res.ok) throw new Error(`Falha ao listar servidores do Discord (${res.status})`);
-  const guilds = (await res.json()) as Array<{ id: string }>;
-  return guilds.some((g) => g.id === env.DISCORD_GUILD_ID);
+  const guilds = (await res.json()) as Array<{ id: string; name: string }>;
+  return guilds.find((g) => g.id === env.DISCORD_GUILD_ID) ?? null;
 }

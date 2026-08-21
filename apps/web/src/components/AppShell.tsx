@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Navigate, NavLink, Outlet, useLocation } from 'react-router-dom';
-import type { SyncStatus } from '@callout/shared';
+import type { SyncStatus, TeamOverview } from '@callout/shared';
 import { MapSchematic, BIND_RECTS } from './MapSchematic';
-import { team, recentMatches, strategies } from '../data/mock';
+import { recentMatches, strategies } from '../data/mock';
 import { useSession } from '../lib/session';
 import { apiFetch } from '../lib/api';
 
@@ -14,10 +14,10 @@ const NAV_ITEMS = [
   { to: '/spots', label: 'Spots', match: (p: string) => p === '/spots' },
 ];
 
-function crumbFor(pathname: string, riotHandle: string) {
+function crumbFor(pathname: string, riotHandle: string, teamName: string) {
   if (pathname === '/') return `${riotHandle} / VISÃO GERAL`;
   if (pathname.startsWith('/partida')) return 'PARTIDAS / BIND · ONTEM 23:14';
-  if (pathname === '/time') return 'OS BOYS / MEMBROS';
+  if (pathname === '/time') return `${teamName.toUpperCase()} / MEMBROS`;
   if (pathname.startsWith('/board')) return 'BOARD / BIND — RUSH B COM MOLLY DUPLA';
   if (pathname === '/spots') return 'SPOTS / BIBLIOTECA DE LINEUPS';
   return '';
@@ -59,10 +59,12 @@ export function AppShell() {
   const location = useLocation();
   const { user, loading } = useSession();
   const [sync, setSync] = useState<SyncStatus | null>(null);
+  const [team, setTeam] = useState<TeamOverview | null>(null);
 
   useEffect(() => {
     if (!user?.riotId) return;
     apiFetch<SyncStatus>('/sync').then(setSync).catch(() => {});
+    apiFetch<TeamOverview>('/team').then(setTeam).catch(() => {});
   }, [user]);
 
   useEffect(() => {
@@ -115,7 +117,7 @@ export function AppShell() {
             callout
           </div>
           <div style={{ fontFamily: 'Inter,sans-serif', fontSize: 10, letterSpacing: '.12em', color: 'var(--text-faint)', marginTop: 2 }}>
-            {team.name.toUpperCase()} · {team.memberCount} MEMBROS
+            {team ? `${team.name.toUpperCase()} · ${team.memberCount} MEMBRO${team.memberCount === 1 ? '' : 'S'}` : '…'}
           </div>
         </div>
 
@@ -200,7 +202,7 @@ export function AppShell() {
           }}
         >
           <div style={{ fontFamily: 'Inter,sans-serif', fontSize: 11, letterSpacing: '.14em', color: 'var(--text-dim)' }}>
-            {crumbFor(location.pathname, riotHandle)}
+            {crumbFor(location.pathname, riotHandle, team?.name ?? '')}
           </div>
           <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 14 }}>
             <SyncChip sync={sync} />
