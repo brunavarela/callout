@@ -1,0 +1,208 @@
+:root {
+  /* cores — base */
+  --bg: #1d1d1d;
+  --surface: #252525;
+  --surface-sunken: #171717;
+  --input-bg: #141414;
+  --avatar-bg: #333333;
+
+  /* cores — texto */
+  --text: #fcfcfc;
+  --text-2: #e4e4e4;
+  --text-3: #d6d6d6;
+  --text-muted: #9a9da1;
+  --text-muted-2: #8a8d91;
+  --text-dim: #7a7e82;
+  --text-faint: #4f5258;
+
+  /* cores — ação e dado */
+  --action: #ef4958;
+  --action-hover: #f4707c;
+  --positive: #18aab7;
+
+  /* cores — conteúdo (agente), variante clara entre parênteses no handoff */
+  --deep-blue: #192573;
+  --deep-blue-light: #4c5bc4;
+  --deep-purple: #421662;
+  --deep-purple-light: #7b3fa8;
+
+  /* bordas e separadores — sempre branco com alfa */
+  --border: rgba(255, 255, 255, 0.09);
+  --divider: rgba(255, 255, 255, 0.07);
+  --divider-soft: rgba(255, 255, 255, 0.05);
+  --border-control: rgba(255, 255, 255, 0.12);
+  --border-control-strong: rgba(255, 255, 255, 0.14);
+  --track: rgba(255, 255, 255, 0.06);
+  --bar-dim: rgba(255, 255, 255, 0.15);
+  --bar-dim-strong: rgba(255, 255, 255, 0.28);
+  --row-hover: rgba(255, 255, 255, 0.03);
+  --nav-active: rgba(255, 255, 255, 0.07);
+
+  --action-tint-bg: rgba(239, 73, 88, 0.06);
+  --action-tint-border: rgba(239, 73, 88, 0.35);
+  --action-tint-row: rgba(239, 73, 88, 0.07);
+  --action-tint-item-active: rgba(239, 73, 88, 0.08);
+  --action-tint-chip-active: rgba(239, 73, 88, 0.1);
+  --blueprint-fill: rgba(24, 170, 183, 0.08);
+
+  /* espaçamento */
+  --space-2: 2px;
+  --space-3: 3px;
+  --space-4: 4px;
+  --space-6: 6px;
+  --space-8: 8px;
+  --space-10: 10px;
+  --space-12: 12px;
+  --space-14: 14px;
+  --space-16: 16px;
+  --space-18: 18px;
+  --space-20: 20px;
+  --space-22: 22px;
+  --space-24: 24px;
+  --space-26: 26px;
+  --space-28: 28px;
+  --space-34: 34px;
+  --space-40: 40px;
+  --space-64: 64px;
+
+  /* raio */
+  --radius-none: 0;
+  --radius-xs: 1px;
+  --radius-sm: 2px;
+  --radius-md: 3px;
+  --radius-pill: 99px;
+
+  /* sombra — única do produto */
+  --shadow-piece: 0 6px 14px rgba(0, 0, 0, 0.4);
+
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+}
+
+body {
+  font-family: 'Inter', system-ui, sans-serif;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+a {
+  color: var(--action);
+  text-decoration: none;
+}
+
+a:hover {
+  color: var(--action-hover);
+}
+
+input,
+button {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+::selection {
+  background: rgba(239, 73, 88, 0.3);
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* classes reutilizáveis — hover/focus não dá pra fazer via style inline em React */
+
+.btn-primary {
+  display: flex;
+  align-items: center;
+  gap: var(--space-12);
+  padding: 18px 22px;
+  background: var(--action);
+  color: var(--bg);
+  border: none;
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  font-size: 16px;
+}
+
+.btn-primary:hover {
+  background: var(--action-hover);
+}
+
+.btn-secondary {
+  padding: 7px 14px;
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--border-control-strong);
+  border-radius: var(--radius-md);
+  font-size: 13px;
+}
+
+.btn-secondary:hover {
+  border-color: var(--action);
+}
+
+.input-field {
+  width: 100%;
+  padding: 18px 20px;
+  background: var(--input-bg);
+  border: 1px solid var(--border-control);
+  border-radius: var(--radius-md);
+  color: var(--text);
+  font-family: 'Inter', sans-serif;
+  font-size: 18px;
+  outline: none;
+}
+
+.input-field:focus {
+  border-color: var(--action);
+}
+
+.nav-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.table-row:hover {
+  background: var(--row-hover);
+}
+
+.strat-item:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.spot-card:hover {
+  border-color: rgba(239, 73, 88, 0.4);
+}
+
+.filter-chip:hover {
+  border-color: var(--action);
+}
+
+.link-quiet {
+  color: var(--action);
+  font-size: 12px;
+}
+
+.link-quiet:hover {
+  color: var(--action-hover);
+}
