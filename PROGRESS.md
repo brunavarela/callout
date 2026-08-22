@@ -224,10 +224,10 @@ antes de responder — 404 senão. Placar/rounds/duração vêm de
 `Match.rawJson` (não há tabela de rounds normalizada); KDA/ACS agregados
 vêm de `MatchPlayer`. `firstBloods`/`clutches`/`plants` são calculados
 simulando a ordem de kills por round (não existiam antes, novo). Cor de
-agente por jogador é cinza placeholder (`#9A9DA1`), mesmo motivo do
-dashboard — o seed da Fase 0 item 4 já tem a cor real (`AgentAsset.cor`),
-só falta esse endpoint ler de lá em vez do fixo. Comentários já são reais
-(ver Fase 4) — o campo de texto envia com Enter.
+agente por jogador é real desde a religação da Fase 0 item 4
+(`loadAgentColorsByName()`, ver linha do Fase 0 item 4 acima) — a tela
+ganhou um swatch na coluna de agente pra mostrar isso. Comentários já
+são reais (ver Fase 4) — o campo de texto envia com Enter.
 
 O link "Partidas" da sidebar (`AppShell.tsx`) e o link de "partida
 recente" no dashboard já apontam pro `id` real do banco.
