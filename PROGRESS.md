@@ -81,16 +81,18 @@ projetos nesta máquina (`iexfy_app_back-end` e `sg-super-web-frontend`).
   estratégia, que não existe no schema. `Strategy.usageCount` e
   `winratePercent` no DTO ficam hardcoded em 0 até isso ser construído.
 
-**Gap conhecido:** dá pra arrastar fichas que já existem numa estratégia,
-mas não dá pra *adicionar* uma ficha nova clicando na toolbar (agente,
-smoke, flash, molly) — as ferramentas só selecionam visualmente, igual
-no protótipo original. Uma estratégia nova (criada pelo botão "+" ou
-"Criar a primeira estratégia") nasce com o canvas vazio e não tem como
-povoar sem essa peça. Precisa de: escolher agente (com cor — depende da
-Fase 0 item 4 ou de um seletor manual) pro tipo `agent`, e escolher
-habilidade/letra pros tipos `smoke`/`flash`/`molly`. Setas/linhas
-(`arrow`/`line`, já existem no `StratItemKind`) continuam só decorativas
-via `boardArrows` do mock, sem interação nenhuma.
+**Gap fechado (2026-08-22):** agora dá pra *adicionar* fichas novas
+clicando na toolbar — agente (com seletor de agente, paleta placeholder
+até a Fase 0 item 4 existir), smoke, flash e molly. Clique no canvas com
+a ferramenta ativa cria a ficha na posição do clique; arrastar continua
+funcionando pras fichas já existentes; a borracha agora remove fichas de
+verdade (antes só selecionava visualmente). Ver
+`apps/web/src/pages/Board.tsx` (`AGENTS`, `KIND_META`,
+`onCanvasPointerDown`, `startDrag`).
+
+**Gap remanescente:** setas/linhas (`arrow`/`line`, já existem no
+`StratItemKind`) continuam só decorativas via `boardArrows` do mock, sem
+interação nenhuma — ficou fora do escopo do fix acima.
 
 ### Fase 4 — Spots + comentários — ⬜ não iniciada
 - `Spot` e `Comment` já existem no schema Prisma, sem endpoints ainda
@@ -118,7 +120,7 @@ antes de confiar no resultado").
 | Dashboard | ✅ real |
 | Time | ✅ real |
 | Detalhe de partida | ❌ mock — `MatchDetail.tsx` não busca nada, sempre mostra a mesma partida fake "Bind" |
-| Board | ✅ real — carrega/arrasta/salva de verdade; só falta adicionar fichas novas via toolbar (ver Fase 3) |
+| Board | ✅ real — carrega/arrasta/adiciona/apaga/salva de verdade; só setas/linhas continuam decorativas (ver Fase 3) |
 | Spots | ❌ mock — busca/filtro funcionam sobre dado fake |
 
 O link de "partida recente" no dashboard já navega pra `/partida/:id`
