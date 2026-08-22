@@ -7,9 +7,11 @@ import type { OutletContext } from '../components/AppShell';
 
 const TOOLS = [
   { id: 'agente', icon: 'AG', title: 'Agente' },
+  { id: 'smoke', icon: '◍', title: 'Smoke' },
+  { id: 'flash', icon: '⚡', title: 'Flash' },
+  { id: 'molly', icon: '●', title: 'Molly' },
   { id: 'seta', icon: '↗', title: 'Seta' },
   { id: 'linha', icon: '∕', title: 'Linha' },
-  { id: 'smoke', icon: '◍', title: 'Smoke' },
   { id: 'borracha', icon: '⌫', title: 'Borracha' },
 ] as const;
 
@@ -25,6 +27,23 @@ interface Piece {
 }
 
 const PIECE_KINDS: readonly PieceKind[] = ['agent', 'smoke', 'flash', 'molly'];
+
+// Sem o seed real de agentes (Fase 0 item 4), usamos a mesma paleta fixa
+// já usada no dashboard mock (apps/web/src/data/mock.ts `byAgent`).
+const AGENTS = [
+  { id: 'viper', name: 'Viper', abbrev: 'VIP', color: '#18AAB7' },
+  { id: 'raze', name: 'Raze', abbrev: 'RAZ', color: '#EF4958' },
+  { id: 'skye', name: 'Skye', abbrev: 'SKY', color: '#4C5BC4' },
+  { id: 'brimstone', name: 'Brimstone', abbrev: 'BRI', color: '#7B3FA8' },
+  { id: 'jett', name: 'Jett', abbrev: 'JET', color: '#7FD3DB' },
+  { id: 'omen', name: 'Omen', abbrev: 'OME', color: '#4F5258' },
+] as const;
+
+const KIND_META: Record<Exclude<PieceKind, 'agent'>, { label: string; color: string }> = {
+  smoke: { label: 'S', color: '#18AAB7' },
+  flash: { label: 'F', color: '#FCFCFC' },
+  molly: { label: 'M', color: '#EF4958' },
+};
 
 function itemsToPieces(items: StratItemDTO[]): Piece[] {
   return items
@@ -47,6 +66,7 @@ export function Board() {
 
   const [pieces, setPieces] = useState<Piece[]>([]);
   const [tool, setTool] = useState<(typeof TOOLS)[number]['id']>('agente');
+  const [selectedAgentId, setSelectedAgentId] = useState<(typeof AGENTS)[number]['id']>(AGENTS[0].id);
   const [description, setDescription] = useState('');
   const [saving, setSaving] = useState(false);
   const [creating, setCreating] = useState(false);
@@ -62,9 +82,14 @@ export function Board() {
     setDescription(strategy.description);
   }, [strategy?.id]);
 
-  function onPointerDown(pieceId: string) {
+  function startDrag(pieceId: string) {
     return (e: React.PointerEvent) => {
       e.preventDefault();
+      e.stopPropagation();
+      if (tool === 'borracha') {
+        setPieces((prev) => prev.filter((p) => p.id !== pieceId));
+        return;
+      }
       dragId.current = pieceId;
       (e.currentTarget as Element).setPointerCapture(e.pointerId);
     };
@@ -81,6 +106,22 @@ export function Board() {
 
   function onPointerUp() {
     dragId.current = null;
+  }
+
+  function onCanvasPointerDown(e: React.PointerEvent) {
+    if (!containerRef.current) return;
+    if ((e.target as HTMLElement).closest('[data-piece]')) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    const x = Math.max(3, Math.min(97, ((e.clientX - rect.left) / rect.width) * 100));
+    const y = Math.max(4, Math.min(96, ((e.clientY - rect.top) / rect.height) * 100));
+    if (tool === 'agente') {
+      const agent = AGENTS.find((a) => a.id === selectedAgentId);
+      if (!agent) return;
+      setPieces((prev) => [...prev, { id: crypto.randomUUID(), label: agent.abbrev, x, y, kind: 'agent', color: agent.color, agentId: agent.id }]);
+    } else if (tool === 'smoke' || tool === 'flash' || tool === 'molly') {
+      const meta = KIND_META[tool];
+      setPieces((prev) => [...prev, { id: crypto.randomUUID(), label: meta.label, x, y, kind: tool, color: meta.color }]);
+    }
   }
 
   async function handleSave() {
@@ -148,7 +189,18 @@ export function Board() {
   return (
     <div style={{ padding: 26, display: 'grid', gridTemplateColumns: '1fr 300px', gap: 16, flex: 1, minHeight: 0 }}>
       <div style={{ borderRadius: 'var(--radius-lg)', position: 'relative', overflow: 'hidden', background: 'var(--surface-sunken)', border: '1px solid var(--surface-border)' }}>
-        <div ref={containerRef} onPointerMove={onPointerMove} onPointerUp={onPointerUp} style={{ position: 'absolute', inset: 0, touchAction: 'none' }}>
+        <div
+          ref={containerRef}
+          onPointerDown={onCanvasPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={onPointerUp}
+          style={{
+            position: 'absolute',
+            inset: 0,
+            touchAction: 'none',
+            cursor: tool === 'agente' || tool === 'smoke' || tool === 'flash' || tool === 'molly' ? 'crosshair' : 'default',
+          }}
+        >
           <div
             style={{
               position: 'absolute',
@@ -211,7 +263,8 @@ export function Board() {
             return (
               <div
                 key={p.id}
-                onPointerDown={onPointerDown(p.id)}
+                data-piece="true"
+                onPointerDown={startDrag(p.id)}
                 style={{
                   position: 'absolute',
                   left: `${p.x}%`,
@@ -263,8 +316,30 @@ export function Board() {
             );
           })}
         </div>
+        {tool === 'agente' && (
+          <div style={{ position: 'absolute', left: 18, top: 62, display: 'flex', gap: 5, background: 'rgba(18,18,19,.92)', border: '1px solid var(--input-border)', borderRadius: 12, padding: 6 }}>
+            {AGENTS.map((a) => {
+              const active = a.id === selectedAgentId;
+              return (
+                <button
+                  key={a.id}
+                  title={a.name}
+                  onClick={() => setSelectedAgentId(a.id)}
+                  style={{
+                    width: 26,
+                    height: 26,
+                    borderRadius: 8,
+                    border: active ? '2px solid #fff' : '1px solid rgba(255,255,255,.22)',
+                    background: a.color,
+                    cursor: 'pointer',
+                  }}
+                />
+              );
+            })}
+          </div>
+        )}
         <div style={{ position: 'absolute', left: 18, bottom: 18, fontSize: 10, letterSpacing: '.12em', color: 'var(--text-faint)' }}>
-          {strategy.mapName.toUpperCase()} · {strategy.side === 'ATK' ? 'ATAQUE' : 'DEFESA'} · ARRASTE OS ÍCONES
+          {strategy.mapName.toUpperCase()} · {strategy.side === 'ATK' ? 'ATAQUE' : 'DEFESA'} · CLIQUE PRA ADICIONAR · ARRASTE PRA MOVER
         </div>
       </div>
 
