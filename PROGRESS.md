@@ -278,7 +278,19 @@ Tabelas: `users`, `maps`, `agents`, `matches`, `match_players`, `teams`,
   `rawJson.metadata.map.name` em vez da relação — não precisou trocar
   isso pra fechar o débito, só garantir que a FK existe pra quem quiser
   usar dela pra frente.
-- Busca no header (`AppShell.tsx`) é só visual, não filtra nada ainda.
+- ✅ **Resolvido (2026-08-22):** busca no header (`AppShell.tsx`,
+  componente `SearchBar`) agora filtra de verdade — dropdown com até 5
+  resultados por grupo (Partidas/Mapas/Estratégias), busca client-side
+  sobre o que já está em cache (`dashboard.recentMatches`,
+  `dashboard.mapWinrates`, `strategies`). Clique navega: partida →
+  `/partida/:id`, mapa → `/heatmap?map=X` (Heatmap.tsx agora lê esse
+  query param como seleção inicial), estratégia → `/board/:id`. Não é
+  busca "agente" separada — digitar um nome de agente já acha as
+  partidas em que ele apareceu, cobre o caso sem precisar de destino
+  próprio pra agente (não existe tela por-agente no app). Estratégias só
+  aparecem na busca se a lista já tiver carregado (visita anterior ao
+  Board) — não força carregar sob demanda só pra busca, mantém o padrão
+  de cache documentado abaixo.
 - `rank.rrDelta7d` no dashboard é somado a partir do histórico de RR de
   verdade agora (não é mais placeholder) — mas se a HenrikDev não tiver
   histórico suficiente, fica 0 silenciosamente.

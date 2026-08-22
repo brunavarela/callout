@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Navigate, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import type { SyncStatus } from '@callout/shared';
 import { useSession } from '../lib/session';
@@ -72,6 +72,135 @@ function SyncChip({ sync }: { sync: SyncStatus | null }) {
         }}
       />
       sincronizando{progress ? ` · ${progress.done} de ${progress.total}` : '…'}
+    </div>
+  );
+}
+
+interface SearchResult {
+  id: string;
+  label: string;
+  sub: string;
+  to: string;
+}
+
+interface SearchGroup {
+  title: string;
+  results: SearchResult[];
+}
+
+function SearchBar({ appData }: { appData: AppData }) {
+  const navigate = useNavigate();
+  const { dashboard, strategies } = appData;
+  const [query, setQuery] = useState('');
+  const [open, setOpen] = useState(false);
+
+  const groups: SearchGroup[] = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return [];
+
+    const matches: SearchResult[] = (dashboard?.recentMatches ?? [])
+      .filter((m) => m.map.toLowerCase().includes(q) || m.agent.toLowerCase().includes(q))
+      .slice(0, 5)
+      .map((m) => ({ id: m.id, label: `${m.map} · ${m.agent}`, sub: `${m.result === 'V' ? 'Vitória' : 'Derrota'} · ${m.score}`, to: `/partida/${m.id}` }));
+
+    const maps: SearchResult[] = (dashboard?.mapWinrates ?? [])
+      .filter((m) => m.map.toLowerCase().includes(q))
+      .slice(0, 5)
+      .map((m) => ({ id: m.map, label: m.map, sub: `${m.winratePercent}% de winrate`, to: `/heatmap?map=${encodeURIComponent(m.map)}` }));
+
+    const strats: SearchResult[] = (strategies ?? [])
+      .filter((s) => s.title.toLowerCase().includes(q) || s.mapName.toLowerCase().includes(q))
+      .slice(0, 5)
+      .map((s) => ({ id: s.id, label: s.title, sub: s.mapName, to: `/board/${s.id}` }));
+
+    const out: SearchGroup[] = [];
+    if (matches.length > 0) out.push({ title: 'Partidas', results: matches });
+    if (maps.length > 0) out.push({ title: 'Mapas', results: maps });
+    if (strats.length > 0) out.push({ title: 'Estratégias', results: strats });
+    return out;
+  }, [query, dashboard, strategies]);
+
+  function pick(to: string) {
+    navigate(to);
+    setQuery('');
+    setOpen(false);
+  }
+
+  const showDropdown = open && query.trim() !== '';
+
+  return (
+    <div
+      style={{ position: 'relative', flex: 1, maxWidth: 520 }}
+      onBlur={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget as Node)) setOpen(false);
+      }}
+    >
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 10,
+          background: 'var(--control-bg)',
+          border: '1px solid var(--surface-border)',
+          borderRadius: 'var(--radius-md)',
+          padding: '10px 14px',
+        }}
+      >
+        <span style={{ width: 14, height: 14, borderRadius: '50%', border: '1.5px solid #5A5D61', display: 'block', flex: 'none' }} />
+        <input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          onFocus={() => setOpen(true)}
+          placeholder="Buscar partida, mapa ou estratégia…"
+          style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', color: 'var(--text)', fontSize: 13 }}
+        />
+      </div>
+      {showDropdown && (
+        <div
+          style={{
+            position: 'absolute',
+            top: 'calc(100% + 6px)',
+            left: 0,
+            right: 0,
+            background: 'var(--surface)',
+            border: '1px solid var(--surface-border)',
+            borderRadius: 'var(--radius-md)',
+            boxShadow: '0 12px 28px rgba(0,0,0,.4)',
+            padding: 8,
+            maxHeight: 360,
+            overflow: 'auto',
+            zIndex: 40,
+          }}
+        >
+          {groups.length === 0 && <div style={{ padding: '10px 8px', fontSize: 12.5, color: 'var(--text-muted)' }}>Nenhum resultado.</div>}
+          {groups.map((group) => (
+            <div key={group.title} style={{ marginBottom: 6 }}>
+              <div style={{ padding: '6px 8px 2px', fontSize: 10, letterSpacing: '.12em', color: 'var(--text-dim)' }}>{group.title.toUpperCase()}</div>
+              {group.results.map((r) => (
+                <button
+                  key={r.id}
+                  onClick={() => pick(r.to)}
+                  style={{
+                    display: 'block',
+                    width: '100%',
+                    textAlign: 'left',
+                    padding: '8px 8px',
+                    borderRadius: 8,
+                    background: 'transparent',
+                    border: 'none',
+                    color: 'var(--text-2)',
+                    cursor: 'pointer',
+                  }}
+                  className="strat-item"
+                >
+                  <div style={{ fontSize: 13 }}>{r.label}</div>
+                  <div style={{ fontSize: 11, color: 'var(--text-faint)', marginTop: 1 }}>{r.sub}</div>
+                </button>
+              ))}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -233,25 +362,7 @@ export function AppShell() {
 
       <main style={{ minWidth: 0, display: 'flex', flexDirection: 'column' }}>
         <header style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '16px 26px', borderBottom: '1px solid var(--divider)' }}>
-          <div
-            style={{
-              flex: 1,
-              maxWidth: 520,
-              display: 'flex',
-              alignItems: 'center',
-              gap: 10,
-              background: 'var(--control-bg)',
-              border: '1px solid var(--surface-border)',
-              borderRadius: 'var(--radius-md)',
-              padding: '10px 14px',
-            }}
-          >
-            <span style={{ width: 14, height: 14, borderRadius: '50%', border: '1.5px solid #5A5D61', display: 'block' }} />
-            <input
-              placeholder="Buscar partida, mapa, agente ou estratégia…"
-              style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', color: 'var(--text)', fontSize: 13 }}
-            />
-          </div>
+          <SearchBar appData={appData} />
           <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 12 }}>
             <SyncChip sync={sync} />
             <button className="btn-icon" title="Sincronizar" onClick={startSync} disabled={sync?.state === 'syncing'}>

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useOutletContext } from 'react-router-dom';
+import { useOutletContext, useSearchParams } from 'react-router-dom';
 import type { HeatmapResult } from '@callout/shared';
 import { apiFetch } from '../lib/api';
 import type { OutletContext } from '../components/AppShell';
@@ -9,6 +9,8 @@ const cardStyle: React.CSSProperties = { borderRadius: 'var(--radius-lg)', backg
 export function Heatmap() {
   const { dashboard, dashboardLoading } = useOutletContext<OutletContext>();
   const maps = dashboard?.mapWinrates.map((m) => m.map) ?? [];
+  const [searchParams] = useSearchParams();
+  const mapFromUrl = searchParams.get('map');
 
   const [selectedMap, setSelectedMap] = useState<string | null>(null);
   const [kind, setKind] = useState<'kills' | 'deaths'>('kills');
@@ -16,8 +18,11 @@ export function Heatmap() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Vem de um resultado de busca ("Mapas") se `mapFromUrl` bater com um
+  // mapa que a conta realmente jogou; senão cai no primeiro da lista.
   useEffect(() => {
-    if (!selectedMap && maps.length > 0) setSelectedMap(maps[0]!);
+    if (selectedMap || maps.length === 0) return;
+    setSelectedMap(mapFromUrl && maps.includes(mapFromUrl) ? mapFromUrl : maps[0]!);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [maps.length]);
 
