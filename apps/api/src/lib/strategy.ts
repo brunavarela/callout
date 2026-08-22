@@ -1,5 +1,6 @@
 import type { Strategy as StrategyDTO, StratItem as StratItemDTO, StratItemKind, Lado } from "@callout/shared";
 import type { Strategy, StratItem, MapAsset, User } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import { prisma } from "./prisma.js";
 
 // Garante que uma estratégia/spot sempre tenha um MapAsset pra referenciar.
@@ -14,18 +15,31 @@ export async function ensureMapAsset(nome: string): Promise<MapAsset> {
   if (existing) return existing;
 
   const slug = nome.trim().toLowerCase().replace(/\s+/g, "-");
-  return prisma.mapAsset.create({
-    data: {
-      uuid: `placeholder-${slug}`,
-      nome,
-      displayIcon: null,
-      xMultiplier: 0,
-      yMultiplier: 0,
-      xScalar: 0,
-      yScalar: 0,
-      callouts: [],
-    },
-  });
+  const uuid = `placeholder-${slug}`;
+  try {
+    return await prisma.mapAsset.create({
+      data: {
+        uuid,
+        nome,
+        displayIcon: null,
+        xMultiplier: 0,
+        yMultiplier: 0,
+        xScalar: 0,
+        yScalar: 0,
+        callouts: [],
+      },
+    });
+  } catch (err) {
+    // Duas chamadas concorrentes pro mesmo mapa inédito geram o mesmo slug
+    // (determinístico) e colidem no `uuid` único — quem perder a corrida
+    // busca a linha que o vencedor acabou de criar em vez de derrubar o
+    // sync/create que a chamou.
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
+      const winner = await prisma.mapAsset.findUnique({ where: { uuid } });
+      if (winner) return winner;
+    }
+    throw err;
+  }
 }
 
 interface StratItemPayload {

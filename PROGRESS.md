@@ -319,3 +319,27 @@ app de verdade.
   `Spot.mapDisplayIcon` só existe pra spots já salvos — o modal de criar
   spot ainda mostra o esquema placeholder enquanto o usuário digita o
   nome do mapa (não busca preview ao vivo).
+
+## Bugs encontrados e corrigidos na revisão rigorosa (2026-08-22)
+
+- ✅ **Corrigido:** `toSpotDTO()` (`apps/api/src/lib/spots.ts`) só resolvia
+  o agente pela paleta placeholder (`PLACEHOLDER_AGENTS`), nunca pela
+  tabela real `AgentAsset` — mas `Spots.tsx` já manda o uuid real do
+  agente desde que o seed rodou. Resultado: todo spot criado depois do
+  seed mostrava agente "—" / cor cinza em vez do nome/cor reais. Fix:
+  `loadAgentsByUuid()` novo em `assets.ts` (mesma ideia de
+  `loadAgentColorsByName()`, mas indexado por uuid pra casar com o que
+  o front manda), `toSpotDTO()` agora recebe esse Map e resolve por ele
+  primeiro, caindo pro placeholder só em spots antigos criados antes do
+  seed. Validado com script standalone (cria spot com agente real,
+  confere DTO, remove).
+- ✅ **Corrigido:** `ensureMapAsset()` (`apps/api/src/lib/strategy.ts`)
+  tinha uma corrida findFirst-então-create — duas chamadas concorrentes
+  pro mesmo mapa inédito (nome nunca visto, ex.: primeiro sync/estratégia/
+  spot de um mapa novo) geram o mesmo slug e colidem no `uuid` único,
+  derrubando uma das duas com erro não tratado (abortaria um `POST
+  /spots`, `POST /strategies` ou o batch de `persistMatchIfNew()`). Fix:
+  captura `P2002` e rebusca pelo `uuid` que a chamada vencedora acabou
+  de criar, em vez de propagar o erro. Validado com 3 chamadas
+  concorrentes (`Promise.all`) pro mesmo nome novo: mesma linha, sem
+  duplicata.

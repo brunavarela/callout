@@ -68,6 +68,14 @@ export async function loadAgentColorsByName(): Promise<Map<string, string>> {
   return new Map(agents.filter((a) => a.cor).map((a) => [a.nome, a.cor!]));
 }
 
+// Usado por spots.ts pra resolver nome/cor reais a partir do `agentUuid`
+// solto em Spot — o front já manda o uuid real de AgentAsset (Spots.tsx),
+// então casar por uuid aqui é o par certo dessa gravação.
+export async function loadAgentsByUuid(): Promise<Map<string, { nome: string; cor: string | null }>> {
+  const agents = await prisma.agentAsset.findMany({ select: { uuid: true, nome: true, cor: true } });
+  return new Map(agents.map((a) => [a.uuid, { nome: a.nome, cor: a.cor }]));
+}
+
 // AgentAsset não tem placeholder pra trocar — `agentUuid` em StratItem/Spot
 // é um campo solto (não é FK de verdade), preenchido hoje com os ids da
 // paleta placeholder do front (`PLACEHOLDER_AGENTS`). Esse seed só popula a

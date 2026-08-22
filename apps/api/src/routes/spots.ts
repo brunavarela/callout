@@ -4,6 +4,7 @@ import { requireAuth } from "../lib/session.js";
 import { prisma } from "../lib/prisma.js";
 import { ensureMapAsset } from "../lib/strategy.js";
 import { toSpotDTO } from "../lib/spots.js";
+import { loadAgentsByUuid } from "../lib/assets.js";
 
 const SPOT_INCLUDE = { map: true, criadoPor: true } as const;
 
@@ -22,8 +23,11 @@ export async function spotsRoutes(app: FastifyInstance) {
   // Schema de Spot não tem teamId — lista é global, não por time (ver
   // PROGRESS.md, Fase 4).
   app.get("/spots", { preHandler: requireAuth }, async () => {
-    const spots = await prisma.spot.findMany({ include: SPOT_INCLUDE, orderBy: { createdAt: "desc" } });
-    return spots.map(toSpotDTO);
+    const [spots, agentsByUuid] = await Promise.all([
+      prisma.spot.findMany({ include: SPOT_INCLUDE, orderBy: { createdAt: "desc" } }),
+      loadAgentsByUuid(),
+    ]);
+    return spots.map((spot) => toSpotDTO(spot, agentsByUuid));
   });
 
   app.post("/spots", { preHandler: requireAuth }, async (request, reply) => {
@@ -51,6 +55,7 @@ export async function spotsRoutes(app: FastifyInstance) {
       include: SPOT_INCLUDE,
     });
 
-    return reply.code(201).send(toSpotDTO(spot));
+    const agentsByUuid = await loadAgentsByUuid();
+    return reply.code(201).send(toSpotDTO(spot, agentsByUuid));
   });
 }
