@@ -1,5 +1,8 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { LogOut } from 'lucide-react';
 import { THEME_PALETTE, useTheme } from '../lib/theme';
+import { useSession } from '../lib/session';
 
 function Swatch({ color, active, disabled, onClick }: { color: string; active: boolean; disabled: boolean; onClick: () => void }) {
   return (
@@ -23,7 +26,10 @@ function Swatch({ color, active, disabled, onClick }: { color: string; active: b
 
 export function ThemeSettings({ onClose }: { onClose: () => void }) {
   const { theme, setTheme } = useTheme();
+  const { logout } = useSession();
+  const navigate = useNavigate();
   const [saving, setSaving] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
 
   async function update(patch: Partial<typeof theme>) {
     setSaving(true);
@@ -31,6 +37,16 @@ export function ThemeSettings({ onClose }: { onClose: () => void }) {
       await setTheme({ ...theme, ...patch });
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleLogout() {
+    setLoggingOut(true);
+    try {
+      await logout();
+      navigate('/login', { replace: true });
+    } finally {
+      setLoggingOut(false);
     }
   }
 
@@ -104,6 +120,29 @@ export function ThemeSettings({ onClose }: { onClose: () => void }) {
         <input type="checkbox" checked={theme.tintedCards} disabled={saving} onChange={(e) => update({ tintedCards: e.target.checked })} />
         Cards tintados
       </label>
+
+      <div style={{ borderTop: '1px solid var(--surface-border)', margin: '2px 0' }} />
+
+      <button
+        onClick={handleLogout}
+        disabled={loggingOut}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 9,
+          background: 'none',
+          border: 'none',
+          padding: 0,
+          fontSize: 13,
+          fontWeight: 500,
+          color: 'var(--acc, #EF4958)',
+          cursor: loggingOut ? 'default' : 'pointer',
+          opacity: loggingOut ? 0.6 : 1,
+        }}
+      >
+        <LogOut size={16} strokeWidth={1.75} />
+        {loggingOut ? 'Saindo…' : 'Sair da conta'}
+      </button>
     </div>
   );
 }
