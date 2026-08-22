@@ -104,10 +104,9 @@ projetos nesta máquina (`iexfy_app_back-end` e `sg-super-web-frontend`).
   é aberto), diferente de time/dashboard que carregam no login
 - Rota mudou de `/board/:id` obrigatório pra `/board` + `/board/:id`
   opcional — sem estratégia selecionada, cai na primeira da lista
-- Contagem de usos/winrate por estratégia (que existia no mock, "4 usos
-  · 75% WR") foi **removida da UI real** — depende de ligar partida↔
-  estratégia, que não existe no schema. `Strategy.usageCount` e
-  `winratePercent` no DTO ficam hardcoded em 0 até isso ser construído.
+- ✅ **Resolvido (2026-08-22):** contagem de usos/winrate por estratégia
+  (que existia no mock, "4 usos · 75% WR") está de volta na UI real —
+  ver `StrategyUsage` nos débitos técnicos, resolvido junto.
 
 **Gap fechado (2026-08-22):** agora dá pra *adicionar* fichas novas
 clicando na toolbar — agente (com seletor de agente, paleta placeholder
@@ -237,12 +236,15 @@ recente" no dashboard já apontam pro `id` real do banco.
 ## Schema do banco (Prisma → Neon)
 
 Migrations aplicadas, em ordem: `init` → `user_riot_region` →
-`match_player_rounds` → `team_member_nota` → `user_theme`.
+`match_player_rounds` → `team_member_nota` → `user_theme` →
+`strategy_usage`.
 
 Tabelas: `users`, `maps`, `agents`, `matches`, `match_players`, `teams`,
-`team_members`, `strategies`, `strat_items`, `spots`, `comments`.
-`maps`/`agents`/`spots`/`strategies` existem no schema mas estão vazias
-(dependem das fases 3-5).
+`team_members`, `strategies`, `strat_items`, `spots`, `comments`,
+`strategy_usages`. Nenhuma tabela fica vazia por padrão mais — `maps`/
+`agents` são populadas pelo seed (`npm run seed:assets`, Fase 0 item 4);
+`strategies`/`spots`/`strategy_usages` populam conforme o time usa o
+app de verdade.
 
 ---
 
@@ -294,6 +296,22 @@ Tabelas: `users`, `maps`, `agents`, `matches`, `match_players`, `teams`,
 - `rank.rrDelta7d` no dashboard é somado a partir do histórico de RR de
   verdade agora (não é mais placeholder) — mas se a HenrikDev não tiver
   histórico suficiente, fica 0 silenciosamente.
+- ✅ **Resolvido (2026-08-22):** `usageCount`/`winratePercent` de
+  `Strategy` eram hardcoded em 0 — sem schema pra ligar partida↔
+  estratégia. Decisão de produto: marcação manual (não dá pra detectar
+  automaticamente — a HenrikDev não sabe o plano combinado antes do
+  round). Modelo novo `StrategyUsage` (migration `strategy_usage`):
+  `matchId` + `strategyId` únicos juntos, `won` denormalizado na hora de
+  marcar (evita reconsultar `MatchPlayer`). `POST/DELETE
+  /matches/:id/strategy-usage(/:strategyId)` — quem marca precisa ter
+  jogado a partida (confere via `MatchPlayer`) e a estratégia precisa
+  ser do mesmo time. `MatchDetail.tsx` ganhou o card "Estratégia usada":
+  lista as marcadas com botão de desmarcar, e um `<select>` só com as
+  estratégias do mesmo mapa da partida que ainda não foram marcadas.
+  `toStrategyDTO()` agora recebe as estatísticas de uso via
+  `loadUsageStats()` (uma consulta em lote pra evitar N+1 quando lista
+  várias estratégias). Board.tsx voltou a mostrar "X usos · Y% WR" na
+  lista lateral (só quando `usageCount > 0`).
 - Não existe `GET /maps` — só `mapDisplayIcon` embutido no DTO de
   `Strategy`/`Spot` (resolvido no backend). Se alguma tela precisar de
   uma lista de mapas independente de estratégia/spot (ex.: um seletor de

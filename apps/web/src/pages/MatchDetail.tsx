@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
-import type { CommentDTO, MatchDetail as MatchDetailDTO } from '@callout/shared';
+import { useOutletContext, useParams } from 'react-router-dom';
+import type { CommentDTO, MatchDetail as MatchDetailDTO, StrategyTag } from '@callout/shared';
 import { apiFetch } from '../lib/api';
+import type { OutletContext } from '../components/AppShell';
 
 const cardStyle: React.CSSProperties = { borderRadius: 'var(--radius-lg)', background: 'var(--surface)', border: '1px solid var(--surface-border)' };
 const scoreCols = '1fr 100px 62px 54px 54px 54px 62px';
@@ -12,11 +13,17 @@ function fmtKda(v: number) {
 
 export function MatchDetail() {
   const { id } = useParams();
+  const { strategies, strategiesLoading, loadStrategies } = useOutletContext<OutletContext>();
   const [match, setMatch] = useState<MatchDetailDTO | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [commentText, setCommentText] = useState('');
   const [postingComment, setPostingComment] = useState(false);
+  const [taggingBusy, setTaggingBusy] = useState(false);
+
+  useEffect(() => {
+    if (strategies === null && !strategiesLoading) loadStrategies();
+  }, [strategies, strategiesLoading, loadStrategies]);
 
   useEffect(() => {
     if (!id) return;
@@ -43,6 +50,32 @@ export function MatchDetail() {
       // TODO: mostrar erro de comentário — por ora falha silenciosa
     } finally {
       setPostingComment(false);
+    }
+  }
+
+  async function tagStrategy(strategyId: string) {
+    if (!id || taggingBusy) return;
+    setTaggingBusy(true);
+    try {
+      const updated = await apiFetch<StrategyTag[]>(`/matches/${id}/strategy-usage`, { method: 'POST', body: JSON.stringify({ strategyId }) });
+      setMatch((prev) => (prev ? { ...prev, taggedStrategies: updated } : prev));
+    } catch {
+      // TODO: mostrar erro — por ora falha silenciosa
+    } finally {
+      setTaggingBusy(false);
+    }
+  }
+
+  async function untagStrategy(strategyId: string) {
+    if (!id || taggingBusy) return;
+    setTaggingBusy(true);
+    try {
+      const updated = await apiFetch<StrategyTag[]>(`/matches/${id}/strategy-usage/${strategyId}`, { method: 'DELETE' });
+      setMatch((prev) => (prev ? { ...prev, taggedStrategies: updated } : prev));
+    } catch {
+      // TODO: mostrar erro — por ora falha silenciosa
+    } finally {
+      setTaggingBusy(false);
     }
   }
 
@@ -177,14 +210,58 @@ export function MatchDetail() {
             style={{ marginTop: 14, padding: '13px 15px', fontSize: 14 }}
           />
         </div>
-        <div style={{ ...cardStyle, padding: '20px 22px' }}>
-          <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 16 }}>Meus números</div>
-          {myStats.map((s) => (
-            <div key={s.label} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid var(--divider)', fontSize: 13 }}>
-              <span style={{ color: 'var(--text-muted)' }}>{s.label}</span>
-              <span>{s.value}</span>
-            </div>
-          ))}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div style={{ ...cardStyle, padding: '20px 22px' }}>
+            <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 16 }}>Estratégia usada</div>
+            {match.taggedStrategies.length === 0 && (
+              <div style={{ padding: '10px 0', fontSize: 13, color: 'var(--text-muted)' }}>Nenhuma marcada ainda.</div>
+            )}
+            {match.taggedStrategies.map((t) => (
+              <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 0', borderBottom: '1px solid var(--divider)', fontSize: 13 }}>
+                <span style={{ flex: 1 }}>{t.title}</span>
+                <button
+                  onClick={() => untagStrategy(t.id)}
+                  disabled={taggingBusy}
+                  title="Desmarcar"
+                  style={{ background: 'none', border: 'none', color: 'var(--text-faint)', cursor: 'pointer', fontSize: 13, lineHeight: 1 }}
+                >
+                  ✕
+                </button>
+              </div>
+            ))}
+            {(() => {
+              const taggedIds = new Set(match.taggedStrategies.map((t) => t.id));
+              const available = (strategies ?? []).filter((s) => s.mapName === match.map && !taggedIds.has(s.id));
+              if (available.length === 0) return null;
+              return (
+                <select
+                  className="input-field"
+                  value=""
+                  disabled={taggingBusy}
+                  onChange={(e) => {
+                    if (e.target.value) tagStrategy(e.target.value);
+                  }}
+                  style={{ marginTop: 12, padding: '9px 12px', fontSize: 13, width: '100%' }}
+                >
+                  <option value="">Marcar estratégia usada…</option>
+                  {available.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.title}
+                    </option>
+                  ))}
+                </select>
+              );
+            })()}
+          </div>
+          <div style={{ ...cardStyle, padding: '20px 22px' }}>
+            <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 16 }}>Meus números</div>
+            {myStats.map((s) => (
+              <div key={s.label} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid var(--divider)', fontSize: 13 }}>
+                <span style={{ color: 'var(--text-muted)' }}>{s.label}</span>
+                <span>{s.value}</span>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </div>

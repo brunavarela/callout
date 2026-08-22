@@ -2,7 +2,7 @@ import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { requireAuth } from "../lib/session.js";
 import { prisma } from "../lib/prisma.js";
-import { ensureMapAsset, toStrategyDTO } from "../lib/strategy.js";
+import { ensureMapAsset, loadUsageStats, toStrategyDTO } from "../lib/strategy.js";
 
 const STRATEGY_INCLUDE = { items: true, map: true, criadoPor: true } as const;
 
@@ -44,7 +44,8 @@ export async function strategiesRoutes(app: FastifyInstance) {
       include: STRATEGY_INCLUDE,
       orderBy: { updatedAt: "desc" },
     });
-    return strategies.map(toStrategyDTO);
+    const usageByStrategy = await loadUsageStats(strategies.map((s) => s.id));
+    return strategies.map((s) => toStrategyDTO(s, usageByStrategy.get(s.id)));
   });
 
   app.get("/strategies/:id", { preHandler: requireAuth }, async (request, reply) => {
@@ -54,7 +55,8 @@ export async function strategiesRoutes(app: FastifyInstance) {
 
     const strategy = await prisma.strategy.findFirst({ where: { id, teamId }, include: STRATEGY_INCLUDE });
     if (!strategy) return reply.code(404).send({ error: "Estratégia não encontrada." });
-    return toStrategyDTO(strategy);
+    const usage = (await loadUsageStats([strategy.id])).get(strategy.id);
+    return toStrategyDTO(strategy, usage);
   });
 
   app.post("/strategies", { preHandler: requireAuth }, async (request, reply) => {
@@ -125,6 +127,7 @@ export async function strategiesRoutes(app: FastifyInstance) {
     });
 
     const updated = await prisma.strategy.findFirstOrThrow({ where: { id }, include: STRATEGY_INCLUDE });
-    return toStrategyDTO(updated);
+    const usage = (await loadUsageStats([updated.id])).get(updated.id);
+    return toStrategyDTO(updated, usage);
   });
 }

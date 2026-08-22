@@ -502,7 +502,10 @@ export function Board() {
                   <span style={{ fontSize: 13, color: active ? 'var(--acc, #EF4958)' : 'var(--text-2)' }}>{s.title}</span>
                   <span style={{ marginLeft: 'auto', fontSize: 10, color: 'var(--text-faint)' }}>{s.side}</span>
                 </div>
-                <div style={{ fontSize: 10.5, color: 'var(--text-faint)', marginTop: 3 }}>{s.mapName}</div>
+                <div style={{ fontSize: 10.5, color: 'var(--text-faint)', marginTop: 3 }}>
+                  {s.mapName}
+                  {s.usageCount > 0 && ` · ${s.usageCount} uso${s.usageCount === 1 ? '' : 's'} · ${s.winratePercent}% WR`}
+                </div>
               </div>
             );
           })}

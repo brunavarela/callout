@@ -62,7 +62,29 @@ function formatUpdatedAt(date: Date, now = new Date()): string {
 
 type StrategyWithRelations = Strategy & { items: StratItem[]; map: MapAsset; criadoPor: User };
 
-export function toStrategyDTO(strategy: StrategyWithRelations): StrategyDTO {
+export interface UsageStats {
+  count: number;
+  wins: number;
+}
+
+// Marcação manual de "usamos essa estratégia nessa partida" (StrategyUsage)
+// — não dá pra detectar automaticamente, então o uso/winrate refletem só o
+// que o time marcou depois de cada partida. Uma consulta em lote pras N
+// estratégias evita N+1 quando `toStrategyDTO` roda dentro de um `.map()`.
+export async function loadUsageStats(strategyIds: string[]): Promise<Map<string, UsageStats>> {
+  if (strategyIds.length === 0) return new Map();
+  const rows = await prisma.strategyUsage.findMany({ where: { strategyId: { in: strategyIds } }, select: { strategyId: true, won: true } });
+  const map = new Map<string, UsageStats>();
+  for (const r of rows) {
+    const entry = map.get(r.strategyId) ?? { count: 0, wins: 0 };
+    entry.count++;
+    if (r.won) entry.wins++;
+    map.set(r.strategyId, entry);
+  }
+  return map;
+}
+
+export function toStrategyDTO(strategy: StrategyWithRelations, usage?: UsageStats): StrategyDTO {
   return {
     id: strategy.id,
     teamId: strategy.teamId,
@@ -74,11 +96,8 @@ export function toStrategyDTO(strategy: StrategyWithRelations): StrategyDTO {
     description: strategy.descricao,
     createdBy: strategy.criadoPor.riotName ?? strategy.criadoPor.discordUsername,
     updatedAtLabel: formatUpdatedAt(strategy.updatedAt),
-    // Contagem de usos e winrate por estratégia dependem de ligar partida ↔
-    // estratégia, o que ainda não existe (nenhum schema de "essa partida usou
-    // essa estratégia") — honesto em 0 até essa peça ser construída.
-    usageCount: 0,
-    winratePercent: 0,
+    usageCount: usage?.count ?? 0,
+    winratePercent: usage && usage.count > 0 ? Math.round((usage.wins / usage.count) * 100) : 0,
     items: strategy.items.map(toStratItemDTO),
     comments: [],
   };

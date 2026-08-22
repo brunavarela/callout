@@ -36,6 +36,7 @@ model User {
   strategiesFeitas Strategy[]  @relation("StrategyAuthor")
   spotsFeitos     Spot[]       @relation("SpotAuthor")
   comments        Comment[]
+  strategyUsagesMarcadas StrategyUsage[] @relation("StrategyUsageMarkedBy")
 
   @@map("users")
 }
@@ -80,6 +81,7 @@ model Match {
   createdAt  DateTime @default(now())
 
   players MatchPlayer[]
+  strategyUsages StrategyUsage[]
 
   @@map("matches")
 }
@@ -151,8 +153,30 @@ model Strategy {
   updatedAt   DateTime @updatedAt
 
   items StratItem[]
+  usages StrategyUsage[]
 
   @@map("strategies")
+}
+
+// Marcação manual de "usamos essa estratégia nessa partida" — não tem
+// como detectar isso automaticamente (a HenrikDev não sabe o que
+// combinamos antes do round), então é opt-in, feito por alguém do time
+// depois da partida. `won` fica denormalizado na hora de marcar (o
+// resultado da partida pra quem marcou) — evita ter que recalcular
+// olhando `MatchPlayer` de novo toda vez que a Strategy DTO é montada.
+model StrategyUsage {
+  id          String   @id @default(cuid())
+  matchId     String
+  match       Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  strategyId  String
+  strategy    Strategy @relation(fields: [strategyId], references: [id], onDelete: Cascade)
+  won         Boolean
+  marcadoPorId String
+  marcadoPor  User     @relation("StrategyUsageMarkedBy", fields: [marcadoPorId], references: [id])
+  createdAt   DateTime @default(now())
+
+  @@unique([matchId, strategyId])
+  @@map("strategy_usages")
 }
 
 model StratItem {

@@ -174,6 +174,11 @@ export interface CommentDTO {
   text: string;
 }
 
+export interface StrategyTag {
+  id: string;
+  title: string;
+}
+
 export interface MatchDetail {
   id: string;
   mode: string;
@@ -184,6 +189,7 @@ export interface MatchDetail {
   rounds: RoundResult[];
   players: MatchPlayerRow[];
   comments: CommentDTO[];
+  taggedStrategies: StrategyTag[];
   myStats: {
     acs: number;
     kda: number;
