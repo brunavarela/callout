@@ -89,7 +89,7 @@ projetos nesta máquina (`iexfy_app_back-end` e `sg-super-web-frontend`).
 - `PATCH /team/members/:userId/note` — recado social editável (clique
   duplo no card, na tela Time)
 
-### Fase 3 — Board de estratégia — ✅ completa (com um gap conhecido)
+### Fase 3 — Board de estratégia — ✅ completa
 - `GET/POST /strategies`, `GET/PATCH /strategies/:id` —
   `apps/api/src/routes/strategies.ts` + `apps/api/src/lib/strategy.ts`
 - "Salvar" substitui o board inteiro (deleta e recria os `StratItem`) em
@@ -119,9 +119,17 @@ verdade (antes só selecionava visualmente). Ver
 `apps/web/src/pages/Board.tsx` (`AGENTS`, `KIND_META`,
 `onCanvasPointerDown`, `startDrag`).
 
-**Gap remanescente:** setas/linhas (`arrow`/`line`, já existem no
-`StratItemKind`) continuam só decorativas via `boardArrows` do mock, sem
-interação nenhuma — ficou fora do escopo do fix acima.
+**Gap fechado (2026-08-22, débito técnico):** setas/linhas (`arrow`/
+`line`) agora são clicáveis — seleciona a ferramenta, clica na origem
+(marca um ponto pendente), clica no destino, cria o `StratItem` com
+`points: [origem, destino]`. Seta desenha com ponta (SVG `<marker>` por
+`id` único); linha desenha tracejada, sem ponta. Borracha apaga
+setas/linhas clicando perto delas (hit-area invisível de 16px em volta
+do traço real, só ativa com a ferramenta borracha selecionada). Não tem
+arrastar ponta depois de criada — só criar/apagar, que já é o suficiente
+pra sair de "zero interação" pra "usável". `boardArrows`/`boardCallouts`
+do mock continuam só como fallback decorativo pros poucos mapas sem
+`mapDisplayIcon` real.
 
 ### Fase 4 — Spots + comentários — ✅ completa
 - ✅ Comentários (2026-08-22): `POST /comments` (`apps/api/src/routes/comments.ts`
@@ -201,7 +209,7 @@ consertar o sync pra popular `mapId` retroativamente, é debito técnico
 | Dashboard | ✅ real |
 | Time | ✅ real |
 | Detalhe de partida | ✅ real (2026-08-22) — `GET /matches/:id`, ver abaixo |
-| Board | ✅ real — carrega/arrasta/adiciona/apaga/salva de verdade; só setas/linhas continuam decorativas (ver Fase 3) |
+| Board | ✅ real — carrega/arrasta/adiciona/apaga/salva de verdade, incluindo setas/linhas (ver Fase 3) |
 | Spots | ✅ real (2026-08-22) — lista/filtra/cria com picker no mapa (ver Fase 4) |
 | Heatmap | ✅ real (2026-08-22) — tela nova, `GET /heatmap` (ver Fase 5) |
 

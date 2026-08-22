@@ -27,7 +27,18 @@ interface Piece {
   agentId?: string;
 }
 
+type Point = { x: number; y: number };
+type ShapeKind = 'arrow' | 'line';
+interface Shape {
+  id: string;
+  kind: ShapeKind;
+  color: string;
+  points: [Point, Point];
+}
+
 const PIECE_KINDS: readonly PieceKind[] = ['agent', 'smoke', 'flash', 'molly'];
+const SHAPE_KINDS: readonly ShapeKind[] = ['arrow', 'line'];
+const SHAPE_COLOR = 'var(--acc, #EF4958)';
 
 const KIND_META: Record<Exclude<PieceKind, 'agent'>, { label: string; color: string }> = {
   smoke: { label: 'S', color: '#18AAB7' },
@@ -39,6 +50,12 @@ function itemsToPieces(items: StratItemDTO[]): Piece[] {
   return items
     .filter((item): item is StratItemDTO & { kind: PieceKind } => (PIECE_KINDS as readonly string[]).includes(item.kind))
     .map((item) => ({ id: item.id, label: item.label, x: item.x, y: item.y, kind: item.kind, color: item.color, agentId: item.agentId }));
+}
+
+function itemsToShapes(items: StratItemDTO[]): Shape[] {
+  return items
+    .filter((item): item is StratItemDTO & { kind: ShapeKind } => (SHAPE_KINDS as readonly string[]).includes(item.kind) && (item.points?.length ?? 0) >= 2)
+    .map((item) => ({ id: item.id, kind: item.kind, color: item.color, points: [item.points![0]!, item.points![1]!] }));
 }
 
 const cardStyle: React.CSSProperties = { borderRadius: 'var(--radius-lg)', background: 'var(--surface)', border: '1px solid var(--surface-border)' };
@@ -72,6 +89,8 @@ export function Board() {
   const strategy = strategies?.find((s) => s.id === id) ?? strategies?.[0] ?? null;
 
   const [pieces, setPieces] = useState<Piece[]>([]);
+  const [shapes, setShapes] = useState<Shape[]>([]);
+  const [pendingPoint, setPendingPoint] = useState<Point | null>(null);
   const [tool, setTool] = useState<(typeof TOOLS)[number]['id']>('agente');
   const [selectedAgentId, setSelectedAgentId] = useState<string>(PLACEHOLDER_AGENTS[0].id);
   const [description, setDescription] = useState('');
@@ -86,8 +105,15 @@ export function Board() {
   useEffect(() => {
     if (!strategy) return;
     setPieces(itemsToPieces(strategy.items));
+    setShapes(itemsToShapes(strategy.items));
     setDescription(strategy.description);
   }, [strategy?.id]);
+
+  // Trocar de ferramenta no meio de uma seta/linha (1º clique já feito)
+  // cancela o ponto pendente — evita misturar intenção de duas ferramentas.
+  useEffect(() => {
+    if (tool !== 'seta' && tool !== 'linha') setPendingPoint(null);
+  }, [tool]);
 
   function startDrag(pieceId: string) {
     return (e: React.PointerEvent) => {
@@ -128,7 +154,23 @@ export function Board() {
     } else if (tool === 'smoke' || tool === 'flash' || tool === 'molly') {
       const meta = KIND_META[tool];
       setPieces((prev) => [...prev, { id: crypto.randomUUID(), label: meta.label, x, y, kind: tool, color: meta.color }]);
+    } else if (tool === 'seta' || tool === 'linha') {
+      if (!pendingPoint) {
+        setPendingPoint({ x, y });
+      } else {
+        setShapes((prev) => [...prev, { id: crypto.randomUUID(), kind: tool === 'seta' ? 'arrow' : 'line', color: SHAPE_COLOR, points: [pendingPoint, { x, y }] }]);
+        setPendingPoint(null);
+      }
     }
+  }
+
+  function eraseShape(shapeId: string) {
+    return (e: React.PointerEvent) => {
+      if (tool !== 'borracha') return;
+      e.preventDefault();
+      e.stopPropagation();
+      setShapes((prev) => prev.filter((s) => s.id !== shapeId));
+    };
   }
 
   async function handleSave() {
@@ -137,7 +179,10 @@ export function Board() {
     try {
       await saveStrategy(strategy.id, {
         description,
-        items: pieces.map((p) => ({ kind: p.kind, label: p.label, x: p.x, y: p.y, color: p.color, agentId: p.agentId })),
+        items: [
+          ...pieces.map((p) => ({ kind: p.kind, label: p.label, x: p.x, y: p.y, color: p.color, agentId: p.agentId })),
+          ...shapes.map((s) => ({ kind: s.kind, label: '', x: s.points[0].x, y: s.points[0].y, color: s.color, points: s.points })),
+        ],
       });
     } catch {
       // TODO: mostrar erro de salvar — por ora falha silenciosa, os dados continuam na tela
@@ -149,6 +194,8 @@ export function Board() {
   function handleClear() {
     if (!strategy) return;
     setPieces(itemsToPieces(strategy.items));
+    setShapes(itemsToShapes(strategy.items));
+    setPendingPoint(null);
   }
 
   async function handleCreate() {
@@ -205,7 +252,7 @@ export function Board() {
             position: 'absolute',
             inset: 0,
             touchAction: 'none',
-            cursor: tool === 'agente' || tool === 'smoke' || tool === 'flash' || tool === 'molly' ? 'crosshair' : 'default',
+            cursor: tool === 'agente' || tool === 'smoke' || tool === 'flash' || tool === 'molly' || tool === 'seta' || tool === 'linha' ? 'crosshair' : 'default',
           }}
         >
           <div
@@ -275,6 +322,44 @@ export function Board() {
               ))}
             </svg>
           )}
+          <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', overflow: 'visible' }}>
+            <defs>
+              {shapes
+                .filter((s) => s.kind === 'arrow')
+                .map((s) => (
+                  <marker key={s.id} id={`arrowhead-${s.id}`} markerWidth={8} markerHeight={8} refX={6} refY={4} orient="auto">
+                    <path d="M0,0 L8,4 L0,8 Z" fill={s.color} />
+                  </marker>
+                ))}
+            </defs>
+            {shapes.map((s) => (
+              <g key={s.id}>
+                <line
+                  x1={`${s.points[0].x}%`}
+                  y1={`${s.points[0].y}%`}
+                  x2={`${s.points[1].x}%`}
+                  y2={`${s.points[1].y}%`}
+                  stroke={s.color}
+                  strokeWidth={2.5}
+                  strokeDasharray={s.kind === 'line' ? '8 6' : undefined}
+                  strokeLinecap="round"
+                  markerEnd={s.kind === 'arrow' ? `url(#arrowhead-${s.id})` : undefined}
+                />
+                <line
+                  data-piece="true"
+                  onPointerDown={eraseShape(s.id)}
+                  x1={`${s.points[0].x}%`}
+                  y1={`${s.points[0].y}%`}
+                  x2={`${s.points[1].x}%`}
+                  y2={`${s.points[1].y}%`}
+                  stroke="transparent"
+                  strokeWidth={16}
+                  style={{ pointerEvents: tool === 'borracha' ? 'stroke' : 'none', cursor: 'pointer' }}
+                />
+              </g>
+            ))}
+            {pendingPoint && <circle cx={`${pendingPoint.x}%`} cy={`${pendingPoint.y}%`} r={5} fill={SHAPE_COLOR} stroke="white" strokeWidth={1.5} />}
+          </svg>
           {pieces.map((p) => {
             const isAgent = p.kind === 'agent';
             return (
