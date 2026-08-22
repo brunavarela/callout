@@ -1,14 +1,12 @@
 import { useState } from 'react';
 import { Navigate, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import type { SyncStatus } from '@callout/shared';
-import { recentMatches } from '../data/mock';
 import { useSession } from '../lib/session';
 import { useAppData, type AppData } from '../lib/appData';
 import { ThemeSettings } from './ThemeSettings';
 
-const NAV_ITEMS = [
+const BASE_NAV_ITEMS = [
   { to: '/', label: 'Dashboard', match: (p: string) => p === '/' },
-  { to: `/partida/${recentMatches[0].id}`, label: 'Partidas', match: (p: string) => p.startsWith('/partida') },
   { to: '/time', label: 'Time', match: (p: string) => p === '/time' },
   { to: '/board', label: 'Board', match: (p: string) => p.startsWith('/board') },
   { to: '/spots', label: 'Spots', match: (p: string) => p === '/spots' },
@@ -82,12 +80,19 @@ export function AppShell() {
   const navigate = useNavigate();
   const { user, loading } = useSession();
   const appData = useAppData(user);
-  const { sync, startSync, team } = appData;
+  const { sync, startSync, team, dashboard } = appData;
   const [settingsOpen, setSettingsOpen] = useState(false);
 
   if (loading) return null;
   if (!user) return <Navigate to="/login" replace />;
   if (!user.riotId) return <Navigate to="/login/vincular" replace />;
+
+  const latestMatchId = dashboard?.recentMatches[0]?.id;
+  const navItems = [
+    BASE_NAV_ITEMS[0]!,
+    { to: latestMatchId ? `/partida/${latestMatchId}` : '/', label: 'Partidas', match: (p: string) => p.startsWith('/partida') },
+    ...BASE_NAV_ITEMS.slice(1),
+  ];
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '232px 1fr', minHeight: '100vh' }}>
@@ -123,7 +128,7 @@ export function AppShell() {
         </div>
 
         <nav style={{ position: 'relative', display: 'flex', flexDirection: 'column', padding: '10px 12px', gap: 4 }}>
-          {NAV_ITEMS.map((item) => {
+          {navItems.map((item) => {
             const active = item.match(location.pathname);
             return (
               <NavLink

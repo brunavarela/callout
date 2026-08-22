@@ -119,13 +119,27 @@ antes de confiar no resultado").
 | Login (2 etapas) | ✅ real |
 | Dashboard | ✅ real |
 | Time | ✅ real |
-| Detalhe de partida | ❌ mock — `MatchDetail.tsx` não busca nada, sempre mostra a mesma partida fake "Bind" |
+| Detalhe de partida | ✅ real (2026-08-22) — `GET /matches/:id`, ver abaixo |
 | Board | ✅ real — carrega/arrasta/adiciona/apaga/salva de verdade; só setas/linhas continuam decorativas (ver Fase 3) |
 | Spots | ❌ mock — busca/filtro funcionam sobre dado fake |
 
-O link de "partida recente" no dashboard já navega pra `/partida/:id`
-com o `id` real do banco — só o componente de destino que ainda ignora
-o param e mostra sempre o mock.
+`MatchDetail.tsx` agora busca `GET /matches/:id` (`apps/api/src/routes/matches.ts`
++ `apps/api/src/lib/matches.ts`) direto na página via `useParams` — não
+passa pelo cache do `useAppData`/`OutletContext` porque não existe uma
+lista de "todos os detalhes de partida" em cache em lugar nenhum (só o
+resumo em `dashboard.recentMatches`, capado em 7). A rota confere que o
+usuário logado tem uma `MatchPlayer` naquela partida (via `riotPuuid`)
+antes de responder — 404 senão. Placar/rounds/duração vêm de
+`Match.rawJson` (não há tabela de rounds normalizada); KDA/ACS agregados
+vêm de `MatchPlayer`. `firstBloods`/`clutches`/`plants` são calculados
+simulando a ordem de kills por round (não existiam antes, novo). Cor de
+agente por jogador é cinza placeholder (`#9A9DA1`), mesmo motivo do
+dashboard — depende da Fase 0 item 4. Comentários da tela renderizam
+`comments: []` da API (Fase 4 não implementada ainda) — o campo de texto
+continua sem `onSubmit`, igual já era no mock.
+
+O link "Partidas" da sidebar (`AppShell.tsx`) e o link de "partida
+recente" no dashboard já apontam pro `id` real do banco.
 
 ---
 
@@ -165,10 +179,6 @@ Tabelas: `users`, `maps`, `agents`, `matches`, `match_players`, `teams`,
 
 ## Débitos técnicos conhecidos (não bloqueiam, mas anotar)
 
-- `apps/web/src/components/AppShell.tsx` — o link de "Partidas" na
-  sidebar ainda aponta pro id mockado (`recentMatches[0].id`), não pro
-  dado real — só importa quando `MatchDetail.tsx` ficar real também
-  (link de "Board" já foi corrigido, usa `/board` sem id).
 - Busca no header (`AppShell.tsx`) é só visual, não filtra nada ainda.
 - `rank.rrDelta7d` no dashboard é somado a partir do histórico de RR de
   verdade agora (não é mais placeholder) — mas se a HenrikDev não tiver
