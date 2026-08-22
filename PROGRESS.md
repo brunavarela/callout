@@ -2,7 +2,7 @@
 
 > Documento de handoff de **implementação** (o que já existe, como rodar,
 > o que falta). Para o briefing de produto/arquitetura, ver [CONTEXT.md](CONTEXT.md).
-> Última atualização: 2026-08-21.
+> Última atualização: 2026-08-22.
 
 ---
 
@@ -61,28 +61,36 @@ projetos nesta máquina (`iexfy_app_back-end` e `sg-super-web-frontend`).
 - `PATCH /team/members/:userId/note` — recado social editável (clique
   duplo no card, na tela Time)
 
-### Fase 3 — Board de estratégia — ⬜ não iniciada
-Hoje o Board (`apps/web/src/pages/Board.tsx`) é 100% mock: drag-and-drop
-funciona visualmente (Pointer Events, posições em %), mas nada persiste —
-recarrega a página e volta pro estado inicial. `strategies` e
-`initialPieces` vêm de `apps/web/src/data/mock.ts`.
+### Fase 3 — Board de estratégia — ✅ completa (com um gap conhecido)
+- `GET/POST /strategies`, `GET/PATCH /strategies/:id` —
+  `apps/api/src/routes/strategies.ts` + `apps/api/src/lib/strategy.ts`
+- "Salvar" substitui o board inteiro (deleta e recria os `StratItem`) em
+  vez de diffar contra o estado anterior — mais simples e previsível
+- `ensureMapAsset()` cria um `MapAsset` placeholder por nome (ex.: "Bind")
+  já que o seed real (Fase 0 item 4) não existe — quando esse job for
+  construído, ele precisa casar por `nome` e atualizar o placeholder em
+  vez de duplicar
+- `apps/web/src/pages/Board.tsx` carrega/salva de verdade via
+  `useAppData` (`strategies`, `saveStrategy`, `createStrategy`,
+  `loadStrategies`) — estratégias carregam sob demanda (só quando o Board
+  é aberto), diferente de time/dashboard que carregam no login
+- Rota mudou de `/board/:id` obrigatório pra `/board` + `/board/:id`
+  opcional — sem estratégia selecionada, cai na primeira da lista
+- Contagem de usos/winrate por estratégia (que existia no mock, "4 usos
+  · 75% WR") foi **removida da UI real** — depende de ligar partida↔
+  estratégia, que não existe no schema. `Strategy.usageCount` e
+  `winratePercent` no DTO ficam hardcoded em 0 até isso ser construído.
 
-**Falta:**
-1. Modelos `Strategy`/`StratItem` já existem no schema Prisma (ver
-   `apps/api/prisma/schema.prisma`) — só falta os endpoints:
-   - `GET /strategies` — lista do time (pra sidebar do board)
-   - `GET /strategies/:id` — uma estratégia com seus `items`
-   - `POST /strategies` — criar
-   - `PATCH /strategies/:id` — salvar título/descrição/items (posição das
-     fichas, setas) quando clica "Salvar"
-2. Trocar `apps/web/src/pages/Board.tsx` pra consumir a API real em vez
-   do mock — provavelmente adicionar `strategies`/`reloadStrategies` ao
-   `useAppData` (`apps/web/src/lib/appData.ts`), do mesmo jeito que
-   `team`/`dashboard` já funcionam
-3. Setas/linhas desenhadas hoje são só decorativas no mock
-   (`boardArrows`) — decidir se entram no `StratItem.payload` (tipo
-   `arrow`/`line` já existe no `StratItemKind` do domain.ts) ou ficam de
-   fora por enquanto
+**Gap conhecido:** dá pra arrastar fichas que já existem numa estratégia,
+mas não dá pra *adicionar* uma ficha nova clicando na toolbar (agente,
+smoke, flash, molly) — as ferramentas só selecionam visualmente, igual
+no protótipo original. Uma estratégia nova (criada pelo botão "+" ou
+"Criar a primeira estratégia") nasce com o canvas vazio e não tem como
+povoar sem essa peça. Precisa de: escolher agente (com cor — depende da
+Fase 0 item 4 ou de um seletor manual) pro tipo `agent`, e escolher
+habilidade/letra pros tipos `smoke`/`flash`/`molly`. Setas/linhas
+(`arrow`/`line`, já existem no `StratItemKind`) continuam só decorativas
+via `boardArrows` do mock, sem interação nenhuma.
 
 ### Fase 4 — Spots + comentários — ⬜ não iniciada
 - `Spot` e `Comment` já existem no schema Prisma, sem endpoints ainda
@@ -110,7 +118,7 @@ antes de confiar no resultado").
 | Dashboard | ✅ real |
 | Time | ✅ real |
 | Detalhe de partida | ❌ mock — `MatchDetail.tsx` não busca nada, sempre mostra a mesma partida fake "Bind" |
-| Board | ❌ mock — drag funciona, nada persiste |
+| Board | ✅ real — carrega/arrasta/salva de verdade; só falta adicionar fichas novas via toolbar (ver Fase 3) |
 | Spots | ❌ mock — busca/filtro funcionam sobre dado fake |
 
 O link de "partida recente" no dashboard já navega pra `/partida/:id`
@@ -155,10 +163,10 @@ Tabelas: `users`, `maps`, `agents`, `matches`, `match_players`, `teams`,
 
 ## Débitos técnicos conhecidos (não bloqueiam, mas anotar)
 
-- `apps/web/src/components/AppShell.tsx` — os links de "Partidas" e
-  "Board" na sidebar ainda apontam pra ids do mock (`recentMatches[0].id`,
-  `strategies[0].id`), não pro dado real — só importa quando essas telas
-  também ficarem reais.
+- `apps/web/src/components/AppShell.tsx` — o link de "Partidas" na
+  sidebar ainda aponta pro id mockado (`recentMatches[0].id`), não pro
+  dado real — só importa quando `MatchDetail.tsx` ficar real também
+  (link de "Board" já foi corrigido, usa `/board` sem id).
 - Busca no header (`AppShell.tsx`) é só visual, não filtra nada ainda.
 - `rank.rrDelta7d` no dashboard é somado a partir do histórico de RR de
   verdade agora (não é mais placeholder) — mas se a HenrikDev não tiver

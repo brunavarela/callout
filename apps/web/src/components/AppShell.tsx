@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Navigate, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import type { SyncStatus } from '@callout/shared';
-import { recentMatches, strategies } from '../data/mock';
+import { recentMatches } from '../data/mock';
 import { useSession } from '../lib/session';
 import { useAppData, type AppData } from '../lib/appData';
 import { ThemeSettings } from './ThemeSettings';
@@ -10,7 +10,7 @@ const NAV_ITEMS = [
   { to: '/', label: 'Dashboard', match: (p: string) => p === '/' },
   { to: `/partida/${recentMatches[0].id}`, label: 'Partidas', match: (p: string) => p.startsWith('/partida') },
   { to: '/time', label: 'Time', match: (p: string) => p === '/time' },
-  { to: `/board/${strategies[0].id}`, label: 'Board', match: (p: string) => p.startsWith('/board') },
+  { to: '/board', label: 'Board', match: (p: string) => p.startsWith('/board') },
   { to: '/spots', label: 'Spots', match: (p: string) => p === '/spots' },
 ];
 
@@ -174,7 +174,7 @@ export function AppShell() {
             <button
               className="btn-primary"
               style={{ width: '100%', marginTop: 14, padding: 9, fontSize: 13, justifyContent: 'center' }}
-              onClick={() => navigate(`/board/${strategies[0].id}`)}
+              onClick={() => navigate('/board')}
             >
               Abrir board
             </button>

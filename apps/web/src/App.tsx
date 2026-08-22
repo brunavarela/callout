@@ -18,6 +18,7 @@ function App() {
         <Route path="/" element={<Dashboard />} />
         <Route path="/partida/:id" element={<MatchDetail />} />
         <Route path="/time" element={<Team />} />
+        <Route path="/board" element={<Board />} />
         <Route path="/board/:id" element={<Board />} />
         <Route path="/spots" element={<Spots />} />
       </Route>

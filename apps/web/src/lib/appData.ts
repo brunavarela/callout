@@ -1,5 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { DashboardSummary, RrHistoryPoint, SessionUser, SidesBreakdown, SyncStatus, TeamOverview } from '@callout/shared';
+import type {
+  DashboardSummary,
+  Lado,
+  RrHistoryPoint,
+  SessionUser,
+  SidesBreakdown,
+  Strategy,
+  StratItem,
+  SyncStatus,
+  TeamOverview,
+} from '@callout/shared';
 import { apiFetch } from './api';
 
 export type RrRange = '7d' | '30d' | '90d';
@@ -77,6 +87,36 @@ export function useAppData(user: SessionUser | null) {
     setTeam((prev) => (prev ? { ...prev, members: prev.members.map((m) => (m.userId === userId ? { ...m, note } : m)) } : prev));
   }, []);
 
+  const [strategies, setStrategies] = useState<Strategy[] | null>(null);
+  const [strategiesError, setStrategiesError] = useState<string | null>(null);
+  const [strategiesLoading, setStrategiesLoading] = useState(false);
+
+  // Estratégias só carregam quando o Board é aberto (ninguém precisa delas
+  // na sidebar/dashboard), mas ficam em cache aqui, não na página.
+  const loadStrategies = useCallback(async () => {
+    setStrategiesLoading(true);
+    try {
+      setStrategies(await apiFetch<Strategy[]>('/strategies'));
+      setStrategiesError(null);
+    } catch {
+      setStrategiesError('Falha ao carregar as estratégias.');
+    } finally {
+      setStrategiesLoading(false);
+    }
+  }, []);
+
+  const saveStrategy = useCallback(async (id: string, patch: { title?: string; description?: string; items?: Array<Omit<StratItem, 'id'>> }) => {
+    const updated = await apiFetch<Strategy>(`/strategies/${id}`, { method: 'PATCH', body: JSON.stringify(patch) });
+    setStrategies((prev) => (prev ? prev.map((s) => (s.id === id ? updated : s)) : prev));
+    return updated;
+  }, []);
+
+  const createStrategy = useCallback(async (input: { mapName: string; side: Lado; title: string }) => {
+    const created = await apiFetch<Strategy>('/strategies', { method: 'POST', body: JSON.stringify(input) });
+    setStrategies((prev) => (prev ? [created, ...prev] : [created]));
+    return created;
+  }, []);
+
   const riotId = user?.riotId?.puuid;
 
   // Carga inicial — uma vez por login, não por navegação.
@@ -142,6 +182,12 @@ export function useAppData(user: SessionUser | null) {
     rrRange,
     setRrRange,
     rrHistory: rrHistoryCache[rrRange] ?? [],
+    strategies,
+    strategiesError,
+    strategiesLoading,
+    loadStrategies,
+    saveStrategy,
+    createStrategy,
   };
 }
 

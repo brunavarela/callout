@@ -3,7 +3,6 @@ import type { RrHistoryPoint, SessionUser, SidesBreakdown } from '@callout/share
 import type { OutletContext } from '../components/AppShell';
 import type { RrRange } from '../lib/appData';
 import { useSession } from '../lib/session';
-import { strategies } from '../data/mock';
 
 const cardStyle: React.CSSProperties = { borderRadius: 'var(--radius-lg)', background: 'var(--surface)', border: '1px solid var(--surface-border)' };
 const RANGES: Array<{ key: RrRange; label: string }> = [
@@ -221,7 +220,7 @@ export function Dashboard() {
           </div>
         </div>
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 10 }}>
-          <button className="btn-secondary" onClick={() => navigate(`/board/${strategies[0].id}`)}>
+          <button className="btn-secondary" onClick={() => navigate('/board')}>
             Abrir board
           </button>
           <button className="btn-primary" style={{ padding: '11px 17px', fontSize: 13 }} onClick={startSync} disabled={sync?.state === 'syncing'}>

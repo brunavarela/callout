@@ -1,7 +1,9 @@
-import { useRef, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useEffect, useRef, useState } from 'react';
+import { useNavigate, useOutletContext, useParams } from 'react-router-dom';
+import type { StratItem as StratItemDTO } from '@callout/shared';
 import { MapSchematic } from '../components/MapSchematic';
-import { boardArrows, boardCallouts, initialPieces, strategies, type BoardPiece } from '../data/mock';
+import { boardArrows, boardCallouts } from '../data/mock';
+import type { OutletContext } from '../components/AppShell';
 
 const TOOLS = [
   { id: 'agente', icon: 'AG', title: 'Agente' },
@@ -11,17 +13,54 @@ const TOOLS = [
   { id: 'borracha', icon: '⌫', title: 'Borracha' },
 ] as const;
 
+type PieceKind = 'agent' | 'smoke' | 'flash' | 'molly';
+interface Piece {
+  id: string;
+  label: string;
+  x: number;
+  y: number;
+  kind: PieceKind;
+  color: string;
+  agentId?: string;
+}
+
+const PIECE_KINDS: readonly PieceKind[] = ['agent', 'smoke', 'flash', 'molly'];
+
+function itemsToPieces(items: StratItemDTO[]): Piece[] {
+  return items
+    .filter((item): item is StratItemDTO & { kind: PieceKind } => (PIECE_KINDS as readonly string[]).includes(item.kind))
+    .map((item) => ({ id: item.id, label: item.label, x: item.x, y: item.y, kind: item.kind, color: item.color, agentId: item.agentId }));
+}
+
+const cardStyle: React.CSSProperties = { borderRadius: 'var(--radius-lg)', background: 'var(--surface)', border: '1px solid var(--surface-border)' };
+
 export function Board() {
   const navigate = useNavigate();
   const { id } = useParams();
-  const strategy = strategies.find((s) => s.id === id) ?? strategies[0];
+  const { strategies, strategiesError, strategiesLoading, loadStrategies, saveStrategy, createStrategy } = useOutletContext<OutletContext>();
 
-  const [pieces, setPieces] = useState<BoardPiece[]>(initialPieces);
+  useEffect(() => {
+    if (strategies === null && !strategiesLoading) loadStrategies();
+  }, [strategies, strategiesLoading, loadStrategies]);
+
+  const strategy = strategies?.find((s) => s.id === id) ?? strategies?.[0] ?? null;
+
+  const [pieces, setPieces] = useState<Piece[]>([]);
   const [tool, setTool] = useState<(typeof TOOLS)[number]['id']>('agente');
-  const [description, setDescription] = useState(strategy.description);
+  const [description, setDescription] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [creating, setCreating] = useState(false);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const dragId = useRef<string | null>(null);
+
+  // Troca de estratégia (ou primeira carga): reseta o estado local pro que
+  // veio do servidor.
+  useEffect(() => {
+    if (!strategy) return;
+    setPieces(itemsToPieces(strategy.items));
+    setDescription(strategy.description);
+  }, [strategy?.id]);
 
   function onPointerDown(pieceId: string) {
     return (e: React.PointerEvent) => {
@@ -42,6 +81,68 @@ export function Board() {
 
   function onPointerUp() {
     dragId.current = null;
+  }
+
+  async function handleSave() {
+    if (!strategy) return;
+    setSaving(true);
+    try {
+      await saveStrategy(strategy.id, {
+        description,
+        items: pieces.map((p) => ({ kind: p.kind, label: p.label, x: p.x, y: p.y, color: p.color, agentId: p.agentId })),
+      });
+    } catch {
+      // TODO: mostrar erro de salvar — por ora falha silenciosa, os dados continuam na tela
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function handleClear() {
+    if (!strategy) return;
+    setPieces(itemsToPieces(strategy.items));
+  }
+
+  async function handleCreate() {
+    setCreating(true);
+    try {
+      const created = await createStrategy({ mapName: 'Bind', side: 'ATK', title: 'Nova estratégia' });
+      navigate(`/board/${created.id}`);
+    } catch {
+      // TODO: mostrar erro de criação
+    } finally {
+      setCreating(false);
+    }
+  }
+
+  if (strategiesError && !strategies) {
+    return (
+      <div style={{ padding: 26 }}>
+        <div style={{ ...cardStyle, padding: 22, display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'flex-start' }}>
+          <div style={{ fontSize: 14, color: 'var(--text-3)' }}>{strategiesError}</div>
+          <button className="btn-secondary" onClick={loadStrategies}>
+            Tentar de novo
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!strategies) {
+    return <div style={{ padding: 26, color: 'var(--text-muted)' }}>Carregando…</div>;
+  }
+
+  if (!strategy) {
+    return (
+      <div style={{ padding: 26 }}>
+        <div style={{ ...cardStyle, padding: 40, textAlign: 'center', color: 'var(--text-muted)', fontSize: 14, display: 'flex', flexDirection: 'column', gap: 14, alignItems: 'center' }}>
+          Nenhuma estratégia salva ainda.
+          <button className="btn-primary" onClick={handleCreate} disabled={creating}>
+            {creating ? 'Criando…' : 'Criar a primeira estratégia'}
+          </button>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -163,18 +264,16 @@ export function Board() {
           })}
         </div>
         <div style={{ position: 'absolute', left: 18, bottom: 18, fontSize: 10, letterSpacing: '.12em', color: 'var(--text-faint)' }}>
-          BIND · ATAQUE · ARRASTE OS ÍCONES
+          {strategy.mapName.toUpperCase()} · {strategy.side === 'ATK' ? 'ATAQUE' : 'DEFESA'} · ARRASTE OS ÍCONES
         </div>
       </div>
 
       <div style={{ borderRadius: 'var(--radius-lg)', background: 'var(--surface)', border: '1px solid var(--surface-border)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <div style={{ padding: '18px 20px', borderBottom: '1px solid var(--divider)' }}>
-          <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 18, letterSpacing: '-.01em' }}>{strategy.name}</div>
-          {strategy.savedBy && (
-            <div style={{ fontSize: 10.5, color: 'var(--text-dim)', marginTop: 4, letterSpacing: '.06em' }}>
-              SALVA POR {strategy.savedBy} · {strategy.editedAt}
-            </div>
-          )}
+          <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 18, letterSpacing: '-.01em' }}>{strategy.title}</div>
+          <div style={{ fontSize: 10.5, color: 'var(--text-dim)', marginTop: 4, letterSpacing: '.06em' }}>
+            SALVA POR {strategy.createdBy.toUpperCase()} · {strategy.updatedAtLabel}
+          </div>
         </div>
         <textarea
           value={description}
@@ -194,7 +293,17 @@ export function Board() {
             fontFamily: 'Inter,sans-serif',
           }}
         />
-        <div style={{ padding: '16px 20px 8px', fontSize: 10.5, letterSpacing: '.14em', color: 'var(--text-dim)' }}>ESTRATÉGIAS DO TIME · {strategies.length}</div>
+        <div style={{ padding: '16px 20px 8px', display: 'flex', alignItems: 'center' }}>
+          <span style={{ fontSize: 10.5, letterSpacing: '.14em', color: 'var(--text-dim)' }}>ESTRATÉGIAS DO TIME · {strategies.length}</span>
+          <button
+            onClick={handleCreate}
+            disabled={creating}
+            title="Nova estratégia"
+            style={{ marginLeft: 'auto', background: 'none', border: 'none', color: 'var(--acc, #EF4958)', fontSize: 16, lineHeight: 1, cursor: 'pointer' }}
+          >
+            +
+          </button>
+        </div>
         <div style={{ overflow: 'auto', padding: '0 12px' }}>
           {strategies.map((s) => {
             const active = s.id === strategy.id;
@@ -213,19 +322,19 @@ export function Board() {
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ fontSize: 13, color: active ? 'var(--acc, #EF4958)' : 'var(--text-2)' }}>{s.name}</span>
+                  <span style={{ fontSize: 13, color: active ? 'var(--acc, #EF4958)' : 'var(--text-2)' }}>{s.title}</span>
                   <span style={{ marginLeft: 'auto', fontSize: 10, color: 'var(--text-faint)' }}>{s.side}</span>
                 </div>
-                <div style={{ fontSize: 10.5, color: 'var(--text-faint)', marginTop: 3 }}>{s.meta}</div>
+                <div style={{ fontSize: 10.5, color: 'var(--text-faint)', marginTop: 3 }}>{s.mapName}</div>
               </div>
             );
           })}
         </div>
         <div style={{ marginTop: 'auto', padding: '16px 20px', borderTop: '1px solid var(--divider)', display: 'flex', gap: 10 }}>
-          <button className="btn-primary" style={{ flex: 1, padding: 11, justifyContent: 'center', fontSize: 13 }}>
-            Salvar
+          <button className="btn-primary" style={{ flex: 1, padding: 11, justifyContent: 'center', fontSize: 13 }} onClick={handleSave} disabled={saving}>
+            {saving ? 'Salvando…' : 'Salvar'}
           </button>
-          <button className="btn-secondary" style={{ padding: '11px 15px', color: 'var(--text-muted)' }} onClick={() => setPieces(initialPieces)}>
+          <button className="btn-secondary" style={{ padding: '11px 15px', color: 'var(--text-muted)' }} onClick={handleClear}>
             Limpar
           </button>
         </div>
