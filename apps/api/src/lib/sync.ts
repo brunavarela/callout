@@ -2,6 +2,7 @@ import { ZodError } from "zod";
 import type { MatchV4Data, SyncStatus } from "@callout/shared";
 import { prisma } from "./prisma.js";
 import { getMatchlist, HenrikDevError } from "./henrikdev.js";
+import { ensureMapAsset } from "./strategy.js";
 
 function describeSyncFailure(err: unknown): string {
   if (err instanceof ZodError) return "A HenrikDev devolveu um formato de dado inesperado.";
@@ -52,10 +53,12 @@ async function persistMatchIfNew(match: MatchV4Data) {
   if (exists) return;
 
   const roundCount = match.rounds.length || 1;
+  const map = await ensureMapAsset(match.metadata.map.name);
 
   await prisma.match.create({
     data: {
       id: match.metadata.match_id,
+      mapId: map.id,
       modo: match.metadata.queue.name ?? match.metadata.queue.id,
       startedAt: new Date(match.metadata.started_at),
       durationMs: match.metadata.game_length_in_ms,

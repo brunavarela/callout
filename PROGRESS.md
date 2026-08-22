@@ -192,12 +192,13 @@ mortes voltava 0 pontos). "Kills" usa a entrada do matador em
 doc do schema. Depois do fix, mortes bateram exatamente com
 `MatchPlayer.deaths` e os pontos também caíram nos corredores certos.
 
-Mesmo problema do Board/Spots pra filtrar por mapa: `Match.mapId` nunca
-foi preenchido pelo sync (fica sempre `null` — nunca foi ligado, nem
-antes do seed existir). `buildHeatmap()` filtra pelo nome do mapa
-dentro do `rawJson`, igual `dashboard.ts` já fazia — não tentei
-consertar o sync pra popular `mapId` retroativamente, é debito técnico
-à parte (ver abaixo), não bloqueia nada hoje.
+Mesmo problema do Board/Spots pra filtrar por mapa: na época dessa
+Fase, `Match.mapId` nunca tinha sido preenchido pelo sync (fica
+`null`). `buildHeatmap()` filtra pelo nome do mapa dentro do `rawJson`,
+igual `dashboard.ts` já fazia — o débito do `mapId` foi corrigido
+depois, ver "Débitos técnicos" abaixo, mas `buildHeatmap()` não foi
+migrado pra usar a FK porque não tinha necessidade (filtrar por nome já
+funciona e é o mesmo padrão do resto do código).
 
 ---
 
@@ -269,13 +270,14 @@ Tabelas: `users`, `maps`, `agents`, `matches`, `match_players`, `teams`,
 
 ## Débitos técnicos conhecidos (não bloqueiam, mas anotar)
 
-- `Match.mapId` nunca é preenchido pelo sync (`apps/api/src/lib/sync.ts`)
-  — fica sempre `null`. Toda tela que precisa filtrar/agrupar por mapa
-  (`dashboard.ts`, `heatmap.ts`) contorna isso lendo `rawJson.metadata.map.name`
-  direto em vez de usar a relação. Funciona, mas se algum dia for
-  conveniente ter a FK de verdade (join mais barato, índice), precisa
-  ligar `mapId` no sync (via `ensureMapAsset`) e rodar um backfill nas
-  partidas já sincronizadas.
+- ✅ **Resolvido (2026-08-22):** `Match.mapId` agora é preenchido no sync
+  (`persistMatchIfNew()` chama `ensureMapAsset()`, igual estratégias/spots
+  já faziam). Rodei `npm run backfill:match-map-id` uma vez contra o Neon
+  pra ligar as 15 partidas já sincronizadas antes do fix (0 ficaram sem
+  `mapId`). `dashboard.ts`/`heatmap.ts` continuam lendo
+  `rawJson.metadata.map.name` em vez da relação — não precisou trocar
+  isso pra fechar o débito, só garantir que a FK existe pra quem quiser
+  usar dela pra frente.
 - Busca no header (`AppShell.tsx`) é só visual, não filtra nada ainda.
 - `rank.rrDelta7d` no dashboard é somado a partir do histórico de RR de
   verdade agora (não é mais placeholder) — mas se a HenrikDev não tiver

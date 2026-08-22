@@ -11,7 +11,8 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:deploy": "prisma migrate deploy",
-    "seed:assets": "tsx --env-file=../../.env src/scripts/seedAssets.ts"
+    "seed:assets": "tsx --env-file=../../.env src/scripts/seedAssets.ts",
+    "backfill:match-map-id": "tsx --env-file=../../.env src/scripts/backfillMatchMapId.ts"
   },
   "dependencies": {
     "@callout/shared": "*",
