@@ -10,6 +10,7 @@ const BASE_NAV_ITEMS = [
   { to: '/time', label: 'Time', match: (p: string) => p === '/time' },
   { to: '/board', label: 'Board', match: (p: string) => p.startsWith('/board') },
   { to: '/spots', label: 'Spots', match: (p: string) => p === '/spots' },
+  { to: '/heatmap', label: 'Heatmap', match: (p: string) => p === '/heatmap' },
 ];
 
 export type OutletContext = AppData;

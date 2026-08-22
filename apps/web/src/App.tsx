@@ -7,6 +7,7 @@ import { MatchDetail } from './pages/MatchDetail';
 import { Team } from './pages/Team';
 import { Board } from './pages/Board';
 import { Spots } from './pages/Spots';
+import { Heatmap } from './pages/Heatmap';
 
 function App() {
   return (
@@ -21,6 +22,7 @@ function App() {
         <Route path="/board" element={<Board />} />
         <Route path="/board/:id" element={<Board />} />
         <Route path="/spots" element={<Spots />} />
+        <Route path="/heatmap" element={<Heatmap />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />

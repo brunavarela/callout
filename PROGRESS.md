@@ -156,13 +156,40 @@ interação nenhuma — ficou fora do escopo do fix acima.
   upload de imagem real (nunca teve, nem no mock: o card sempre foi um
   placeholder "PRINT DA MIRA").
 
-### Fase 5 — Heatmap — ⬜ não iniciada
-A Fase 0 item 4 (seed de mapas, com `displayIcon`/calibração reais) já
-está pronta, então o bloqueio de dado não existe mais — falta construir
-a feature em si. Usa a função `gameLocationToMinimapPosition` (já existe
-em `packages/shared/src/valorant-api.ts`, mas não testada com partida
-real ainda — o próprio código avisa: "validar com uma partida real
-conhecida antes de confiar no resultado").
+### Fase 5 — Heatmap — ✅ completa
+`GET /heatmap?map=&kind=kills|deaths` (`apps/api/src/routes/heatmap.ts` +
+`apps/api/src/lib/heatmap.ts`) + tela nova `apps/web/src/pages/Heatmap.tsx`
+(nav item novo, rota `/heatmap`). Chips de mapa vêm de
+`dashboard.mapWinrates` (reaproveita o que já carrega no login, sem
+endpoint novo de "lista de mapas") — só mostra mapas que a conta
+realmente jogou nos últimos 30 dias.
+
+**A fórmula do CONTEXT.md §5.4 (`gameLocationToMinimapPosition`) foi
+validada com partida real** (2026-08-22) — a validação que o código
+pedia e nunca tinha sido feita. Processo: rodei o endpoint contra o
+histórico real da conta, plotei os pontos por cima do minimapa oficial
+baixado da valorant-api.com e conferi visualmente que caem nos
+corredores/salas, não em paredes. Bind e Summit conferidos assim,
+resultado limpo — a inversão de eixo (y do jogo vira x do mapa) está
+certa como documentada, sem precisar do fallback "tente sem a
+inversão".
+
+**Bug real achado nessa validação e corrigido:** `player_locations` de
+cada kill (payload da HenrikDev) traz a posição de todo mundo *exceto*
+quem morreu naquele abate — confirmado comparando com dado real
+(`MatchPlayer.deaths` de uma partida tinha 19 mortes, o heatmap de
+mortes voltava 0 pontos). "Kills" usa a entrada do matador em
+`player_locations` (funciona); "deaths" precisa usar o campo solto
+`kill.location`, que é a posição de quem morreu — não estava óbvio pela
+doc do schema. Depois do fix, mortes bateram exatamente com
+`MatchPlayer.deaths` e os pontos também caíram nos corredores certos.
+
+Mesmo problema do Board/Spots pra filtrar por mapa: `Match.mapId` nunca
+foi preenchido pelo sync (fica sempre `null` — nunca foi ligado, nem
+antes do seed existir). `buildHeatmap()` filtra pelo nome do mapa
+dentro do `rawJson`, igual `dashboard.ts` já fazia — não tentei
+consertar o sync pra popular `mapId` retroativamente, é debito técnico
+à parte (ver abaixo), não bloqueia nada hoje.
 
 ---
 
@@ -176,6 +203,7 @@ conhecida antes de confiar no resultado").
 | Detalhe de partida | ✅ real (2026-08-22) — `GET /matches/:id`, ver abaixo |
 | Board | ✅ real — carrega/arrasta/adiciona/apaga/salva de verdade; só setas/linhas continuam decorativas (ver Fase 3) |
 | Spots | ✅ real (2026-08-22) — lista/filtra/cria com picker no mapa (ver Fase 4) |
+| Heatmap | ✅ real (2026-08-22) — tela nova, `GET /heatmap` (ver Fase 5) |
 
 `MatchDetail.tsx` agora busca `GET /matches/:id` (`apps/api/src/routes/matches.ts`
 + `apps/api/src/lib/matches.ts`) direto na página via `useParams` — não
@@ -233,6 +261,13 @@ Tabelas: `users`, `maps`, `agents`, `matches`, `match_players`, `teams`,
 
 ## Débitos técnicos conhecidos (não bloqueiam, mas anotar)
 
+- `Match.mapId` nunca é preenchido pelo sync (`apps/api/src/lib/sync.ts`)
+  — fica sempre `null`. Toda tela que precisa filtrar/agrupar por mapa
+  (`dashboard.ts`, `heatmap.ts`) contorna isso lendo `rawJson.metadata.map.name`
+  direto em vez de usar a relação. Funciona, mas se algum dia for
+  conveniente ter a FK de verdade (join mais barato, índice), precisa
+  ligar `mapId` no sync (via `ensureMapAsset`) e rodar um backfill nas
+  partidas já sincronizadas.
 - Busca no header (`AppShell.tsx`) é só visual, não filtra nada ainda.
 - `rank.rrDelta7d` no dashboard é somado a partir do histórico de RR de
   verdade agora (não é mais placeholder) — mas se a HenrikDev não tiver
