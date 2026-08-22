@@ -29,16 +29,31 @@ projetos nesta máquina (`iexfy_app_back-end` e `sg-super-web-frontend`).
 
 ## Estado por fase
 
-### Fase 0 — Fundação — ✅ completa (exceto item 4)
+### Fase 0 — Fundação — ✅ completa
 1. ✅ `packages/shared` — tipos de domínio (`domain.ts`), schemas Zod da
    HenrikDev (`henrikdev.ts`) e da valorant-api.com (`valorant-api.ts`)
 2. ✅ Scaffold do `apps/api` (Fastify + TS + Prisma)
 3. ✅ Schema Prisma aplicado no Neon (5 migrations, ver abaixo)
-4. ⬜ Job de seed dos assets estáticos (mapas/agentes da valorant-api.com)
-   — **não construído ainda**. Só é necessário a partir da Fase 3/5
-   (cores reais de agente, minimapa real no board). Até lá, cor de agente
-   no dashboard é cinza neutro (`#9A9DA1`) e o mapa do board é o SVG
-   esquemático do protótipo.
+4. ✅ Job de seed dos assets estáticos (2026-08-22) — `npm run seed:assets`
+   (`apps/api/src/scripts/seedAssets.ts` + `apps/api/src/lib/assets.ts`),
+   busca mapas e agentes reais direto da valorant-api.com (pública, sem
+   chave). **Já rodado contra o Neon real**: 13 mapas competitivos
+   (filtrados por `callouts !== null && xMultiplier !== 0` — descarta
+   Range/Skirmish/minigames) e 29 agentes. `seedMaps()` casa o placeholder
+   existente (criado por `ensureMapAsset`) pelo `nome` e faz `update` na
+   mesma linha em vez de criar uma nova — preserva o `id` que
+   Match/Strategy/Spot já referenciam (confirmado: o Bind virou real sem
+   duplicar linha). Cor de agente vem de `backgroundGradientColors[0]` da
+   API (campo que não estava no schema Zod, adicionado agora).
+
+   **O que isso NÃO fez ainda** (passo à parte, ver débitos técnicos):
+   ninguém no front lê essas tabelas de verdade. Dashboard
+   (`agentWinrates`) e Detalhe de Partida continuam com cor cinza fixa
+   (`#9A9DA1`); Board e Spots continuam com a paleta `PLACEHOLDER_AGENTS`
+   (ids tipo `'viper'`, sem relação com o uuid real) e o esquema SVG de
+   Bind fixo em vez do `displayIcon` real. Religar isso é trabalho de
+   frontend/API separado — o seed só garante que o dado real já existe
+   no banco pra quando isso for feito.
 
 ### Fase 1 — Login real + dashboard — ✅ completa
 - Discord OAuth2 com allowlist do servidor (`GET /auth/discord`,
@@ -66,10 +81,10 @@ projetos nesta máquina (`iexfy_app_back-end` e `sg-super-web-frontend`).
   `apps/api/src/routes/strategies.ts` + `apps/api/src/lib/strategy.ts`
 - "Salvar" substitui o board inteiro (deleta e recria os `StratItem`) em
   vez de diffar contra o estado anterior — mais simples e previsível
-- `ensureMapAsset()` cria um `MapAsset` placeholder por nome (ex.: "Bind")
-  já que o seed real (Fase 0 item 4) não existe — quando esse job for
-  construído, ele precisa casar por `nome` e atualizar o placeholder em
-  vez de duplicar
+- `ensureMapAsset()` cria um `MapAsset` placeholder por nome (ex.: um mapa
+  novo criado antes do próximo `npm run seed:assets` rodar) — o seed da
+  Fase 0 item 4 (já construído e já rodado pro catálogo atual) casa por
+  `nome` e atualiza o placeholder em vez de duplicar
 - `apps/web/src/pages/Board.tsx` carrega/salva de verdade via
   `useAppData` (`strategies`, `saveStrategy`, `createStrategy`,
   `loadStrategies`) — estratégias carregam sob demanda (só quando o Board
@@ -83,7 +98,8 @@ projetos nesta máquina (`iexfy_app_back-end` e `sg-super-web-frontend`).
 
 **Gap fechado (2026-08-22):** agora dá pra *adicionar* fichas novas
 clicando na toolbar — agente (com seletor de agente, paleta placeholder
-até a Fase 0 item 4 existir), smoke, flash e molly. Clique no canvas com
+`PLACEHOLDER_AGENTS` — ainda não religada aos uuids reais do seed, ver
+Fase 0 item 4), smoke, flash e molly. Clique no canvas com
 a ferramenta ativa cria a ficha na posição do clique; arrastar continua
 funcionando pras fichas já existentes; a borracha agora remove fichas de
 verdade (antes só selecionava visualmente). Ver
@@ -110,8 +126,9 @@ interação nenhuma — ficou fora do escopo do fix acima.
   então não precisou resolver upload de arquivo — o formulário tem um
   campo de link (Discord/clipe) em vez de upload; `mediaUrl` fica `null`
   se não preenchido. Mesmo problema do Board pra agente: `Spot.agentUuid`
-  não é FK de verdade (`AgentAsset` vazia, Fase 0 item 4) — resolvido com
-  a mesma paleta placeholder, agora compartilhada em
+  não é FK de verdade — resolvido com a mesma paleta placeholder (ainda
+  não religada aos uuids reais do seed, ver Fase 0 item 4), agora
+  compartilhada em
   `packages/shared/src/agents.ts` (`PLACEHOLDER_AGENTS`) e reusada pelo
   Board também (antes tinha uma cópia local lá). Schema não tem `teamId`
   em `Spot`, então `GET /spots` é uma lista global (todo usuário logado
@@ -127,11 +144,12 @@ interação nenhuma — ficou fora do escopo do fix acima.
   placeholder "PRINT DA MIRA").
 
 ### Fase 5 — Heatmap — ⬜ não iniciada
-Depende da Fase 0 item 4 (seed de mapas) pra ter o minimapa real e a
-função `gameLocationToMinimapPosition` (já existe em
-`packages/shared/src/valorant-api.ts`, mas não testada com partida real
-ainda — o próprio código avisa: "validar com uma partida real conhecida
-antes de confiar no resultado").
+A Fase 0 item 4 (seed de mapas, com `displayIcon`/calibração reais) já
+está pronta, então o bloqueio de dado não existe mais — falta construir
+a feature em si. Usa a função `gameLocationToMinimapPosition` (já existe
+em `packages/shared/src/valorant-api.ts`, mas não testada com partida
+real ainda — o próprio código avisa: "validar com uma partida real
+conhecida antes de confiar no resultado").
 
 ---
 
@@ -157,8 +175,9 @@ antes de responder — 404 senão. Placar/rounds/duração vêm de
 vêm de `MatchPlayer`. `firstBloods`/`clutches`/`plants` são calculados
 simulando a ordem de kills por round (não existiam antes, novo). Cor de
 agente por jogador é cinza placeholder (`#9A9DA1`), mesmo motivo do
-dashboard — depende da Fase 0 item 4. Comentários já são reais (ver
-Fase 4) — o campo de texto envia com Enter.
+dashboard — o seed da Fase 0 item 4 já tem a cor real (`AgentAsset.cor`),
+só falta esse endpoint ler de lá em vez do fixo. Comentários já são reais
+(ver Fase 4) — o campo de texto envia com Enter.
 
 O link "Partidas" da sidebar (`AppShell.tsx`) e o link de "partida
 recente" no dashboard já apontam pro `id` real do banco.
@@ -205,3 +224,10 @@ Tabelas: `users`, `maps`, `agents`, `matches`, `match_players`, `teams`,
 - `rank.rrDelta7d` no dashboard é somado a partir do histórico de RR de
   verdade agora (não é mais placeholder) — mas se a HenrikDev não tiver
   histórico suficiente, fica 0 silenciosamente.
+- Dado real de mapas/agentes existe no banco desde o seed da Fase 0 item
+  4, mas nada consome ele ainda: `dashboard.ts`/`matches.ts` continuam
+  com cor de agente fixa em `#9A9DA1`, e Board/Spots continuam com a
+  paleta `PLACEHOLDER_AGENTS` (ids tipo `'viper'`, sem uuid real) e o SVG
+  esquemático de Bind em vez do `MapAsset.displayIcon` real. Religar isso
+  exige decidir como expor os dados (`GET /agents`/`GET /maps`?) e trocar
+  o front — trabalho à parte, não feito ainda.

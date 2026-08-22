@@ -37,6 +37,9 @@ export const valorantApiAgentSchema = z.object({
   fullPortrait: z.string().nullable(),
   role: z.object({ displayName: z.string() }).nullable(),
   isPlayableCharacter: z.boolean(),
+  // Hex8 (RRGGBBAA); o primeiro tende a ser a cor mais representativa do
+  // agente — usado como `AgentAsset.cor` no seed (Fase 0 item 4).
+  backgroundGradientColors: z.array(z.string()).nullable().optional(),
 });
 export type ValorantApiAgent = z.infer<typeof valorantApiAgentSchema>;
 
