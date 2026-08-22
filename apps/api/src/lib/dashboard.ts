@@ -77,22 +77,28 @@ export async function buildDashboardSummary(userId: string, puuid: string, regio
 
   const c = aggregate(current);
   const p = aggregate(previous);
+  // Sem partida nenhuma nos 30-60 dias anteriores não dá pra comparar com
+  // nada — `delta = atual - 0` pareceria uma comparação real quando não é
+  // (a regra que o redesign do dashboard veio corrigir: nunca comparar com
+  // zero). Nesse caso o delta fica 0 mesmo.
+  const hasPrevious = previous.length > 0;
+  const d = (curr: number, prev: number, round: (n: number) => number) => (hasPrevious ? round(curr - prev) : 0);
 
   const kpis: DashboardSummary["kpis"] = {
     kda: {
       value: round2(c.kda),
-      delta: round2(c.kda - p.kda),
+      delta: d(c.kda, p.kda, round2),
       spark: perMatchSpark(current, (r) => (r.deaths > 0 ? (r.kills + r.assists) / r.deaths : r.kills + r.assists)),
     },
-    acs: { value: Math.round(c.acs), delta: Math.round(c.acs - p.acs), spark: perMatchSpark(current, (r) => r.acs) },
+    acs: { value: Math.round(c.acs), delta: d(c.acs, p.acs, Math.round), spark: perMatchSpark(current, (r) => r.acs) },
     adr: {
       value: Math.round(c.adr),
-      delta: Math.round(c.adr - p.adr),
+      delta: d(c.adr, p.adr, Math.round),
       spark: perMatchSpark(current, (r) => (r.roundsPlayed > 0 ? r.damageDealt / r.roundsPlayed : 0)),
     },
     hsPercent: {
       value: round2(c.hsPercent),
-      delta: round2(c.hsPercent - p.hsPercent),
+      delta: d(c.hsPercent, p.hsPercent, round2),
       spark: perMatchSpark(current, (r) => {
         const total = r.headshots + r.bodyshots + r.legshots;
         return total > 0 ? (r.headshots / total) * 100 : 0;
@@ -102,6 +108,11 @@ export async function buildDashboardSummary(userId: string, puuid: string, regio
       value: current.length > 0 ? Math.round((c.wins / current.length) * 100) : 0,
       wins: c.wins,
       losses: c.losses,
+      delta:
+        current.length > 0 && hasPrevious
+          ? Math.round((c.wins / current.length) * 100 - (p.wins / previous.length) * 100)
+          : 0,
+      spark: perMatchSpark(current, (r) => (r.won ? 100 : 0)),
     },
   };
 
@@ -121,13 +132,47 @@ export async function buildDashboardSummary(userId: string, puuid: string, regio
   }
 
   const mapWinrates = [...byMap.entries()]
-    .map(([map, s]) => ({ map, winratePercent: Math.round((s.wins / s.total) * 100) }))
+    .map(([map, s]) => ({ map, winratePercent: Math.round((s.wins / s.total) * 100), wins: s.wins, total: s.total }))
     .sort((a, b) => b.winratePercent - a.winratePercent);
 
   const agentColors = await loadAgentColorsByName();
   const agentWinrates = [...byAgent.entries()]
-    .map(([agent, s]) => ({ agent, winratePercent: Math.round((s.wins / s.total) * 100), color: agentColors.get(agent) ?? "#9A9DA1" }))
+    .map(([agent, s]) => ({
+      agent,
+      winratePercent: Math.round((s.wins / s.total) * 100),
+      color: agentColors.get(agent) ?? "#9A9DA1",
+      wins: s.wins,
+      total: s.total,
+    }))
     .sort((a, b) => b.winratePercent - a.winratePercent);
+
+  const last14Results = rows
+    .slice(0, 14)
+    .reverse()
+    .map((r) => (r.won ? "V" : "D")) as Array<"V" | "D">;
+
+  // getMmr (rank atual) e getMmrHistory (RR por partida) são endpoints
+  // independentes da HenrikDev — um falhar não pode derrubar o outro. Antes
+  // o histórico só era buscado dentro do try do getMmr, então uma conta sem
+  // rank exposto (região errada, MMR oculto) também ficava sem RR por
+  // partida na tabela, mesmo quando o histórico funcionava sozinho.
+  let rank: DashboardSummary["rank"] = { current: "—", rr: 0, rrDelta7d: 0 };
+  let rrByMatch = new Map<string, number>();
+  try {
+    const sevenDaysAgo = new Date(now.getTime() - 7 * 86_400_000);
+    const history = await getMmrHistory(region, puuid);
+    rrByMatch = new Map(history.map((h) => [h.match_id, h.last_change]));
+    rank.rrDelta7d = history.filter((h) => new Date(h.date) >= sevenDaysAgo).reduce((sum, h) => sum + h.last_change, 0);
+  } catch {
+    // sem histórico — mantém 0 e rrByMatch vazio (recentMatches.rr vira null)
+  }
+  try {
+    const mmr = await getMmr(region, puuid);
+    rank.current = mmr.current_data.currenttierpatched;
+    rank.rr = mmr.current_data.ranking_in_tier;
+  } catch {
+    // sem MMR disponível (conta nova, região errada, API fora) — mantém o placeholder
+  }
 
   const recentMatches = rows.slice(0, 7).map((r) => {
     const score = scoreFor(r.match.rawJson, r.teamId);
@@ -138,34 +183,10 @@ export async function buildDashboardSummary(userId: string, puuid: string, regio
       agent: r.agentName,
       score: `${score.own}—${score.opponent}`,
       kda: `${r.kills}/${r.deaths}/${r.assists}`,
+      rr: rrByMatch.get(r.match.id) ?? null,
       playedAtLabel: formatPlayedAt(r.match.startedAt, now),
     };
   });
-
-  const last14Results = rows
-    .slice(0, 14)
-    .reverse()
-    .map((r) => (r.won ? "V" : "D")) as Array<"V" | "D">;
-
-  let rank: DashboardSummary["rank"] = { current: "—", rr: 0, rrDelta7d: 0 };
-  try {
-    const mmr = await getMmr(region, puuid);
-    let rrDelta7d = 0;
-    try {
-      const sevenDaysAgo = new Date(now.getTime() - 7 * 86_400_000);
-      const history = await getMmrHistory(region, puuid);
-      rrDelta7d = history.filter((h) => new Date(h.date) >= sevenDaysAgo).reduce((sum, h) => sum + h.last_change, 0);
-    } catch {
-      // sem histórico — mantém 0
-    }
-    rank = {
-      current: mmr.current_data.currenttierpatched,
-      rr: mmr.current_data.ranking_in_tier,
-      rrDelta7d,
-    };
-  } catch {
-    // sem MMR disponível (conta nova, região errada, API fora) — mantém o placeholder
-  }
 
   return {
     rank,

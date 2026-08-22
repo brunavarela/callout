@@ -1,5 +1,5 @@
 import { useNavigate, useOutletContext } from 'react-router-dom';
-import type { RrHistoryPoint, SessionUser, SidesBreakdown } from '@callout/shared';
+import type { AgentWinrate, MapWinrate, RrHistoryPoint, SessionUser, SidesBreakdown } from '@callout/shared';
 import type { OutletContext } from '../components/AppShell';
 import type { RrRange } from '../lib/appData';
 import { useSession } from '../lib/session';
@@ -11,129 +11,196 @@ const RANGES: Array<{ key: RrRange; label: string }> = [
   { key: '90d', label: '90D' },
 ];
 
+const WIN = 'var(--pos, #18AAB7)';
+const LOSS = 'var(--acc, #EF4958)';
+const LOW_SAMPLE = 'var(--bar-dim)';
+const UNDER_50 = 'color-mix(in srgb, var(--acc, #EF4958) 42%, var(--track))';
+const MIN_SAMPLE = 3;
+
 function fmtNum(n: number, decimals: number): string {
   return n.toFixed(decimals).replace('.', ',');
 }
 
-function fmtDelta(n: number, decimals: number): string {
+function fmtDelta(n: number, decimals: number, suffix = ''): string {
   const abs = Math.abs(n);
   const numStr = decimals > 0 ? fmtNum(abs, decimals) : String(Math.round(abs));
-  if (n > 0) return `+${numStr}`;
-  if (n < 0) return `−${numStr}`;
-  return numStr;
+  if (n > 0) return `+${numStr}${suffix}`;
+  if (n < 0) return `−${numStr}${suffix}`;
+  return `${numStr}${suffix}`;
 }
 
-function Sparkline({ values }: { values: number[] }) {
-  if (values.length === 0) return null;
-  const max = Math.max(...values, 1);
+function pct(a: number, b: number): number {
+  return b > 0 ? Math.round((a / b) * 100) : 0;
+}
+
+function plural(n: number, word: string): string {
+  return `${n} ${word}${n === 1 ? '' : 's'}`;
+}
+
+function rateBarColor(wins: number, total: number): string {
+  if (total < MIN_SAMPLE) return LOW_SAMPLE;
+  return wins / total >= 0.5 ? WIN : UNDER_50;
+}
+
+// Ticks "redondos" cobrindo [min,max] garantindo que 0 caia exatamente numa
+// linha de grade — sem isso a régua vertical fica arbitrária e ilegível.
+function niceTicks(minIn: number, maxIn: number, count = 4): number[] {
+  const min = Math.min(0, minIn);
+  const max = Math.max(0, maxIn === minIn ? minIn + 10 : maxIn);
+  const rawStep = (max - min) / (count - 1);
+  const mag = Math.pow(10, Math.floor(Math.log10(rawStep || 1)));
+  const norm = rawStep / mag;
+  const niceNorm = norm <= 1 ? 1 : norm <= 2 ? 2 : norm <= 5 ? 5 : 10;
+  const step = niceNorm * mag;
+  const niceMin = Math.floor(min / step) * step;
+  const niceMax = Math.ceil(max / step) * step;
+  const ticks: number[] = [];
+  for (let v = niceMin; v <= niceMax + 1e-6; v += step) ticks.push(Math.round(v));
+  return ticks;
+}
+
+function pickTickIndices(n: number, count = 5): number[] {
+  if (n <= count) return Array.from({ length: n }, (_, i) => i);
+  const idxs = new Set<number>();
+  for (let k = 0; k < count; k++) idxs.add(Math.round((k * (n - 1)) / (count - 1)));
+  return [...idxs].sort((a, b) => a - b);
+}
+
+function streaks(results: Array<'V' | 'D'>): { currentType: 'V' | 'D' | null; currentCount: number; bestWin: number } {
+  if (results.length === 0) return { currentType: null, currentCount: 0, bestWin: 0 };
+  const last = results[results.length - 1]!;
+  let currentCount = 0;
+  for (let i = results.length - 1; i >= 0; i--) {
+    if (results[i] === last) currentCount++;
+    else break;
+  }
+  let bestWin = 0;
+  let run = 0;
+  for (const r of results) {
+    run = r === 'V' ? run + 1 : 0;
+    bestWin = Math.max(bestWin, run);
+  }
+  return { currentType: last, currentCount, bestWin };
+}
+
+function MiniSparkline({ values, color }: { values: number[]; color: string }) {
+  if (values.length < 2) return <svg width={108} height={32} />;
+  const min = Math.min(...values, 0);
+  const max = Math.max(...values, 0);
+  const span = max - min || 1;
+  const y = (v: number) => 30 - ((v - min) / span) * 27;
+  const step = 108 / (values.length - 1);
+  const pts = values.map((v, i) => `${(i * step).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
   return (
-    <div style={{ display: 'flex', gap: 2, alignItems: 'flex-end', height: 30 }}>
-      {values.map((v, i) => (
-        <div
-          key={i}
-          style={{
-            width: 4,
-            borderRadius: 2,
-            height: Math.max(3, (v / max) * 30),
-            background: i === values.length - 1 ? 'var(--acc, #EF4958)' : 'color-mix(in srgb, var(--acc, #EF4958) 35%, transparent)',
-          }}
-        />
+    <svg viewBox="0 0 108 32" width={108} height={32} aria-hidden="true">
+      <line x1={0} y1={y(0)} x2={108} y2={y(0)} stroke="var(--divider)" strokeWidth={1} />
+      <polyline points={pts} fill="none" stroke={color} strokeWidth={1.8} strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function RrLineChart({ points }: { points: RrHistoryPoint[] }) {
+  const navigate = useNavigate();
+  const w = 640;
+  const h = 220;
+  const pad = { l: 34, r: 8, t: 14, b: 26 };
+
+  let running = 0;
+  const cum = points.map((p) => (running += p.delta));
+  const ticks = niceTicks(Math.min(...cum, 0), Math.max(...cum, 0));
+  const [niceMin, niceMax] = [ticks[0]!, ticks[ticks.length - 1]!];
+
+  const plotW = w - pad.l - pad.r;
+  const plotH = h - pad.t - pad.b;
+  const y = (v: number) => pad.t + ((niceMax - v) / (niceMax - niceMin || 1)) * plotH;
+  const step = plotW / points.length;
+  const x = (i: number) => pad.l + step * (i + 0.5);
+
+  const zeroY = y(0);
+  const polyline = cum.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
+  const area =
+    points.length > 0
+      ? `M ${x(0).toFixed(1)} ${zeroY.toFixed(1)} ` +
+        cum.map((v, i) => `L ${x(i).toFixed(1)} ${y(v).toFixed(1)}`).join(' ') +
+        ` L ${x(points.length - 1).toFixed(1)} ${zeroY.toFixed(1)} Z`
+      : '';
+
+  const tickIndices = pickTickIndices(points.length);
+
+  return (
+    <svg viewBox={`0 0 ${w} ${h}`} style={{ width: '100%', height: 'auto', overflow: 'visible' }} role="img" aria-label="RR acumulado por partida">
+      {ticks.map((v) => (
+        <g key={v}>
+          <line x1={pad.l} y1={y(v)} x2={w} y2={y(v)} stroke={v === 0 ? 'var(--divider)' : 'var(--track)'} strokeWidth={1} />
+          <text x={pad.l - 6} y={y(v) + 3.5} textAnchor="end" fontSize={10.5} fill={v === 0 ? 'var(--text-muted)' : 'var(--text-faint)'}>
+            {v > 0 ? `+${v}` : v}
+          </text>
+        </g>
       ))}
-    </div>
-  );
-}
-
-function RrChart({ points }: { points: RrHistoryPoint[] }) {
-  const maxUp = Math.max(10, ...points.map((p) => Math.max(0, p.delta)));
-  const maxDown = Math.max(10, ...points.map((p) => Math.max(0, -p.delta)));
-  const zeroTop = (maxUp / (maxUp + maxDown)) * 100;
-
-  return (
-    <div style={{ display: 'grid', gridTemplateColumns: '34px 1fr', gap: 10, marginTop: 20 }}>
-      <div style={{ position: 'relative', height: 190, fontSize: 10.5, color: '#5A5D61', textAlign: 'right' }}>
-        <span style={{ position: 'absolute', top: 0 }}>+{maxUp}</span>
-        <span style={{ position: 'absolute', top: `${zeroTop}%`, transform: 'translateY(-50%)' }}>0</span>
-        <span style={{ position: 'absolute', bottom: 0 }}>−{maxDown}</span>
-      </div>
-      <div>
-        <div
-          style={{
-            position: 'relative',
-            display: 'flex',
-            alignItems: 'stretch',
-            gap: 8,
-            height: 190,
-            borderLeft: '1px solid var(--surface-border)',
-            borderBottom: '1px solid var(--surface-border)',
-            padding: '0 4px',
-          }}
+      {area && <path d={area} fill="color-mix(in srgb, var(--pos, #18AAB7) 10%, transparent)" />}
+      {polyline && <polyline points={polyline} fill="none" stroke={WIN} strokeWidth={2.2} strokeLinejoin="round" />}
+      {cum.map((v, i) => (
+        <circle
+          key={points[i]!.matchId}
+          cx={x(i)}
+          cy={y(v)}
+          r={3.4}
+          fill="var(--surface)"
+          stroke={points[i]!.delta >= 0 ? WIN : LOSS}
+          strokeWidth={2}
+          style={{ cursor: 'pointer' }}
+          onClick={() => navigate(`/partida/${points[i]!.matchId}`)}
         >
-          <div style={{ position: 'absolute', left: 0, right: 0, top: `${zeroTop}%`, height: 1, background: 'var(--divider)' }} />
-          {points.map((p, i) => {
-            const positive = p.delta >= 0;
-            const magnitude = positive ? (Math.abs(p.delta) / maxUp) * zeroTop : (Math.abs(p.delta) / maxDown) * (100 - zeroTop);
-            return (
-              <div key={i} style={{ position: 'relative', flex: 1 }}>
-                <div
-                  style={{
-                    position: 'absolute',
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                    width: '70%',
-                    maxWidth: 34,
-                    borderRadius: 5,
-                    background: positive ? 'var(--pos, #18AAB7)' : 'color-mix(in srgb, var(--acc, #EF4958) 55%, transparent)',
-                    top: positive ? 'auto' : `${zeroTop}%`,
-                    bottom: positive ? `${100 - zeroTop}%` : 'auto',
-                    height: `${magnitude}%`,
-                  }}
-                />
-              </div>
-            );
-          })}
-        </div>
-        <div style={{ display: 'flex', gap: 8, padding: '8px 4px 0' }}>
-          {points.map((p, i) => (
-            <div key={i} style={{ flex: 1, textAlign: 'center', fontSize: 10.5, color: '#5A5D61' }}>
-              {p.label}
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
+          <title>
+            {points[i]!.label} · {points[i]!.map} · {points[i]!.agent} · {points[i]!.result === 'V' ? 'vitória' : 'derrota'} ·{' '}
+            {fmtDelta(points[i]!.delta, 0)} RR
+          </title>
+        </circle>
+      ))}
+      {tickIndices.map((i) => (
+        <text key={i} x={x(i)} y={h - 4} textAnchor="middle" fontSize={10.5} fill="var(--text-faint)">
+          {points[i]!.label}
+        </text>
+      ))}
+    </svg>
   );
 }
 
-function SidesDonut({ sides, winratePercent }: { sides: SidesBreakdown; winratePercent: number }) {
-  const totalRounds = sides.attack.total + sides.defense.total + sides.overtime.total;
-  const attackShare = totalRounds > 0 ? (sides.attack.total / totalRounds) * 100 : 0;
-  const defenseShare = totalRounds > 0 ? (sides.defense.total / totalRounds) * 100 : 0;
-
-  const donut =
-    totalRounds > 0
-      ? `conic-gradient(var(--pos, #18AAB7) 0 ${attackShare}%, color-mix(in srgb, var(--acc, #EF4958) 70%, transparent) ${attackShare}% ${attackShare + defenseShare}%, var(--bar-dim) ${attackShare + defenseShare}% 100%)`
-      : 'var(--bar-dim)';
-
+function RateBlock({ title, sub, rows, colorFor }: { title: string; sub: string; rows: Array<{ key: string; name: string; wins: number; total: number; dot?: string }>; colorFor: (wins: number, total: number) => string }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 20, marginTop: 16 }}>
-      <div style={{ width: 112, height: 112, borderRadius: '50%', flex: 'none', background: donut, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ width: 70, height: 70, borderRadius: '50%', background: 'var(--surface)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 19, lineHeight: 1 }}>{winratePercent}%</div>
-          <div style={{ fontSize: 9.5, color: 'var(--text-dim)', marginTop: 3 }}>WINRATE</div>
-        </div>
+    <div style={{ ...cardStyle, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 11 }}>
+      <div>
+        <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 15 }}>{title}</div>
+        <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 3 }}>{sub}</div>
       </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 11, minWidth: 0 }}>
-        {[
-          { label: 'Ataque', value: `${sides.attack.winratePercent}%`, color: 'var(--pos, #18AAB7)' },
-          { label: 'Defesa', value: `${sides.defense.winratePercent}%`, color: 'color-mix(in srgb, var(--acc, #EF4958) 70%, transparent)' },
-          { label: 'Overtime', value: `${sides.overtime.wins} de ${sides.overtime.total}`, color: 'var(--bar-dim)' },
-        ].map((s) => (
-          <div key={s.label} style={{ display: 'flex', alignItems: 'center', gap: 9, fontSize: 12.5 }}>
-            <span style={{ width: 9, height: 9, borderRadius: 3, background: s.color, flex: 'none' }} />
-            <span style={{ color: 'var(--text-3)' }}>{s.label}</span>
-            <span style={{ marginLeft: 'auto', color: 'var(--text-dim)', paddingLeft: 12 }}>{s.value}</span>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
+        {rows.map((r) => (
+          <div key={r.key} style={{ display: 'grid', gridTemplateColumns: '1fr 40px', gap: 10, alignItems: 'center' }}>
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 13, color: 'var(--text-3)' }}>
+                  {r.dot && <span style={{ width: 9, height: 9, borderRadius: 3, background: r.dot, flex: 'none' }} />}
+                  {r.name}
+                </span>
+                <span style={{ fontSize: 11, color: 'var(--text-faint)', whiteSpace: 'nowrap' }}>{plural(r.total, 'partida')}</span>
+              </div>
+              <div style={{ height: 6, borderRadius: 3, background: 'var(--track)', marginTop: 5, position: 'relative' }}>
+                <div style={{ position: 'absolute', inset: '0 auto 0 0', width: `${pct(r.wins, r.total)}%`, borderRadius: 3, background: colorFor(r.wins, r.total) }} />
+              </div>
+            </div>
+            <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-3)', textAlign: 'right' }}>{pct(r.wins, r.total)}%</span>
           </div>
         ))}
+      </div>
+      <div style={{ borderTop: '1px solid var(--divider)', paddingTop: 9, display: 'flex', flexDirection: 'column', gap: 4, fontSize: 11, color: 'var(--text-faint)' }}>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+          <span style={{ width: 9, height: 5, borderRadius: 3, background: LOW_SAMPLE }} />
+          menos de {MIN_SAMPLE} partidas: amostra pequena
+        </span>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+          <span style={{ width: 9, height: 5, borderRadius: 3, background: UNDER_50 }} />
+          abaixo de 50%
+        </span>
       </div>
     </div>
   );
@@ -178,19 +245,49 @@ export function Dashboard() {
     );
   }
 
-  const { kpis, mapWinrates, agentWinrates, recentMatches, rank } = data;
+  const { kpis, mapWinrates, agentWinrates, recentMatches, rank, last14Results } = data;
   const totalInWindow = kpis.winrate.wins + kpis.winrate.losses;
-  const recentCount = recentMatches.filter((m) => m.playedAtLabel.startsWith('hoje') || m.playedAtLabel.startsWith('ontem')).length;
 
   const kpiCards = [
-    { label: 'KDA', value: fmtNum(kpis.kda.value, 2), delta: `${fmtDelta(kpis.kda.delta, 2)} vs. 30d`, positive: kpis.kda.delta > 0, icon: '◇', spark: kpis.kda.spark },
-    { label: 'ACS', value: String(kpis.acs.value), delta: `${fmtDelta(kpis.acs.delta, 0)} vs. 30d`, positive: kpis.acs.delta > 0, icon: '◈', spark: kpis.acs.spark },
-    { label: 'HS%', value: `${fmtNum(kpis.hsPercent.value, 1)}%`, delta: `${fmtDelta(kpis.hsPercent.delta, 1)} vs. 30d`, positive: kpis.hsPercent.delta > 0, icon: '◎', spark: kpis.hsPercent.spark },
-    { label: 'WINRATE', value: `${kpis.winrate.value}%`, delta: `${kpis.winrate.wins}V · ${kpis.winrate.losses}D`, positive: false, icon: '◐', spark: kpis.acs.spark.map((_, i, arr) => (i / Math.max(1, arr.length - 1)) * 100) },
+    {
+      label: 'KDA médio',
+      value: fmtNum(kpis.kda.value, 2),
+      delta: kpis.kda.delta,
+      deltaLabel: fmtDelta(kpis.kda.delta, 2),
+      explain: 'Abates mais assistências divididos pelas mortes, por partida.',
+      spark: kpis.kda.spark,
+    },
+    {
+      label: 'ACS médio',
+      value: String(kpis.acs.value),
+      delta: kpis.acs.delta,
+      deltaLabel: fmtDelta(kpis.acs.delta, 0),
+      explain: 'Pontuação de combate por round: dano, abates e utilidade somados.',
+      spark: kpis.acs.spark,
+    },
+    {
+      label: 'Tiros na cabeça',
+      value: `${fmtNum(kpis.hsPercent.value, 1)}%`,
+      delta: kpis.hsPercent.delta,
+      deltaLabel: fmtDelta(kpis.hsPercent.delta, 1, ' pt'),
+      explain: 'Dos seus tiros que acertaram, quantos foram na cabeça.',
+      spark: kpis.hsPercent.spark,
+    },
+    {
+      label: 'Partidas ganhas',
+      value: `${kpis.winrate.value}%`,
+      delta: kpis.winrate.delta,
+      deltaLabel: fmtDelta(kpis.winrate.delta, 0, ' pt'),
+      explain: `${plural(kpis.winrate.wins, 'vitória')} em ${plural(totalInWindow, 'partida')} jogada${totalInWindow === 1 ? '' : 's'} nos últimos 30 dias.`,
+      spark: kpis.winrate.spark,
+    },
   ];
 
+  const form = streaks(last14Results.slice(-10));
+  const formBoxes = last14Results.slice(-10);
+
   return (
-    <div style={{ padding: 26, display: 'flex', flexDirection: 'column', gap: 18 }}>
+    <div style={{ padding: 26, display: 'flex', flexDirection: 'column', gap: 16 }}>
       <div style={{ display: 'flex', alignItems: 'flex-end', gap: 20, flexWrap: 'wrap' }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -215,8 +312,7 @@ export function Dashboard() {
             )}
           </div>
           <div style={{ fontSize: 14, color: 'var(--text-muted)', marginTop: 6 }}>
-            {totalInWindow} partida{totalInWindow === 1 ? '' : 's'} nos últimos 30 dias
-            {recentCount > 0 ? ` · ${recentCount} recente${recentCount === 1 ? '' : 's'}` : ''}.
+            {plural(totalInWindow, 'partida')} · 30 dias · {kpis.winrate.wins}V–{kpis.winrate.losses}D
           </div>
         </div>
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 10 }}>
@@ -229,136 +325,236 @@ export function Dashboard() {
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 16 }}>
-        {kpiCards.map((k) => (
-          <div key={k.label} style={{ position: 'relative', overflow: 'hidden', borderRadius: 'var(--radius-lg)', padding: '18px 20px', background: 'var(--kpi-bg, var(--surface))', border: '1px solid var(--kpi-border, var(--surface-border))' }}>
-            <div style={{ display: 'flex', alignItems: 'flex-start' }}>
-              <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{k.label}</div>
-              <div style={{ marginLeft: 'auto', width: 26, height: 26, borderRadius: 8, border: '1px solid var(--kpi-border, var(--surface-border))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, color: 'var(--acc, #EF4958)' }}>
-                {k.icon}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14 }}>
+        {kpiCards.map((k) => {
+          const positive = k.delta > 0;
+          const color = positive ? 'var(--pos, #18AAB7)' : k.delta < 0 ? 'var(--text-muted-2)' : 'var(--text-faint)';
+          return (
+            <div key={k.label} style={{ ...cardStyle, padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}>
+                <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-3)' }}>{k.label}</span>
+                <span style={{ fontSize: 12, fontWeight: 600, color, whiteSpace: 'nowrap' }}>{k.deltaLabel}</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 10 }}>
+                <span style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 32, letterSpacing: '-.02em', lineHeight: 1 }}>{k.value}</span>
+                <MiniSparkline values={k.spark} color={color} />
+              </div>
+              <div style={{ borderTop: '1px solid var(--divider)', paddingTop: 8, display: 'flex', flexDirection: 'column', gap: 3 }}>
+                <span style={{ fontSize: 11.5, lineHeight: 1.35, color: 'var(--text-dim)' }}>{k.explain}</span>
+                <span style={{ fontSize: 10.5, color: 'var(--text-faint)' }}>{k.deltaLabel} contra os 30 dias anteriores · linha: últimas partidas, eixo em zero</span>
               </div>
             </div>
-            <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 32, letterSpacing: '-.02em', marginTop: 12, lineHeight: 1 }}>{k.value}</div>
-            <div style={{ display: 'flex', alignItems: 'flex-end', gap: 12, marginTop: 14 }}>
-              <div style={{ fontSize: 12, color: k.positive ? 'var(--pos, #18AAB7)' : 'var(--text-muted-2)', whiteSpace: 'nowrap' }}>{k.delta}</div>
-              <div style={{ marginLeft: 'auto' }}>
-                <Sparkline values={k.spark} />
-              </div>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.45fr', gap: 16 }}>
-        <div style={{ ...cardStyle, padding: '20px 22px', display: 'flex', flexDirection: 'column' }}>
-          <div style={{ display: 'flex', alignItems: 'center' }}>
-            <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 16 }}>Partidas recentes</div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1.45fr 1fr', gap: 14 }}>
+        <div style={{ ...cardStyle, padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+            <div>
+              <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 16 }}>RR ganho e perdido no período</div>
+              <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 3 }}>
+                Soma acumulada de RR — cada ponto é uma partida.
+                {rrHistory.length > 0 && (
+                  <>
+                    {' '}
+                    Fechou em{' '}
+                    <span style={{ color: rrHistory.reduce((s, p) => s + p.delta, 0) >= 0 ? 'var(--pos, #18AAB7)' : 'var(--text-muted-2)' }}>
+                      {fmtDelta(rrHistory.reduce((s, p) => s + p.delta, 0), 0)} RR
+                    </span>
+                    .
+                  </>
+                )}
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 4, background: 'var(--input-bg)', border: '1px solid var(--surface-border)', borderRadius: 9, padding: 3, flex: 'none' }}>
+              {RANGES.map((r) => (
+                <button
+                  key={r.key}
+                  onClick={() => setRrRange(r.key)}
+                  style={{
+                    padding: '5px 11px',
+                    borderRadius: 6,
+                    border: 'none',
+                    cursor: 'pointer',
+                    fontSize: 11.5,
+                    background: rrRange === r.key ? 'var(--acc, #EF4958)' : 'transparent',
+                    color: rrRange === r.key ? '#141415' : 'var(--text-muted)',
+                  }}
+                >
+                  {r.label}
+                </button>
+              ))}
+            </div>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', marginTop: 8 }}>
+          {rrHistory.length > 0 ? (
+            <>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 14, fontSize: 11.5, color: 'var(--text-dim)', marginTop: 4 }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span style={{ width: 9, height: 9, borderRadius: 2, background: WIN }} /> partida ganhou RR
+                </span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span style={{ width: 9, height: 9, borderRadius: 2, background: LOSS }} /> partida perdeu RR
+                </span>
+              </div>
+              <RrLineChart points={rrHistory} />
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, fontSize: 10.5, color: 'var(--text-faint)', borderTop: '1px solid var(--divider)', paddingTop: 8 }}>
+                <span>Vertical: RR acumulado no período (0 = onde você começou)</span>
+                <span>Horizontal: data da partida</span>
+              </div>
+            </>
+          ) : (
+            <div style={{ marginTop: 20, fontSize: 13, color: 'var(--text-dim)' }}>Sem histórico de RR ainda.</div>
+          )}
+        </div>
+
+        <div style={{ ...cardStyle, padding: '18px 20px', display: 'flex', flexDirection: 'column' }}>
+          <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 16 }}>Suas {recentMatches.length} últimas partidas</div>
+          <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 3 }}>Da mais recente para a mais antiga</div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '24px 1fr 62px 42px', gap: 8, padding: '10px 0 6px', marginTop: 8, borderBottom: '1px solid var(--divider)', fontSize: 9.5, letterSpacing: '.08em', color: 'var(--text-faint)' }}>
+            <span>V/D</span>
+            <span>MAPA · AGENTE</span>
+            <span>PLACAR</span>
+            <span style={{ textAlign: 'right' }}>RR</span>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
             {recentMatches.map((m) => (
               <div
                 key={m.id}
                 className="list-row"
                 onClick={() => navigate(`/partida/${m.id}`)}
-                style={{ display: 'flex', alignItems: 'center', gap: 13, padding: '11px 10px', margin: '0 -10px', borderRadius: 11, cursor: 'pointer' }}
+                style={{ display: 'grid', gridTemplateColumns: '24px 1fr 62px 42px', gap: 8, alignItems: 'center', padding: '9px 6px', margin: '0 -6px', borderRadius: 8, cursor: 'pointer', borderTop: '1px solid var(--divider)' }}
               >
-                <div
+                <span
                   style={{
-                    width: 26,
-                    height: 26,
-                    borderRadius: 8,
-                    flex: 'none',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: 11,
-                    fontWeight: 600,
-                    background: m.result === 'V' ? 'color-mix(in srgb, var(--pos, #18AAB7) 16%, transparent)' : 'rgba(255,255,255,.06)',
-                    color: m.result === 'V' ? 'var(--pos, #18AAB7)' : 'var(--text-muted-2)',
+                    fontSize: 10.5,
+                    fontWeight: 700,
+                    borderRadius: 4,
+                    textAlign: 'center',
+                    padding: '3px 0',
+                    color: m.result === 'V' ? WIN : LOSS,
+                    background: m.result === 'V' ? 'color-mix(in srgb, var(--pos, #18AAB7) 16%, transparent)' : 'color-mix(in srgb, var(--acc, #EF4958) 14%, transparent)',
                   }}
                 >
                   {m.result}
-                </div>
-                <div style={{ minWidth: 0 }}>
-                  <div style={{ fontSize: 13.5, fontWeight: 500 }}>
-                    {m.map} <span style={{ color: 'var(--text-dim)', fontWeight: 400 }}>· {m.agent}</span>
-                  </div>
-                  <div style={{ fontSize: 11.5, color: 'var(--text-dim)', marginTop: 2 }}>
-                    {m.score} · KDA {m.kda}
-                  </div>
-                </div>
-                <div style={{ marginLeft: 'auto', fontSize: 11.5, color: 'var(--text-faint)', whiteSpace: 'nowrap' }}>{m.playedAtLabel}</div>
+                </span>
+                <span style={{ fontSize: 12.5, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {m.map} <span style={{ color: 'var(--text-faint)' }}>· {m.agent}</span>
+                </span>
+                <span style={{ fontSize: 11.5, color: 'var(--text-3)', whiteSpace: 'nowrap' }}>{m.score}</span>
+                <span style={{ fontSize: 11.5, fontWeight: 600, textAlign: 'right', color: m.rr === null ? 'var(--text-faint)' : m.rr >= 0 ? WIN : LOSS }}>
+                  {m.rr === null ? '—' : fmtDelta(m.rr, 0)}
+                </span>
               </div>
             ))}
           </div>
         </div>
-
-        <div style={cardStyle}>
-          <div style={{ padding: '20px 22px' }}>
-            <div style={{ display: 'flex', alignItems: 'center' }}>
-              <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 16 }}>Progressão de RR</div>
-              <div style={{ marginLeft: 'auto', display: 'flex', gap: 4, background: 'var(--input-bg)', border: '1px solid var(--surface-border)', borderRadius: 9, padding: 3 }}>
-                {RANGES.map((r) => (
-                  <button
-                    key={r.key}
-                    onClick={() => setRrRange(r.key)}
-                    style={{
-                      padding: '5px 11px',
-                      borderRadius: 6,
-                      border: 'none',
-                      cursor: 'pointer',
-                      fontSize: 11.5,
-                      background: rrRange === r.key ? 'var(--acc, #EF4958)' : 'transparent',
-                      color: rrRange === r.key ? '#141415' : 'var(--text-muted)',
-                    }}
-                  >
-                    {r.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-            {rrHistory.length > 0 ? (
-              <RrChart points={rrHistory} />
-            ) : (
-              <div style={{ marginTop: 20, fontSize: 13, color: 'var(--text-dim)' }}>Sem histórico de RR ainda.</div>
-            )}
-          </div>
-        </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16 }}>
-        <div style={{ ...cardStyle, padding: '20px 22px' }}>
-          <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 16, marginBottom: 14 }}>Por mapa</div>
-          {mapWinrates.map((m) => (
-            <div key={m.map} style={{ display: 'grid', gridTemplateColumns: '66px 1fr 44px', alignItems: 'center', gap: 10, padding: '6.5px 0' }}>
-              <div style={{ fontSize: 13 }}>{m.map}</div>
-              <div style={{ height: 7, borderRadius: 99, background: 'var(--track)' }}>
-                <div style={{ height: 7, borderRadius: 99, width: `${m.winratePercent}%`, background: m.winratePercent >= 55 ? 'var(--pos, #18AAB7)' : 'var(--bar-dim)' }} />
-              </div>
-              <div style={{ fontSize: 12, color: 'var(--text-muted)', textAlign: 'right' }}>{m.winratePercent}%</div>
-            </div>
-          ))}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14 }}>
+        <RateBlock
+          title="Em quais mapas você ganha"
+          sub="% de partidas vencidas em cada mapa"
+          rows={mapWinrates.map((m: MapWinrate) => ({ key: m.map, name: m.map, wins: m.wins, total: m.total }))}
+          colorFor={rateBarColor}
+        />
+        <RateBlock
+          title="Com quais agentes você ganha"
+          sub="% de partidas vencidas com cada agente"
+          rows={agentWinrates.map((a: AgentWinrate) => ({ key: a.agent, name: a.agent, wins: a.wins, total: a.total, dot: a.color }))}
+          colorFor={rateBarColor}
+        />
+
+        <div style={{ ...cardStyle, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div>
+            <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 15 }}>Ataque ou defesa: onde você rende mais</div>
+            <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 3 }}>% de rounds ganhos em cada lado</div>
+          </div>
+          {sides ? (
+            <>
+              {(
+                [
+                  { label: 'Ataque', ...sides.attack },
+                  { label: 'Defesa', ...sides.defense },
+                ] as Array<{ label: string; winratePercent: number; wins: number; total: number }>
+              ).map((s) => (
+                <div key={s.label} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                    <span style={{ fontSize: 13, color: 'var(--text-3)' }}>{s.label}</span>
+                    <span style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 17 }}>{s.winratePercent}%</span>
+                  </div>
+                  <div style={{ height: 9, borderRadius: 5, background: 'var(--track)', position: 'relative' }}>
+                    <div style={{ position: 'absolute', inset: '0 auto 0 0', width: `${s.winratePercent}%`, borderRadius: 5, background: s.winratePercent >= 50 ? WIN : UNDER_50 }} />
+                    <div style={{ position: 'absolute', left: '50%', top: -3, bottom: -3, width: 1, background: 'var(--text-faint)' }} />
+                  </div>
+                  <span style={{ fontSize: 11, color: 'var(--text-faint)' }}>{plural(s.wins, 'round')} ganho{s.wins === 1 ? '' : 's'} de {s.total}</span>
+                </div>
+              ))}
+              {sides.overtime.total > 0 && (
+                <div style={{ fontSize: 11, color: 'var(--text-faint)' }}>
+                  + overtime: {sides.overtime.wins} de {sides.overtime.total} rounds
+                </div>
+              )}
+              <p style={{ borderTop: '1px solid var(--divider)', paddingTop: 9, margin: 0, fontSize: 11, lineHeight: 1.4, color: 'var(--text-faint)' }}>
+                O traço no meio da barra marca os 50%. Ataque e defesa são medidos separadamente — por isso não somam 100%.
+              </p>
+            </>
+          ) : (
+            <div style={{ fontSize: 13, color: 'var(--text-dim)' }}>Carregando…</div>
+          )}
         </div>
 
-        <div style={{ ...cardStyle, padding: '20px 22px' }}>
-          <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 16, marginBottom: 14 }}>Por agente</div>
-          {agentWinrates.map((a) => (
-            <div key={a.agent} style={{ display: 'grid', gridTemplateColumns: '84px 1fr 44px', alignItems: 'center', gap: 10, padding: '6.5px 0' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
-                <span style={{ width: 16, height: 16, borderRadius: 5, background: a.color, flex: 'none' }} />
-                {a.agent}
-              </div>
-              <div style={{ height: 7, borderRadius: 99, background: 'var(--track)' }}>
-                <div style={{ height: 7, borderRadius: 99, width: `${a.winratePercent}%`, background: a.color }} />
-              </div>
-              <div style={{ fontSize: 12, color: 'var(--text-muted)', textAlign: 'right' }}>{a.winratePercent}%</div>
+        <div style={{ ...cardStyle, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 11 }}>
+          <div>
+            <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 15 }}>Vitórias e derrotas em sequência</div>
+            <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 3 }}>Uma caixa por partida: V venceu, D perdeu</div>
+          </div>
+          <div>
+            <div style={{ display: 'flex', gap: 4 }}>
+              {formBoxes.map((r, i) => (
+                <span
+                  key={i}
+                  style={{
+                    flex: 1,
+                    height: 32,
+                    borderRadius: 4,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: 10.5,
+                    fontWeight: 700,
+                    background: r === 'V' ? 'color-mix(in srgb, var(--pos, #18AAB7) 18%, transparent)' : 'color-mix(in srgb, var(--acc, #EF4958) 18%, transparent)',
+                    color: r === 'V' ? WIN : LOSS,
+                  }}
+                >
+                  {r}
+                </span>
+              ))}
             </div>
-          ))}
-        </div>
-
-        <div style={{ ...cardStyle, padding: '20px 22px' }}>
-          <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 16 }}>Lados</div>
-          {sides ? <SidesDonut sides={sides} winratePercent={kpis.winrate.value} /> : <div style={{ marginTop: 16, fontSize: 13, color: 'var(--text-dim)' }}>Carregando…</div>}
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10.5, color: 'var(--text-faint)', marginTop: 5 }}>
+              <span>{formBoxes.length} partidas atrás</span>
+              <span>partida mais recente</span>
+            </div>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 5, fontSize: 12.5, color: 'var(--text-dim)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span>Saldo nas {formBoxes.length}</span>
+              <b style={{ color: 'var(--text-2)', fontWeight: 600 }}>
+                {formBoxes.filter((r) => r === 'V').length}V–{formBoxes.filter((r) => r === 'D').length}D
+              </b>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span>Sequência atual</span>
+              <b style={{ color: form.currentType === 'V' ? WIN : 'var(--text-2)', fontWeight: 600 }}>
+                {form.currentType ? plural(form.currentCount, form.currentType === 'V' ? 'vitória' : 'derrota') : '—'}
+              </b>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span>Melhor sequência</span>
+              <b style={{ color: 'var(--text-2)', fontWeight: 600 }}>{plural(form.bestWin, 'vitória')}</b>
+            </div>
+          </div>
         </div>
       </div>
 

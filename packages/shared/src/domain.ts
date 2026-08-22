@@ -71,8 +71,12 @@ export interface SessionUser {
 // --- Progressão de RR ---
 
 export interface RrHistoryPoint {
-  label: string; // dia formatado, ex.: "seg", "12/08"
-  delta: number; // soma de RR ganho/perdido naquele dia
+  matchId: string;
+  label: string; // data curta da partida, ex.: "12/08"
+  delta: number; // RR ganho/perdido especificamente nessa partida
+  map: string;
+  agent: string;
+  result: "V" | "D";
 }
 
 // --- Lados (ataque/defesa/overtime) ---
@@ -107,18 +111,22 @@ export interface DashboardKpis {
   acs: KpiValue;
   adr: KpiValue;
   hsPercent: KpiValue;
-  winrate: { value: number; wins: number; losses: number };
+  winrate: { value: number; wins: number; losses: number; delta: number; spark: number[] };
 }
 
 export interface MapWinrate {
   map: string;
   winratePercent: number;
+  wins: number;
+  total: number;
 }
 
 export interface AgentWinrate {
   agent: string;
   winratePercent: number;
   color: string;
+  wins: number;
+  total: number;
 }
 
 export interface RecentMatchSummary {
@@ -128,6 +136,7 @@ export interface RecentMatchSummary {
   agent: string;
   score: string;
   kda: string;
+  rr: number | null;
   playedAtLabel: string;
 }
 

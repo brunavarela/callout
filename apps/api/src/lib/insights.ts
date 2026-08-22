@@ -2,39 +2,37 @@ import type { MatchV4Data, RrHistoryPoint, SidesBreakdown } from "@callout/share
 import { prisma } from "./prisma.js";
 import { getMmrHistory } from "./henrikdev.js";
 
-const WEEKDAY_LABELS = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
-
-// Histórico de RR real, vindo do endpoint -history da HenrikDev. Agrupa em
-// ~10 barras: 1 dia por barra em janelas curtas, vários dias por barra em
-// janelas longas (senão 90D vira 90 barras ilegíveis).
+// Histórico de RR real, um ponto por partida (não por dia) — a HenrikDev dá
+// o RR ganho/perdido (`last_change`) já casado com o `match_id`, que é o
+// mesmo id que a gente usa como `Match.id` (ver schema.prisma). Partidas sem
+// entrada correspondente na mmr-history (deathmatch, unrated etc. não geram
+// RR) ficam de fora — não tem o que plotar nelas.
 export async function buildRrHistory(affinity: string, puuid: string, days: number): Promise<RrHistoryPoint[]> {
-  const history = await getMmrHistory(affinity, puuid);
-  const now = new Date();
-  const windowStart = new Date(now.getTime() - days * 86_400_000);
+  const windowStart = new Date(Date.now() - days * 86_400_000);
+  const [history, rows] = await Promise.all([
+    getMmrHistory(affinity, puuid),
+    prisma.matchPlayer.findMany({
+      where: { puuid, match: { startedAt: { gte: windowStart } } },
+      include: { match: true },
+      orderBy: { match: { startedAt: "asc" } },
+    }),
+  ]);
 
-  const inWindow = history.filter((h) => new Date(h.date) >= windowStart);
+  const rrByMatch = new Map(history.map((h) => [h.match_id, h.last_change]));
 
-  const bucketSizeDays = Math.max(1, Math.round(days / 10));
-  const bucketCount = Math.ceil(days / bucketSizeDays);
-
-  const points: RrHistoryPoint[] = [];
-  for (let i = bucketCount - 1; i >= 0; i--) {
-    const bucketEnd = new Date(now.getTime() - i * bucketSizeDays * 86_400_000);
-    const bucketStart = new Date(bucketEnd.getTime() - bucketSizeDays * 86_400_000);
-
-    const delta = inWindow
-      .filter((h) => {
-        const d = new Date(h.date);
-        return d >= bucketStart && d < bucketEnd;
-      })
-      .reduce((sum, h) => sum + h.last_change, 0);
-
-    const label = bucketSizeDays === 1 ? WEEKDAY_LABELS[bucketEnd.getDay()]! : bucketEnd.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
-
-    points.push({ label, delta });
-  }
-
-  return points;
+  return rows
+    .filter((r) => rrByMatch.has(r.match.id))
+    .map((r) => {
+      const match = r.match.rawJson as unknown as MatchV4Data;
+      return {
+        matchId: r.match.id,
+        label: r.match.startedAt.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }),
+        delta: rrByMatch.get(r.match.id)!,
+        map: match.metadata.map.name,
+        agent: r.agentName,
+        result: (r.won ? "V" : "D") as "V" | "D",
+      };
+    });
 }
 
 const HALF_1_LAST_ROUND = 12;
