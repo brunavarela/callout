@@ -132,26 +132,3 @@ export const strategies: Strategy[] = [
   { id: '6', name: 'Eco rush Short', side: 'ATK', meta: 'Bind · 6 usos · 66% WR', description: '', savedBy: '', editedAt: '' },
 ];
 
-export const spotFilters = ['Todos', 'Bind', 'Ascent', 'Lotus', 'Viper', 'Sova', 'Brimstone', 'Ataque'];
-
-export interface Spot {
-  agent: string;
-  ability: string;
-  from: string;
-  to: string;
-  map: string;
-  side: 'ATK' | 'DEF';
-  author: string;
-  color: string;
-}
-
-export const spots: Spot[] = [
-  { agent: 'Viper', ability: 'Snake Bite', from: 'B Long', to: 'B Site', map: 'Bind', side: 'ATK', author: '@lucas', color: '#18AAB7' },
-  { agent: 'Sova', ability: 'Recon Bolt', from: 'A Short', to: 'A Site', map: 'Bind', side: 'ATK', author: '@thiago', color: '#4C5BC4' },
-  { agent: 'Brimstone', ability: 'Incendiary', from: 'Spawn ATK', to: 'Hookah', map: 'Bind', side: 'ATK', author: '@nando', color: '#7B3FA8' },
-  { agent: 'Viper', ability: 'Poison Cloud', from: 'Meio', to: 'A Site', map: 'Bind', side: 'ATK', author: '@thiago', color: '#18AAB7' },
-  { agent: 'Sova', ability: 'Shock Dart', from: 'B Long', to: 'Plant padrão', map: 'Bind', side: 'ATK', author: '@bento', color: '#4C5BC4' },
-  { agent: 'Raze', ability: 'Paint Shells', from: 'Caverna', to: 'B Site', map: 'Bind', side: 'ATK', author: '@lucas', color: '#EF4958' },
-  { agent: 'Brimstone', ability: 'Sky Smoke', from: 'Fountain', to: 'A Truck', map: 'Bind', side: 'DEF', author: '@dedé', color: '#7B3FA8' },
-  { agent: 'Sova', ability: 'Recon Bolt', from: 'B Site', to: 'Hookah', map: 'Bind', side: 'DEF', author: '@jow', color: '#4C5BC4' },
-];

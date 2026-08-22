@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useOutletContext, useParams } from 'react-router-dom';
 import type { StratItem as StratItemDTO } from '@callout/shared';
+import { PLACEHOLDER_AGENTS } from '@callout/shared';
 import { MapSchematic } from '../components/MapSchematic';
 import { boardArrows, boardCallouts } from '../data/mock';
 import type { OutletContext } from '../components/AppShell';
@@ -28,16 +29,7 @@ interface Piece {
 
 const PIECE_KINDS: readonly PieceKind[] = ['agent', 'smoke', 'flash', 'molly'];
 
-// Sem o seed real de agentes (Fase 0 item 4), usamos a mesma paleta fixa
-// já usada no dashboard mock (apps/web/src/data/mock.ts `byAgent`).
-const AGENTS = [
-  { id: 'viper', name: 'Viper', abbrev: 'VIP', color: '#18AAB7' },
-  { id: 'raze', name: 'Raze', abbrev: 'RAZ', color: '#EF4958' },
-  { id: 'skye', name: 'Skye', abbrev: 'SKY', color: '#4C5BC4' },
-  { id: 'brimstone', name: 'Brimstone', abbrev: 'BRI', color: '#7B3FA8' },
-  { id: 'jett', name: 'Jett', abbrev: 'JET', color: '#7FD3DB' },
-  { id: 'omen', name: 'Omen', abbrev: 'OME', color: '#4F5258' },
-] as const;
+const AGENTS = PLACEHOLDER_AGENTS;
 
 const KIND_META: Record<Exclude<PieceKind, 'agent'>, { label: string; color: string }> = {
   smoke: { label: 'S', color: '#18AAB7' },

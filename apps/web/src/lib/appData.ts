@@ -5,6 +5,7 @@ import type {
   RrHistoryPoint,
   SessionUser,
   SidesBreakdown,
+  Spot,
   Strategy,
   StratItem,
   SyncStatus,
@@ -117,6 +118,42 @@ export function useAppData(user: SessionUser | null) {
     return created;
   }, []);
 
+  const [spots, setSpots] = useState<Spot[] | null>(null);
+  const [spotsError, setSpotsError] = useState<string | null>(null);
+  const [spotsLoading, setSpotsLoading] = useState(false);
+
+  // Igual estratégias: só carrega quando a tela de Spots é aberta, fica em
+  // cache aqui depois.
+  const loadSpots = useCallback(async () => {
+    setSpotsLoading(true);
+    try {
+      setSpots(await apiFetch<Spot[]>('/spots'));
+      setSpotsError(null);
+    } catch {
+      setSpotsError('Falha ao carregar os spots.');
+    } finally {
+      setSpotsLoading(false);
+    }
+  }, []);
+
+  const createSpot = useCallback(
+    async (input: {
+      mapName: string;
+      side: Lado;
+      agentId: string;
+      habilidade: string;
+      origin: { x: number; y: number };
+      target: { x: number; y: number };
+      videoUrl?: string;
+      notas?: string;
+    }) => {
+      const created = await apiFetch<Spot>('/spots', { method: 'POST', body: JSON.stringify(input) });
+      setSpots((prev) => (prev ? [created, ...prev] : [created]));
+      return created;
+    },
+    [],
+  );
+
   const riotId = user?.riotId?.puuid;
 
   // Carga inicial — uma vez por login, não por navegação.
@@ -188,6 +225,11 @@ export function useAppData(user: SessionUser | null) {
     loadStrategies,
     saveStrategy,
     createStrategy,
+    spots,
+    spotsError,
+    spotsLoading,
+    loadSpots,
+    createSpot,
   };
 }
 

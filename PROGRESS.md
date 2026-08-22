@@ -94,7 +94,7 @@ verdade (antes só selecionava visualmente). Ver
 `StratItemKind`) continuam só decorativas via `boardArrows` do mock, sem
 interação nenhuma — ficou fora do escopo do fix acima.
 
-### Fase 4 — Spots + comentários — 🔶 em andamento
+### Fase 4 — Spots + comentários — ✅ completa
 - ✅ Comentários (2026-08-22): `POST /comments` (`apps/api/src/routes/comments.ts`
   + `apps/api/src/lib/comments.ts`) — polimórfico (`entidadeTipo` +
   `entidadeId`), valida que a entidade (match/strategy/spot) existe antes
@@ -105,18 +105,26 @@ interação nenhuma — ficou fora do escopo do fix acima.
   ainda tem painel de comentário pra ligar (Board não tem, Spots nem
   existe de verdade ainda) — `toStrategyDTO` continua com `comments: []`
   hardcoded até o Board ganhar essa UI.
-- ⬜ Spots — `Spot` já existe no schema Prisma, sem endpoints ainda.
-  `Spot.videoUrl` é opcional (`String?`), então dá pra ter spots reais
-  sem resolver upload de arquivo — um campo de link (Discord/clipe) já
-  cobre o caso, sem precisar decidir S3/Cloudinary/R2 agora. Mesmo
-  problema do Board pra agente: `Spot.agentUuid` não é FK de verdade
-  (tabela `AgentAsset` vazia, Fase 0 item 4), então precisa do mesmo tipo
-  de paleta placeholder por nome/cor. Esquema também não tem `teamId` em
-  `Spot` — hoje seria uma lista global, não por time.
-  `apps/web/src/pages/Spots.tsx` (mock) só tem busca/filtro, sem UI de
-  criação nenhuma — adicionar um spot novo exigiria um seletor de
-  origem/alvo no mapa (tipo o Board), o que é escopo bem maior que só
-  "ligar dado real".
+- ✅ Spots (2026-08-22): `GET/POST /spots` (`apps/api/src/routes/spots.ts`
+  + `apps/api/src/lib/spots.ts`). `Spot.videoUrl` é opcional (`String?`),
+  então não precisou resolver upload de arquivo — o formulário tem um
+  campo de link (Discord/clipe) em vez de upload; `mediaUrl` fica `null`
+  se não preenchido. Mesmo problema do Board pra agente: `Spot.agentUuid`
+  não é FK de verdade (`AgentAsset` vazia, Fase 0 item 4) — resolvido com
+  a mesma paleta placeholder, agora compartilhada em
+  `packages/shared/src/agents.ts` (`PLACEHOLDER_AGENTS`) e reusada pelo
+  Board também (antes tinha uma cópia local lá). Schema não tem `teamId`
+  em `Spot`, então `GET /spots` é uma lista global (todo usuário logado
+  vê todos os spots de todo mundo) — não filtra por time porque o schema
+  não suporta isso hoje.
+  `apps/web/src/pages/Spots.tsx` ganhou um fluxo completo de criação:
+  botão "+ Novo spot" abre um modal com mapa/habilidade/lado/agente,
+  notas e link opcionais, e um picker de clique no mini-mapa (reusa
+  `MapSchematic`) pra marcar origem e alvo — 1º clique marca origem, 2º
+  marca alvo, 3º reinicia. O mesmo componente (`SpotPreview`) desenha a
+  origem/alvo/linha nos cards da listagem, sem interação — não tem
+  upload de imagem real (nunca teve, nem no mock: o card sempre foi um
+  placeholder "PRINT DA MIRA").
 
 ### Fase 5 — Heatmap — ⬜ não iniciada
 Depende da Fase 0 item 4 (seed de mapas) pra ter o minimapa real e a
@@ -136,7 +144,7 @@ antes de confiar no resultado").
 | Time | ✅ real |
 | Detalhe de partida | ✅ real (2026-08-22) — `GET /matches/:id`, ver abaixo |
 | Board | ✅ real — carrega/arrasta/adiciona/apaga/salva de verdade; só setas/linhas continuam decorativas (ver Fase 3) |
-| Spots | ❌ mock — busca/filtro funcionam sobre dado fake |
+| Spots | ✅ real (2026-08-22) — lista/filtra/cria com picker no mapa (ver Fase 4) |
 
 `MatchDetail.tsx` agora busca `GET /matches/:id` (`apps/api/src/routes/matches.ts`
 + `apps/api/src/lib/matches.ts`) direto na página via `useParams` — não
