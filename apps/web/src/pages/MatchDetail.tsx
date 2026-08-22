@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import type { MatchDetail as MatchDetailDTO } from '@callout/shared';
+import type { CommentDTO, MatchDetail as MatchDetailDTO } from '@callout/shared';
 import { apiFetch } from '../lib/api';
 
 const cardStyle: React.CSSProperties = { borderRadius: 'var(--radius-lg)', background: 'var(--surface)', border: '1px solid var(--surface-border)' };
@@ -15,6 +15,8 @@ export function MatchDetail() {
   const [match, setMatch] = useState<MatchDetailDTO | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [commentText, setCommentText] = useState('');
+  const [postingComment, setPostingComment] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -25,6 +27,24 @@ export function MatchDetail() {
       .catch(() => setError('Não foi possível carregar essa partida.'))
       .finally(() => setLoading(false));
   }, [id]);
+
+  async function submitComment() {
+    const texto = commentText.trim();
+    if (!texto || !id || postingComment) return;
+    setPostingComment(true);
+    try {
+      const created = await apiFetch<CommentDTO>('/comments', {
+        method: 'POST',
+        body: JSON.stringify({ entidadeTipo: 'match', entidadeId: id, texto }),
+      });
+      setMatch((prev) => (prev ? { ...prev, comments: [...prev.comments, created] } : prev));
+      setCommentText('');
+    } catch {
+      // TODO: mostrar erro de comentário — por ora falha silenciosa
+    } finally {
+      setPostingComment(false);
+    }
+  }
 
   if (loading) {
     return <div style={{ padding: 26, color: 'var(--text-muted)' }}>Carregando…</div>;
@@ -142,7 +162,17 @@ export function MatchDetail() {
               </div>
             </div>
           ))}
-          <input className="input-field" placeholder="Escrever um comentário…" style={{ marginTop: 14, padding: '13px 15px', fontSize: 14 }} />
+          <input
+            className="input-field"
+            placeholder="Escrever um comentário…"
+            value={commentText}
+            onChange={(e) => setCommentText(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') submitComment();
+            }}
+            disabled={postingComment}
+            style={{ marginTop: 14, padding: '13px 15px', fontSize: 14 }}
+          />
         </div>
         <div style={{ ...cardStyle, padding: '20px 22px' }}>
           <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 16 }}>Meus números</div>

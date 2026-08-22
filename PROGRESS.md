@@ -94,14 +94,29 @@ verdade (antes só selecionava visualmente). Ver
 `StratItemKind`) continuam só decorativas via `boardArrows` do mock, sem
 interação nenhuma — ficou fora do escopo do fix acima.
 
-### Fase 4 — Spots + comentários — ⬜ não iniciada
-- `Spot` e `Comment` já existem no schema Prisma, sem endpoints ainda
-- Falta decidir onde guardar imagem/vídeo do lineup (S3, Cloudinary, R2?)
-  antes de implementar o upload
-- Comentários são polimórficos (`entidadeTipo` + `entidadeId`) — servem
-  pra partida, estratégia e spot com uma tabela só
-- `apps/web/src/pages/MatchDetail.tsx` já tem a UI de comentários pronta
-  (mock) — é só ligar
+### Fase 4 — Spots + comentários — 🔶 em andamento
+- ✅ Comentários (2026-08-22): `POST /comments` (`apps/api/src/routes/comments.ts`
+  + `apps/api/src/lib/comments.ts`) — polimórfico (`entidadeTipo` +
+  `entidadeId`), valida que a entidade (match/strategy/spot) existe antes
+  de criar. `GET /matches/:id` já devolve os comentários reais via
+  `listComments("match", id)`. `MatchDetail.tsx` liga o campo de texto
+  que já existia (Enter envia, aparece na lista sem reload). Comentários
+  em estratégia/spot: endpoint já serve os três tipos, mas nenhuma tela
+  ainda tem painel de comentário pra ligar (Board não tem, Spots nem
+  existe de verdade ainda) — `toStrategyDTO` continua com `comments: []`
+  hardcoded até o Board ganhar essa UI.
+- ⬜ Spots — `Spot` já existe no schema Prisma, sem endpoints ainda.
+  `Spot.videoUrl` é opcional (`String?`), então dá pra ter spots reais
+  sem resolver upload de arquivo — um campo de link (Discord/clipe) já
+  cobre o caso, sem precisar decidir S3/Cloudinary/R2 agora. Mesmo
+  problema do Board pra agente: `Spot.agentUuid` não é FK de verdade
+  (tabela `AgentAsset` vazia, Fase 0 item 4), então precisa do mesmo tipo
+  de paleta placeholder por nome/cor. Esquema também não tem `teamId` em
+  `Spot` — hoje seria uma lista global, não por time.
+  `apps/web/src/pages/Spots.tsx` (mock) só tem busca/filtro, sem UI de
+  criação nenhuma — adicionar um spot novo exigiria um seletor de
+  origem/alvo no mapa (tipo o Board), o que é escopo bem maior que só
+  "ligar dado real".
 
 ### Fase 5 — Heatmap — ⬜ não iniciada
 Depende da Fase 0 item 4 (seed de mapas) pra ter o minimapa real e a
@@ -134,9 +149,8 @@ antes de responder — 404 senão. Placar/rounds/duração vêm de
 vêm de `MatchPlayer`. `firstBloods`/`clutches`/`plants` são calculados
 simulando a ordem de kills por round (não existiam antes, novo). Cor de
 agente por jogador é cinza placeholder (`#9A9DA1`), mesmo motivo do
-dashboard — depende da Fase 0 item 4. Comentários da tela renderizam
-`comments: []` da API (Fase 4 não implementada ainda) — o campo de texto
-continua sem `onSubmit`, igual já era no mock.
+dashboard — depende da Fase 0 item 4. Comentários já são reais (ver
+Fase 4) — o campo de texto envia com Enter.
 
 O link "Partidas" da sidebar (`AppShell.tsx`) e o link de "partida
 recente" no dashboard já apontam pro `id` real do banco.

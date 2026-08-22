@@ -9,6 +9,7 @@ import { teamRoutes } from "./routes/team.js";
 import { meRoutes } from "./routes/me.js";
 import { strategiesRoutes } from "./routes/strategies.js";
 import { matchesRoutes } from "./routes/matches.js";
+import { commentsRoutes } from "./routes/comments.js";
 
 const app = Fastify({ logger: true });
 
@@ -30,6 +31,7 @@ await app.register(teamRoutes);
 await app.register(meRoutes);
 await app.register(strategiesRoutes);
 await app.register(matchesRoutes);
+await app.register(commentsRoutes);
 
 try {
   await app.listen({ port: env.PORT, host: "0.0.0.0" });

@@ -1,5 +1,6 @@
 import type { MatchDetail, MatchKill, MatchPlayerRow, MatchV4Data, RoundResult } from "@callout/shared";
 import { prisma } from "./prisma.js";
+import { listComments } from "./comments.js";
 
 const WEEKDAY_LABELS = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
 
@@ -110,7 +111,7 @@ export async function buildMatchDetail(matchId: string, selfPuuid: string): Prom
     score: scoreFor(raw, selfRow.teamId),
     rounds,
     players: [...own, ...opponents],
-    comments: [],
+    comments: await listComments("match", match.id),
     myStats: {
       acs: selfRow.acs,
       kda: selfRow.deaths > 0 ? Math.round(((selfRow.kills + selfRow.assists) / selfRow.deaths) * 100) / 100 : selfRow.kills + selfRow.assists,
