@@ -30,6 +30,7 @@ export function ThemeSettings({ onClose }: { onClose: () => void }) {
   const navigate = useNavigate();
   const [saving, setSaving] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
+  const [confirmingLogout, setConfirmingLogout] = useState(false);
 
   async function update(patch: Partial<typeof theme>) {
     setSaving(true);
@@ -124,8 +125,7 @@ export function ThemeSettings({ onClose }: { onClose: () => void }) {
       <div style={{ borderTop: '1px solid var(--surface-border)', margin: '2px 0' }} />
 
       <button
-        onClick={handleLogout}
-        disabled={loggingOut}
+        onClick={() => setConfirmingLogout(true)}
         style={{
           display: 'flex',
           alignItems: 'center',
@@ -136,13 +136,55 @@ export function ThemeSettings({ onClose }: { onClose: () => void }) {
           fontSize: 13,
           fontWeight: 500,
           color: 'var(--acc, #EF4958)',
-          cursor: loggingOut ? 'default' : 'pointer',
-          opacity: loggingOut ? 0.6 : 1,
+          cursor: 'pointer',
         }}
       >
         <LogOut size={16} strokeWidth={1.75} />
-        {loggingOut ? 'Saindo…' : 'Sair da conta'}
+        Sair da conta
       </button>
+
+      {confirmingLogout && (
+        <div
+          onClick={() => !loggingOut && setConfirmingLogout(false)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60 }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: 'var(--surface)',
+              border: '1px solid var(--surface-border)',
+              borderRadius: 'var(--radius-lg)',
+              padding: 22,
+              width: 320,
+              maxWidth: '90vw',
+              boxShadow: '0 12px 28px rgba(0,0,0,.5)',
+            }}
+          >
+            <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 16 }}>Sair da conta?</div>
+            <div style={{ fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.5, marginTop: 8 }}>
+              Você vai precisar entrar de novo com o Discord pra acessar o callout.
+            </div>
+            <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
+              <button
+                onClick={() => setConfirmingLogout(false)}
+                disabled={loggingOut}
+                className="btn-secondary"
+                style={{ flex: 1, padding: 10, fontSize: 13, justifyContent: 'center' }}
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleLogout}
+                disabled={loggingOut}
+                className="btn-primary"
+                style={{ flex: 1, padding: 10, fontSize: 13, justifyContent: 'center', opacity: loggingOut ? 0.6 : 1 }}
+              >
+                {loggingOut ? 'Saindo…' : 'Sair'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
