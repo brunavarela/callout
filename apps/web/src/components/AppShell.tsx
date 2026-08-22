@@ -1,16 +1,17 @@
 import { useMemo, useState } from 'react';
 import { Navigate, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { LayoutDashboard, Swords, Users, PenTool, MapPin, Flame } from 'lucide-react';
 import type { SyncStatus } from '@callout/shared';
 import { useSession } from '../lib/session';
 import { useAppData, type AppData } from '../lib/appData';
 import { ThemeSettings } from './ThemeSettings';
 
 const BASE_NAV_ITEMS = [
-  { to: '/', label: 'Dashboard', match: (p: string) => p === '/' },
-  { to: '/time', label: 'Time', match: (p: string) => p === '/time' },
-  { to: '/board', label: 'Board', match: (p: string) => p.startsWith('/board') },
-  { to: '/spots', label: 'Spots', match: (p: string) => p === '/spots' },
-  { to: '/heatmap', label: 'Heatmap', match: (p: string) => p === '/heatmap' },
+  { to: '/', label: 'Dashboard', icon: LayoutDashboard, match: (p: string) => p === '/' },
+  { to: '/time', label: 'Time', icon: Users, match: (p: string) => p === '/time' },
+  { to: '/board', label: 'Board', icon: PenTool, match: (p: string) => p.startsWith('/board') },
+  { to: '/spots', label: 'Spots', icon: MapPin, match: (p: string) => p === '/spots' },
+  { to: '/heatmap', label: 'Heatmap', icon: Flame, match: (p: string) => p === '/heatmap' },
 ];
 
 export type OutletContext = AppData;
@@ -220,18 +221,19 @@ export function AppShell() {
   const latestMatchId = dashboard?.recentMatches[0]?.id;
   const navItems = [
     BASE_NAV_ITEMS[0]!,
-    { to: latestMatchId ? `/partida/${latestMatchId}` : '/', label: 'Partidas', match: (p: string) => p.startsWith('/partida') },
+    { to: latestMatchId ? `/partida/${latestMatchId}` : '/', label: 'Partidas', icon: Swords, match: (p: string) => p.startsWith('/partida') },
     ...BASE_NAV_ITEMS.slice(1),
   ];
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '232px 1fr', minHeight: '100vh' }}>
+    <div style={{ display: 'grid', gridTemplateColumns: '232px 1fr', height: '100vh', overflow: 'hidden' }}>
       <aside
         style={{
           background: 'var(--surface)',
           display: 'flex',
           flexDirection: 'column',
           position: 'relative',
+          height: '100%',
           overflow: 'hidden',
           borderRight: '1px solid #202023',
         }}
@@ -260,6 +262,7 @@ export function AppShell() {
         <nav style={{ position: 'relative', display: 'flex', flexDirection: 'column', padding: '10px 12px', gap: 4 }}>
           {navItems.map((item) => {
             const active = item.match(location.pathname);
+            const Icon = item.icon;
             return (
               <NavLink
                 key={item.label}
@@ -277,15 +280,11 @@ export function AppShell() {
                   color: active ? 'var(--text)' : 'var(--text-muted)',
                 }}
               >
-                <span
-                  style={{
-                    width: 18,
-                    height: 18,
-                    borderRadius: 5,
-                    border: `1.5px solid ${active ? 'var(--acc, #EF4958)' : 'var(--text-faint)'}`,
-                    display: 'block',
-                    flex: 'none',
-                  }}
+                <Icon
+                  size={18}
+                  strokeWidth={active ? 2.25 : 1.75}
+                  color={active ? 'var(--acc, #EF4958)' : 'var(--text-faint)'}
+                  style={{ flex: 'none' }}
                 />
                 {item.label}
               </NavLink>
@@ -360,7 +359,7 @@ export function AppShell() {
         </div>
       </aside>
 
-      <main style={{ minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+      <main style={{ minWidth: 0, height: '100%', display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
         <header style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '16px 26px', borderBottom: '1px solid var(--divider)' }}>
           <SearchBar appData={appData} />
           <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 12 }}>
