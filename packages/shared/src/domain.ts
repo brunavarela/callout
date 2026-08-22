@@ -238,6 +238,7 @@ export interface Strategy {
   teamId: string;
   mapId: string;
   mapName: string;
+  mapDisplayIcon: string | null;
   side: Lado;
   title: string;
   description: string;
@@ -254,6 +255,7 @@ export interface Strategy {
 export interface Spot {
   id: string;
   mapName: string;
+  mapDisplayIcon: string | null;
   agent: string;
   agentColor: string;
   habilidade: string;

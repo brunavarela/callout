@@ -1,6 +1,7 @@
 import type { MatchDetail, MatchKill, MatchPlayerRow, MatchV4Data, RoundResult } from "@callout/shared";
 import { prisma } from "./prisma.js";
 import { listComments } from "./comments.js";
+import { loadAgentColorsByName } from "./assets.js";
 
 const WEEKDAY_LABELS = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
 
@@ -80,8 +81,7 @@ export async function buildMatchDetail(matchId: string, selfPuuid: string): Prom
 
   const rounds: RoundResult[] = raw.rounds.map((r) => ({ number: r.id, wonBySelf: r.winning_team === selfRow.teamId }));
 
-  // Cor real do agente depende do seed de assets da Fase 0 item 4 — cinza
-  // neutro até lá, mesmo placeholder usado no dashboard.
+  const agentColors = await loadAgentColorsByName();
   const toRow = (p: (typeof match.players)[number]): MatchPlayerRow => ({
     puuid: p.puuid,
     name: p.name,
@@ -89,7 +89,7 @@ export async function buildMatchDetail(matchId: string, selfPuuid: string): Prom
     side: p.teamId === selfRow.teamId ? "own" : "opponent",
     isSelf: p.puuid === selfPuuid,
     agent: p.agentName,
-    agentColor: "#9A9DA1",
+    agentColor: agentColors.get(p.agentName) ?? "#9A9DA1",
     acs: p.acs,
     kills: p.kills,
     deaths: p.deaths,

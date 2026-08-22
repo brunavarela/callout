@@ -1,23 +1,26 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { PLACEHOLDER_AGENTS, type Lado } from '@callout/shared';
+import { PLACEHOLDER_AGENTS, type AgentAsset, type Lado } from '@callout/shared';
 import { MapSchematic } from '../components/MapSchematic';
 import type { OutletContext } from '../components/AppShell';
 
 const cardStyle: React.CSSProperties = { borderRadius: 'var(--radius-lg)', background: 'var(--surface)', border: '1px solid var(--surface-border)' };
 
 type Point = { x: number; y: number };
+type AgentOption = { id: string; name: string; color: string };
 
 function SpotPreview({
   origin,
   target,
   color,
+  mapDisplayIcon,
   interactive,
   onPick,
 }: {
   origin: Point | null;
   target: Point | null;
   color: string;
+  mapDisplayIcon?: string | null;
   interactive?: boolean;
   onPick?: (p: Point) => void;
 }) {
@@ -37,7 +40,15 @@ function SpotPreview({
       onClick={handleClick}
       style={{ position: 'relative', width: '100%', height: '100%', cursor: interactive ? 'crosshair' : 'default', overflow: 'hidden' }}
     >
-      <MapSchematic fill="var(--pos08, rgba(24,170,183,.08))" preserveAspectRatio="none" rounded style={{ position: 'absolute', top: '6%', bottom: '6%', left: '10%', right: '10%' }} />
+      {mapDisplayIcon ? (
+        <img
+          src={mapDisplayIcon}
+          alt=""
+          style={{ position: 'absolute', top: '6%', bottom: '6%', left: '10%', right: '10%', width: '80%', height: '88%', objectFit: 'contain', pointerEvents: 'none' }}
+        />
+      ) : (
+        <MapSchematic fill="var(--pos08, rgba(24,170,183,.08))" preserveAspectRatio="none" rounded style={{ position: 'absolute', top: '6%', bottom: '6%', left: '10%', right: '10%' }} />
+      )}
       {origin && target && (
         <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none' }}>
           <line x1={`${origin.x}%`} y1={`${origin.y}%`} x2={`${target.x}%`} y2={`${target.y}%`} stroke={color} strokeWidth={2} strokeDasharray="6 5" />
@@ -86,11 +97,11 @@ function SpotPreview({
   );
 }
 
-function emptyForm() {
+function emptyForm(defaultAgentId: string) {
   return {
     mapName: '',
     side: 'ATK' as Lado,
-    agentId: PLACEHOLDER_AGENTS[0]!.id,
+    agentId: defaultAgentId,
     habilidade: '',
     notas: '',
     videoUrl: '',
@@ -99,12 +110,20 @@ function emptyForm() {
   };
 }
 
-function CreateSpotModal({ onClose, onCreate }: { onClose: () => void; onCreate: ReturnType<typeof useOutletContext<OutletContext>>['createSpot'] }) {
-  const [form, setForm] = useState(emptyForm());
+function CreateSpotModal({
+  agents,
+  onClose,
+  onCreate,
+}: {
+  agents: AgentOption[];
+  onClose: () => void;
+  onCreate: ReturnType<typeof useOutletContext<OutletContext>>['createSpot'];
+}) {
+  const [form, setForm] = useState(() => emptyForm(agents[0]!.id));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const agent = PLACEHOLDER_AGENTS.find((a) => a.id === form.agentId)!;
+  const agent = agents.find((a) => a.id === form.agentId)!;
   const canSubmit = form.mapName.trim() !== '' && form.habilidade.trim() !== '' && !!form.origin && !!form.target;
 
   function pick(p: Point) {
@@ -182,8 +201,8 @@ function CreateSpotModal({ onClose, onCreate }: { onClose: () => void; onCreate:
           ))}
         </div>
 
-        <div style={{ display: 'flex', gap: 5, marginBottom: 14 }}>
-          {PLACEHOLDER_AGENTS.map((a) => {
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: 14 }}>
+          {agents.map((a) => {
             const active = a.id === form.agentId;
             return (
               <button
@@ -243,7 +262,7 @@ function CreateSpotModal({ onClose, onCreate }: { onClose: () => void; onCreate:
 }
 
 export function Spots() {
-  const { spots, spotsError, spotsLoading, loadSpots, createSpot } = useOutletContext<OutletContext>();
+  const { spots, spotsError, spotsLoading, loadSpots, createSpot, agents: realAgents, loadAgents } = useOutletContext<OutletContext>();
   const [query, setQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState('Todos');
   const [creating, setCreating] = useState(false);
@@ -251,6 +270,17 @@ export function Spots() {
   useEffect(() => {
     if (spots === null && !spotsLoading) loadSpots();
   }, [spots, spotsLoading, loadSpots]);
+
+  useEffect(() => {
+    if (realAgents === null) loadAgents();
+  }, [realAgents, loadAgents]);
+
+  // Cai pra paleta placeholder enquanto `agents` carrega ou se a Fase 0
+  // item 4 (seed) nunca rodou nesse ambiente.
+  const agentOptions: AgentOption[] =
+    realAgents && realAgents.length > 0
+      ? realAgents.map((a: AgentAsset) => ({ id: a.uuid, name: a.nome, color: a.cor }))
+      : PLACEHOLDER_AGENTS.map((a) => ({ id: a.id, name: a.name, color: a.color }));
 
   const filterOptions = useMemo(() => {
     if (!spots) return ['Todos'];
@@ -345,7 +375,7 @@ export function Spots() {
           {filtered.map((s) => (
             <div key={s.id} className="card-hover-acc" style={{ borderRadius: 'var(--radius-lg)', background: 'var(--surface)', border: '1px solid var(--surface-border)', overflow: 'hidden' }}>
               <div style={{ height: 146, borderBottom: '1px solid var(--surface-border)' }}>
-                <SpotPreview origin={s.origin} target={s.target} color={s.agentColor} />
+                <SpotPreview origin={s.origin} target={s.target} color={s.agentColor} mapDisplayIcon={s.mapDisplayIcon} />
               </div>
               <div style={{ padding: '15px 16px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -368,7 +398,7 @@ export function Spots() {
         </div>
       )}
 
-      {creating && <CreateSpotModal onClose={() => setCreating(false)} onCreate={createSpot} />}
+      {creating && <CreateSpotModal agents={agentOptions} onClose={() => setCreating(false)} onCreate={createSpot} />}
     </div>
   );
 }

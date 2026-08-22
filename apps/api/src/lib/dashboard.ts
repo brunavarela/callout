@@ -2,6 +2,7 @@ import type { DashboardSummary, MatchV4Data } from "@callout/shared";
 import { prisma } from "./prisma.js";
 import { getMmr, getMmrHistory } from "./henrikdev.js";
 import { getSyncProgress } from "./sync.js";
+import { loadAgentColorsByName } from "./assets.js";
 
 const WEEKDAY_LABELS = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
 
@@ -123,10 +124,9 @@ export async function buildDashboardSummary(userId: string, puuid: string, regio
     .map(([map, s]) => ({ map, winratePercent: Math.round((s.wins / s.total) * 100) }))
     .sort((a, b) => b.winratePercent - a.winratePercent);
 
-  // Cor real do agente depende do job de seed dos assets da valorant-api.com
-  // (roadmap fase 3/5, ainda não construído) — cinza neutro até lá.
+  const agentColors = await loadAgentColorsByName();
   const agentWinrates = [...byAgent.entries()]
-    .map(([agent, s]) => ({ agent, winratePercent: Math.round((s.wins / s.total) * 100), color: "#9A9DA1" }))
+    .map(([agent, s]) => ({ agent, winratePercent: Math.round((s.wins / s.total) * 100), color: agentColors.get(agent) ?? "#9A9DA1" }))
     .sort((a, b) => b.winratePercent - a.winratePercent);
 
   const recentMatches = rows.slice(0, 7).map((r) => {

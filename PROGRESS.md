@@ -46,14 +46,27 @@ projetos nesta máquina (`iexfy_app_back-end` e `sg-super-web-frontend`).
    duplicar linha). Cor de agente vem de `backgroundGradientColors[0]` da
    API (campo que não estava no schema Zod, adicionado agora).
 
-   **O que isso NÃO fez ainda** (passo à parte, ver débitos técnicos):
-   ninguém no front lê essas tabelas de verdade. Dashboard
-   (`agentWinrates`) e Detalhe de Partida continuam com cor cinza fixa
-   (`#9A9DA1`); Board e Spots continuam com a paleta `PLACEHOLDER_AGENTS`
-   (ids tipo `'viper'`, sem relação com o uuid real) e o esquema SVG de
-   Bind fixo em vez do `displayIcon` real. Religar isso é trabalho de
-   frontend/API separado — o seed só garante que o dado real já existe
-   no banco pra quando isso for feito.
+   **Religado ao front (2026-08-22, mesmo dia)**: `GET /agents`
+   (`apps/api/src/routes/agents.ts`) expõe o catálogo real; `dashboard.ts`
+   e `matches.ts` resolvem `agentColor`/`AgentWinrate.color` de verdade via
+   `loadAgentColorsByName()` (`apps/api/src/lib/assets.ts`) em vez do cinza
+   fixo — `MatchDetail.tsx` ganhou um swatch na coluna de agente pra
+   mostrar isso (o dado já vinha no DTO, só não era desenhado). `Strategy`
+   e `Spot` ganharam `mapDisplayIcon` no DTO (`toStrategyDTO`/`toSpotDTO`);
+   Board e Spots trocam o SVG esquemático pela imagem real do minimapa
+   quando ela existe, e o seletor de agente usa `GET /agents` (cai pra
+   `PLACEHOLDER_AGENTS` só se a lista real ainda não carregou/seed nunca
+   rodou). Fichas já salvas com os ids antigos (`'viper'` etc.) continuam
+   normais — cor/label ficam gravados no `StratItem`/`Spot` no momento da
+   criação, não são resolvidos ao vivo.
+
+   **Bug pego e corrigido no processo**: `ensureMapAsset()` casava só por
+   `uuid` (`placeholder-${slug}`) — depois que o seed troca o placeholder
+   pelo real (uuid muda), criar uma estratégia/spot novo pro mesmo mapa
+   duplicava a linha (`placeholder-bind` novo ao lado do Bind real).
+   Corrigido pra casar por `nome` primeiro. Uma estratégia e um spot de
+   teste criados antes do fix foram migrados manualmente pra linha real
+   e o duplicado foi removido (sem perda de dado).
 
 ### Fase 1 — Login real + dashboard — ✅ completa
 - Discord OAuth2 com allowlist do servidor (`GET /auth/discord`,
@@ -224,10 +237,10 @@ Tabelas: `users`, `maps`, `agents`, `matches`, `match_players`, `teams`,
 - `rank.rrDelta7d` no dashboard é somado a partir do histórico de RR de
   verdade agora (não é mais placeholder) — mas se a HenrikDev não tiver
   histórico suficiente, fica 0 silenciosamente.
-- Dado real de mapas/agentes existe no banco desde o seed da Fase 0 item
-  4, mas nada consome ele ainda: `dashboard.ts`/`matches.ts` continuam
-  com cor de agente fixa em `#9A9DA1`, e Board/Spots continuam com a
-  paleta `PLACEHOLDER_AGENTS` (ids tipo `'viper'`, sem uuid real) e o SVG
-  esquemático de Bind em vez do `MapAsset.displayIcon` real. Religar isso
-  exige decidir como expor os dados (`GET /agents`/`GET /maps`?) e trocar
-  o front — trabalho à parte, não feito ainda.
+- Não existe `GET /maps` — só `mapDisplayIcon` embutido no DTO de
+  `Strategy`/`Spot` (resolvido no backend). Se alguma tela precisar de
+  uma lista de mapas independente de estratégia/spot (ex.: um seletor de
+  mapa com preview antes de criar), aí sim vale expor a rota.
+  `Spot.mapDisplayIcon` só existe pra spots já salvos — o modal de criar
+  spot ainda mostra o esquema placeholder enquanto o usuário digita o
+  nome do mapa (não busca preview ao vivo).

@@ -11,6 +11,7 @@ export function toSpotDTO(spot: SpotWithRelations): SpotDTO {
   return {
     id: spot.id,
     mapName: spot.map.nome,
+    mapDisplayIcon: spot.map.displayIcon,
     agent: agent?.name ?? "—",
     agentColor: agent?.color ?? "#9A9DA1",
     habilidade: spot.habilidade,

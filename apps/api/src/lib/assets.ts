@@ -60,6 +60,14 @@ export async function seedMaps(): Promise<string[]> {
   return results;
 }
 
+// Usado por dashboard.ts/matches.ts pra resolver a cor real do agente (em
+// vez do cinza placeholder) sem precisar de uma segunda ida ao banco por
+// linha — chame uma vez e reuse o Map.
+export async function loadAgentColorsByName(): Promise<Map<string, string>> {
+  const agents = await prisma.agentAsset.findMany({ select: { nome: true, cor: true } });
+  return new Map(agents.filter((a) => a.cor).map((a) => [a.nome, a.cor!]));
+}
+
 // AgentAsset não tem placeholder pra trocar — `agentUuid` em StratItem/Spot
 // é um campo solto (não é FK de verdade), preenchido hoje com os ids da
 // paleta placeholder do front (`PLACEHOLDER_AGENTS`). Esse seed só popula a

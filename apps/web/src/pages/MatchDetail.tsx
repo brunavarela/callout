@@ -129,7 +129,10 @@ export function MatchDetail() {
               <span style={{ color: p.side === 'own' ? 'var(--text)' : 'var(--text-muted)', fontWeight: p.isSelf ? 600 : 400 }}>{p.name}</span>
               <span style={{ fontSize: 10.5, color: 'var(--text-faint)' }}>{p.tag}</span>
             </div>
-            <div style={{ color: 'var(--text-muted)' }}>{p.agent}</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--text-muted)' }}>
+              <span style={{ width: 10, height: 10, borderRadius: 3, background: p.agentColor, flex: 'none' }} />
+              {p.agent}
+            </div>
             <div style={{ textAlign: 'right' }}>{p.acs}</div>
             <div style={{ textAlign: 'right' }}>{p.kills}</div>
             <div style={{ textAlign: 'right', color: 'var(--text-muted)' }}>{p.deaths}</div>

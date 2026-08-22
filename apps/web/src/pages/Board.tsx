@@ -29,8 +29,6 @@ interface Piece {
 
 const PIECE_KINDS: readonly PieceKind[] = ['agent', 'smoke', 'flash', 'molly'];
 
-const AGENTS = PLACEHOLDER_AGENTS;
-
 const KIND_META: Record<Exclude<PieceKind, 'agent'>, { label: string; color: string }> = {
   smoke: { label: 'S', color: '#18AAB7' },
   flash: { label: 'F', color: '#FCFCFC' },
@@ -48,17 +46,34 @@ const cardStyle: React.CSSProperties = { borderRadius: 'var(--radius-lg)', backg
 export function Board() {
   const navigate = useNavigate();
   const { id } = useParams();
-  const { strategies, strategiesError, strategiesLoading, loadStrategies, saveStrategy, createStrategy } = useOutletContext<OutletContext>();
+  const { strategies, strategiesError, strategiesLoading, loadStrategies, saveStrategy, createStrategy, agents, loadAgents } = useOutletContext<OutletContext>();
 
   useEffect(() => {
     if (strategies === null && !strategiesLoading) loadStrategies();
   }, [strategies, strategiesLoading, loadStrategies]);
 
+  useEffect(() => {
+    if (agents === null) loadAgents();
+  }, [agents, loadAgents]);
+
+  // Cai pra paleta placeholder enquanto `agents` carrega ou se a Fase 0
+  // item 4 (seed) nunca rodou nesse ambiente.
+  const AGENTS = agents && agents.length > 0 ? agents.map((a) => ({ id: a.uuid, name: a.nome, abbrev: a.nome.slice(0, 3).toUpperCase(), color: a.cor })) : PLACEHOLDER_AGENTS;
+
+  // Quando o catálogo real chega, a seleção default (placeholder) não bate
+  // com nenhum uuid real — realinha pro primeiro agente real.
+  useEffect(() => {
+    if (agents && agents.length > 0 && !agents.some((a) => a.uuid === selectedAgentId)) {
+      setSelectedAgentId(agents[0]!.uuid);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [agents]);
+
   const strategy = strategies?.find((s) => s.id === id) ?? strategies?.[0] ?? null;
 
   const [pieces, setPieces] = useState<Piece[]>([]);
   const [tool, setTool] = useState<(typeof TOOLS)[number]['id']>('agente');
-  const [selectedAgentId, setSelectedAgentId] = useState<(typeof AGENTS)[number]['id']>(AGENTS[0].id);
+  const [selectedAgentId, setSelectedAgentId] = useState<string>(PLACEHOLDER_AGENTS[0].id);
   const [description, setDescription] = useState('');
   const [saving, setSaving] = useState(false);
   const [creating, setCreating] = useState(false);
@@ -213,13 +228,21 @@ export function Board() {
               background: 'radial-gradient(circle, var(--acc10, rgba(239,73,88,.1)) 0%, transparent 70%)',
             }}
           />
-          <MapSchematic
-            fill="var(--pos08, rgba(24,170,183,.08))"
-            preserveAspectRatio="none"
-            rounded
-            style={{ position: 'absolute', top: '7%', bottom: '7%', left: '12%', right: '12%' }}
-          />
-          {boardCallouts.map((c) => (
+          {strategy.mapDisplayIcon ? (
+            <img
+              src={strategy.mapDisplayIcon}
+              alt={strategy.mapName}
+              style={{ position: 'absolute', top: '7%', bottom: '7%', left: '12%', right: '12%', width: '86%', height: '86%', objectFit: 'contain', pointerEvents: 'none' }}
+            />
+          ) : (
+            <MapSchematic
+              fill="var(--pos08, rgba(24,170,183,.08))"
+              preserveAspectRatio="none"
+              rounded
+              style={{ position: 'absolute', top: '7%', bottom: '7%', left: '12%', right: '12%' }}
+            />
+          )}
+          {!strategy.mapDisplayIcon && boardCallouts.map((c) => (
             <div
               key={c.label}
               style={{
@@ -235,21 +258,23 @@ export function Board() {
               {c.label}
             </div>
           ))}
-          <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none' }}>
-            {boardArrows.map((a, i) => (
-              <line
-                key={i}
-                x1={a.x1}
-                y1={a.y1}
-                x2={a.x2}
-                y2={a.y2}
-                stroke="var(--acc, #EF4958)"
-                strokeWidth={2.5}
-                strokeDasharray="8 6"
-                strokeLinecap="round"
-              />
-            ))}
-          </svg>
+          {!strategy.mapDisplayIcon && (
+            <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none' }}>
+              {boardArrows.map((a, i) => (
+                <line
+                  key={i}
+                  x1={a.x1}
+                  y1={a.y1}
+                  x2={a.x2}
+                  y2={a.y2}
+                  stroke="var(--acc, #EF4958)"
+                  strokeWidth={2.5}
+                  strokeDasharray="8 6"
+                  strokeLinecap="round"
+                />
+              ))}
+            </svg>
+          )}
           {pieces.map((p) => {
             const isAgent = p.kind === 'agent';
             return (
@@ -309,7 +334,7 @@ export function Board() {
           })}
         </div>
         {tool === 'agente' && (
-          <div style={{ position: 'absolute', left: 18, top: 62, display: 'flex', gap: 5, background: 'rgba(18,18,19,.92)', border: '1px solid var(--input-border)', borderRadius: 12, padding: 6 }}>
+          <div style={{ position: 'absolute', left: 18, top: 62, right: 18, display: 'flex', flexWrap: 'wrap', gap: 5, background: 'rgba(18,18,19,.92)', border: '1px solid var(--input-border)', borderRadius: 12, padding: 6 }}>
             {AGENTS.map((a) => {
               const active = a.id === selectedAgentId;
               return (

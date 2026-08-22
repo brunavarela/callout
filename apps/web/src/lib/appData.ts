@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type {
+  AgentAsset,
   DashboardSummary,
   Lado,
   RrHistoryPoint,
@@ -154,6 +155,23 @@ export function useAppData(user: SessionUser | null) {
     [],
   );
 
+  const [agents, setAgents] = useState<AgentAsset[] | null>(null);
+  const [agentsLoading, setAgentsLoading] = useState(false);
+
+  // Catálogo real de agentes (Fase 0 item 4) — carrega sob demanda (Board/
+  // Spots são as únicas telas que precisam), fica em cache aqui.
+  const loadAgents = useCallback(async () => {
+    setAgentsLoading(true);
+    try {
+      setAgents(await apiFetch<AgentAsset[]>('/agents'));
+    } catch {
+      // widget secundário (seletor de agente) — falha aqui não é crítica,
+      // as telas caem pra paleta placeholder se `agents` continuar null
+    } finally {
+      setAgentsLoading(false);
+    }
+  }, []);
+
   const riotId = user?.riotId?.puuid;
 
   // Carga inicial — uma vez por login, não por navegação.
@@ -230,6 +248,9 @@ export function useAppData(user: SessionUser | null) {
     spotsLoading,
     loadSpots,
     createSpot,
+    agents,
+    agentsLoading,
+    loadAgents,
   };
 }
 

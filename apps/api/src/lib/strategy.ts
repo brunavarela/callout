@@ -2,17 +2,20 @@ import type { Strategy as StrategyDTO, StratItem as StratItemDTO, StratItemKind,
 import type { Strategy, StratItem, MapAsset, User } from "@prisma/client";
 import { prisma } from "./prisma.js";
 
-// Fase 0 item 4 (seed dos mapas via valorant-api.com) ainda não existe —
-// esse helper garante que uma estratégia sempre tenha um MapAsset pra
-// referenciar, criando um registro placeholder na primeira vez que o nome
-// aparece. Quando o job de seed real existir, ele deve casar por `nome` e
-// atualizar esse registro em vez de duplicar (ver PROGRESS.md).
+// Garante que uma estratégia/spot sempre tenha um MapAsset pra referenciar.
+// Casa por `nome` primeiro — depois do seed (Fase 0 item 4, `npm run
+// seed:assets`) isso já acha a linha real; só cria um placeholder se o mapa
+// ainda não existir em nenhuma forma (nome inédito, seed não rodou pra ele
+// ainda). Checar por nome antes é essencial: sem isso, um mapa cujo
+// placeholder já foi trocado pelo real (uuid mudou de `placeholder-x` pro
+// uuid da valorant-api.com) geraria um placeholder duplicado.
 export async function ensureMapAsset(nome: string): Promise<MapAsset> {
+  const existing = await prisma.mapAsset.findFirst({ where: { nome: { equals: nome, mode: "insensitive" } } });
+  if (existing) return existing;
+
   const slug = nome.trim().toLowerCase().replace(/\s+/g, "-");
-  return prisma.mapAsset.upsert({
-    where: { uuid: `placeholder-${slug}` },
-    update: {},
-    create: {
+  return prisma.mapAsset.create({
+    data: {
       uuid: `placeholder-${slug}`,
       nome,
       displayIcon: null,
@@ -65,6 +68,7 @@ export function toStrategyDTO(strategy: StrategyWithRelations): StrategyDTO {
     teamId: strategy.teamId,
     mapId: strategy.mapId,
     mapName: strategy.map.nome,
+    mapDisplayIcon: strategy.map.displayIcon,
     side: strategy.lado as Lado,
     title: strategy.titulo,
     description: strategy.descricao,
