@@ -1,5 +1,5 @@
 import { useNavigate, useOutletContext } from 'react-router-dom';
-import type { AgentWinrate, MapWinrate, RrHistoryPoint, SessionUser, SidesBreakdown } from '@callout/shared';
+import type { AgentWinrate, MapWinrate, MatchModeFilter, RrHistoryPoint, SessionUser, SidesBreakdown } from '@callout/shared';
 import type { OutletContext } from '../components/AppShell';
 import type { RrRange } from '../lib/appData';
 import { useSession } from '../lib/session';
@@ -9,6 +9,11 @@ const RANGES: Array<{ key: RrRange; label: string }> = [
   { key: '7d', label: '7D' },
   { key: '30d', label: '30D' },
   { key: '90d', label: '90D' },
+];
+const MODOS: Array<{ key: MatchModeFilter; label: string }> = [
+  { key: 'all', label: 'Todos' },
+  { key: 'Competitive', label: 'Competitivo' },
+  { key: 'Unrated', label: 'Sem classificação' },
 ];
 
 const WIN = 'var(--pos, #18AAB7)';
@@ -212,10 +217,48 @@ function firstName(user: SessionUser | null): string {
   return user?.riotId?.name ?? user?.discordUsername ?? '';
 }
 
+function ModoFilterButtons({ modoFilter, setModoFilter }: { modoFilter: MatchModeFilter; setModoFilter: (m: MatchModeFilter) => void }) {
+  return (
+    <div style={{ display: 'flex', gap: 4, background: 'var(--input-bg)', border: '1px solid var(--surface-border)', borderRadius: 9, padding: 3 }}>
+      {MODOS.map((m) => (
+        <button
+          key={m.key}
+          onClick={() => setModoFilter(m.key)}
+          style={{
+            padding: '7px 12px',
+            borderRadius: 6,
+            border: 'none',
+            cursor: 'pointer',
+            fontSize: 12,
+            fontWeight: 600,
+            whiteSpace: 'nowrap',
+            background: modoFilter === m.key ? 'var(--acc, #EF4958)' : 'transparent',
+            color: modoFilter === m.key ? '#141415' : 'var(--text-muted)',
+          }}
+        >
+          {m.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export function Dashboard() {
   const navigate = useNavigate();
-  const { sync, startSync, dashboard: data, dashboardError: error, dashboardLoading: loading, reloadDashboard, sides, rrRange, setRrRange, rrHistory } =
-    useOutletContext<OutletContext>();
+  const {
+    sync,
+    startSync,
+    dashboard: data,
+    dashboardError: error,
+    dashboardLoading: loading,
+    reloadDashboard,
+    modoFilter,
+    setModoFilter,
+    sides,
+    rrRange,
+    setRrRange,
+    rrHistory,
+  } = useOutletContext<OutletContext>();
   const { user } = useSession();
 
   if (loading) {
@@ -239,9 +282,14 @@ export function Dashboard() {
 
   if (data.recentMatches.length === 0) {
     return (
-      <div style={{ padding: 26 }}>
+      <div style={{ padding: 26, display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+          <ModoFilterButtons modoFilter={modoFilter} setModoFilter={setModoFilter} />
+        </div>
         <div style={{ ...cardStyle, padding: 40, textAlign: 'center', color: 'var(--text-muted)', fontSize: 14 }}>
-          Nenhuma partida sincronizada ainda. Clica no ícone de sincronizar lá em cima pra buscar suas últimas partidas.
+          {modoFilter === 'all'
+            ? 'Nenhuma partida sincronizada ainda. Clica no ícone de sincronizar lá em cima pra buscar suas últimas partidas.'
+            : `Nenhuma partida ${modoFilter === 'Competitive' ? 'competitiva' : 'sem classificação'} nas suas partidas sincronizadas. Troque o filtro acima ou sincronize mais partidas.`}
         </div>
       </div>
     );
@@ -317,7 +365,8 @@ export function Dashboard() {
             {plural(totalInWindow, 'partida')} · 30 dias · {kpis.winrate.wins}V–{kpis.winrate.losses}D
           </div>
         </div>
-        <div style={{ marginLeft: 'auto', display: 'flex', gap: 10 }}>
+        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10 }}>
+          <ModoFilterButtons modoFilter={modoFilter} setModoFilter={setModoFilter} />
           <button className="btn-secondary" onClick={() => navigate('/board')}>
             Abrir board
           </button>

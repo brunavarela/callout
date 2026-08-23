@@ -127,9 +127,14 @@ function perMatchSpark(list: Row[], selector: (r: Row) => number, count = 10): n
     .map(selector);
 }
 
-export async function buildDashboardSummary(userId: string, puuid: string, region: string): Promise<DashboardSummary> {
+export async function buildDashboardSummary(
+  userId: string,
+  puuid: string,
+  region: string,
+  modoFilter?: "Competitive" | "Unrated",
+): Promise<DashboardSummary> {
   const rows = await prisma.matchPlayer.findMany({
-    where: { puuid },
+    where: { puuid, ...(modoFilter ? { match: { modo: modoFilter } } : {}) },
     include: { match: true },
     orderBy: { match: { startedAt: "desc" } },
   });

@@ -3,6 +3,7 @@ import type {
   AgentAsset,
   DashboardSummary,
   Lado,
+  MatchModeFilter,
   RrHistoryPoint,
   SessionUser,
   SidesBreakdown,
@@ -15,6 +16,10 @@ import type {
 import { apiFetch } from './api';
 
 export type RrRange = '7d' | '30d' | '90d';
+
+function modoQuery(modo: MatchModeFilter): string {
+  return modo === 'all' ? '' : `modo=${encodeURIComponent(modo)}`;
+}
 
 // Estado do dashboard/time vive aqui, não dentro das páginas — assim ele
 // sobrevive a trocar de aba e voltar (React desmonta a página, não o shell).
@@ -32,7 +37,9 @@ export function useAppData(user: SessionUser | null) {
   const [sides, setSides] = useState<SidesBreakdown | null>(null);
 
   const [rrRange, setRrRangeState] = useState<RrRange>('30d');
-  const [rrHistoryCache, setRrHistoryCache] = useState<Partial<Record<RrRange, RrHistoryPoint[]>>>({});
+  const [rrHistoryCache, setRrHistoryCache] = useState<Record<string, RrHistoryPoint[]>>({});
+
+  const [modoFilter, setModoFilterState] = useState<MatchModeFilter>('all');
 
   const wasSyncing = useRef(false);
 
@@ -45,10 +52,11 @@ export function useAppData(user: SessionUser | null) {
     }
   }, []);
 
-  const loadDashboard = useCallback(async () => {
+  const loadDashboard = useCallback(async (modo: MatchModeFilter) => {
     setDashboardLoading(true);
     try {
-      setDashboard(await apiFetch<DashboardSummary>('/dashboard'));
+      const qs = modoQuery(modo);
+      setDashboard(await apiFetch<DashboardSummary>(`/dashboard${qs ? `?${qs}` : ''}`));
       setDashboardError(null);
     } catch {
       setDashboardError('Falha ao carregar o dashboard.');
@@ -57,18 +65,24 @@ export function useAppData(user: SessionUser | null) {
     }
   }, []);
 
-  const loadSides = useCallback(async () => {
+  const loadSides = useCallback(async (modo: MatchModeFilter) => {
     try {
-      setSides(await apiFetch<SidesBreakdown>('/dashboard/sides'));
+      const qs = modoQuery(modo);
+      setSides(await apiFetch<SidesBreakdown>(`/dashboard/sides${qs ? `?${qs}` : ''}`));
     } catch {
       // widget secundário — falha aqui não precisa de estado de erro próprio
     }
   }, []);
 
-  const loadRrHistory = useCallback(async (range: RrRange) => {
+  // Cache chaveado por modo+range — filtro diferente é um dado diferente,
+  // não dá pra reaproveitar o que já tava em cache pro range sozinho.
+  const rrCacheKey = (range: RrRange, modo: MatchModeFilter) => `${modo}:${range}`;
+
+  const loadRrHistory = useCallback(async (range: RrRange, modo: MatchModeFilter) => {
     try {
-      const points = await apiFetch<RrHistoryPoint[]>(`/dashboard/rr-history?range=${range}`);
-      setRrHistoryCache((prev) => ({ ...prev, [range]: points }));
+      const modoQs = modoQuery(modo);
+      const points = await apiFetch<RrHistoryPoint[]>(`/dashboard/rr-history?range=${range}${modoQs ? `&${modoQs}` : ''}`);
+      setRrHistoryCache((prev) => ({ ...prev, [rrCacheKey(range, modo)]: points }));
     } catch {
       // idem — o card mostra "sem histórico" se não tiver nada em cache
     }
@@ -78,12 +92,16 @@ export function useAppData(user: SessionUser | null) {
     (range: RrRange) => {
       setRrRangeState(range);
       setRrHistoryCache((prev) => {
-        if (!prev[range]) loadRrHistory(range);
+        if (!prev[rrCacheKey(range, modoFilter)]) loadRrHistory(range, modoFilter);
         return prev;
       });
     },
-    [loadRrHistory],
+    [loadRrHistory, modoFilter],
   );
+
+  const setModoFilter = useCallback((modo: MatchModeFilter) => {
+    setModoFilterState(modo);
+  }, []);
 
   const updateTeamMemberNote = useCallback((userId: string, note: string) => {
     setTeam((prev) => (prev ? { ...prev, members: prev.members.map((m) => (m.userId === userId ? { ...m, note } : m)) } : prev));
@@ -174,8 +192,7 @@ export function useAppData(user: SessionUser | null) {
 
   const riotId = user?.riotId?.puuid;
 
-  // Carga inicial — uma vez por login, não por navegação. Mostra o dado em
-  // cache na hora (loadDashboard/loadTeam abaixo) e já dispara a
+  // Carga inicial — uma vez por login, não por navegação. Dispara a
   // sincronização em paralelo, sem esperar clique no botão — quando ela
   // termina, o efeito de "sync terminou" (mais abaixo) rebusca os dados.
   useEffect(() => {
@@ -185,11 +202,19 @@ export function useAppData(user: SessionUser | null) {
       if (status.state !== 'syncing') startSync();
     }).catch(() => {});
     loadTeam();
-    loadDashboard();
-    loadSides();
-    loadRrHistory('30d');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [riotId]);
+
+  // Recarrega dashboard/sides/RR na carga inicial e sempre que o filtro de
+  // modo (competitivo/sem classificação) mudar — os três endpoints dependem
+  // dele.
+  useEffect(() => {
+    if (!riotId) return;
+    loadDashboard(modoFilter);
+    loadSides(modoFilter);
+    loadRrHistory(rrRange, modoFilter);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [riotId, modoFilter]);
 
   // Poll enquanto a sincronização está rolando.
   useEffect(() => {
@@ -212,10 +237,10 @@ export function useAppData(user: SessionUser | null) {
     }
     if (wasSyncing.current && sync?.state === 'idle') {
       wasSyncing.current = false;
-      loadDashboard();
-      loadSides();
+      loadDashboard(modoFilter);
+      loadSides(modoFilter);
       loadTeam();
-      loadRrHistory(rrRange);
+      loadRrHistory(rrRange, modoFilter);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sync?.state]);
@@ -228,6 +253,8 @@ export function useAppData(user: SessionUser | null) {
     }
   }, []);
 
+  const reloadDashboard = useCallback(() => loadDashboard(modoFilter), [loadDashboard, modoFilter]);
+
   return {
     sync,
     startSync,
@@ -238,11 +265,13 @@ export function useAppData(user: SessionUser | null) {
     dashboard,
     dashboardError,
     dashboardLoading,
-    reloadDashboard: loadDashboard,
+    reloadDashboard,
+    modoFilter,
+    setModoFilter,
     sides,
     rrRange,
     setRrRange,
-    rrHistory: rrHistoryCache[rrRange] ?? [],
+    rrHistory: rrHistoryCache[rrCacheKey(rrRange, modoFilter)] ?? [],
     strategies,
     strategiesError,
     strategiesLoading,

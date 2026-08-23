@@ -100,6 +100,11 @@ export interface SyncStatus {
 
 // --- Dashboard individual ---
 
+// Valores batem com `Match.modo` (ver apps/api/src/lib/sync.ts), que vem do
+// `queue.name` da HenrikDev — "Competitive" e "Unrated" são os dois modos
+// com partida ranqueada/não ranqueada que fazem sentido filtrar por aqui.
+export type MatchModeFilter = "all" | "Competitive" | "Unrated";
+
 export interface KpiValue {
   value: number;
   delta: number;
