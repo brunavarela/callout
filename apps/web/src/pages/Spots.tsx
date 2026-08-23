@@ -179,7 +179,7 @@ function CreateSpotModal({
               className="input-field"
               value={form.mapId}
               onChange={(e) => setForm((f) => ({ ...f, mapId: e.target.value }))}
-              style={{ padding: '10px 13px', fontSize: 13 }}
+              style={{ padding: '10px 13px', fontSize: 13, paddingRight: 34 }}
             >
               {maps.map((m) => (
                 <option key={m.id} value={m.id}>
@@ -191,7 +191,7 @@ function CreateSpotModal({
               className="input-field"
               value={form.agentId}
               onChange={(e) => setForm((f) => ({ ...f, agentId: e.target.value }))}
-              style={{ padding: '10px 13px', fontSize: 13 }}
+              style={{ padding: '10px 13px', fontSize: 13, paddingRight: 34 }}
             >
               {agents.map((a) => (
                 <option key={a.id} value={a.id}>
@@ -413,14 +413,9 @@ export function Spots() {
     });
   }, [spots, query, filterMap, filterAgent, filterSide]);
 
-  const selectStyle: React.CSSProperties = {
-    padding: '9px 12px',
-    background: 'var(--input-bg)',
-    border: '1px solid var(--surface-border)',
-    borderRadius: 'var(--radius-md)',
-    color: 'var(--text)',
-    fontSize: 12.5,
-  };
+  // .input-field cuida de fundo/borda/cor/seta — só o tamanho compacto do
+  // filtro (menor que o padrão do modal) fica por conta do inline.
+  const selectStyle: React.CSSProperties = { width: 'auto', padding: '9px 30px 9px 12px', fontSize: 12.5 };
 
   return (
     <div style={{ padding: 26, display: 'flex', flexDirection: 'column', gap: 18 }}>
@@ -451,21 +446,21 @@ export function Spots() {
       </div>
 
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-        <select value={filterMap} onChange={(e) => setFilterMap(e.target.value)} style={selectStyle}>
+        <select className="input-field" value={filterMap} onChange={(e) => setFilterMap(e.target.value)} style={selectStyle}>
           {mapFilterOptions.map((m) => (
             <option key={m} value={m}>
               {m === 'Todos' ? 'Todos os mapas' : m}
             </option>
           ))}
         </select>
-        <select value={filterAgent} onChange={(e) => setFilterAgent(e.target.value)} style={selectStyle}>
+        <select className="input-field" value={filterAgent} onChange={(e) => setFilterAgent(e.target.value)} style={selectStyle}>
           {agentFilterOptions.map((a) => (
             <option key={a} value={a}>
               {a === 'Todos' ? 'Todos os agentes' : a}
             </option>
           ))}
         </select>
-        <select value={filterSide} onChange={(e) => setFilterSide(e.target.value as 'Todos' | Lado)} style={selectStyle}>
+        <select className="input-field" value={filterSide} onChange={(e) => setFilterSide(e.target.value as 'Todos' | Lado)} style={selectStyle}>
           <option value="Todos">Ataque e defesa</option>
           <option value="ATK">Só ataque</option>
           <option value="DEF">Só defesa</option>

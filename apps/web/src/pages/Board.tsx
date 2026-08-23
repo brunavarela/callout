@@ -121,7 +121,7 @@ function CreateStrategyModal({
             className="input-field"
             value={mapName}
             onChange={(e) => setMapName(e.target.value)}
-            style={{ width: '100%', padding: '10px 13px', fontSize: 13, marginBottom: 12 }}
+            style={{ width: '100%', padding: '10px 13px', fontSize: 13, marginBottom: 12, paddingRight: 34 }}
           >
             {maps.map((m) => (
               <option key={m.id} value={m.nome}>

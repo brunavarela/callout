@@ -188,6 +188,21 @@ button {
   border-color: var(--acc, #ef4958);
 }
 
+/* <select class="input-field"> — mesma caixa do input, mas sem a setinha
+   nativa do SO (cinza clara, quadrada, destoava do resto). Troca por um
+   chevron desenhado e força o popup de opções a respeitar o tema escuro. */
+select.input-field {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  color-scheme: dark;
+  cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6' fill='none'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%239A9DA1' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  background-size: 10px 6px;
+}
+
 .nav-item:hover {
   background: rgba(255, 255, 255, 0.045);
 }
