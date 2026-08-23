@@ -8,7 +8,7 @@
     "postinstall": "prisma generate",
     "build": "tsc -b",
     "start": "node --env-file=../../.env dist/server.js",
-    "start:prod": "node dist/server.js",
+    "start:prod": "prisma migrate deploy && node dist/server.js",
     "typecheck": "tsc -b --noEmit",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
