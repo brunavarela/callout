@@ -275,9 +275,9 @@ function MatchCountButtons({ matchCountFilter, setMatchCountFilter }: { matchCou
   );
 }
 
-// "Cobrinha" girando — arco com gradiente que esmaece de #EF4958 até
-// transparente, mascarado em anel e rotacionando (reaproveita a keyframe
-// `spin` já usada no ícone de sync do AppShell).
+// "Cobrinha" girando — arco com gradiente que esmaece da cor de ação do
+// tema até transparente, mascarado em anel e rotacionando (reaproveita a
+// keyframe `spin` já usada no ícone de sync do AppShell).
 function SnakeSpinner({ size = 44 }: { size?: number }) {
   return (
     <div
@@ -287,7 +287,7 @@ function SnakeSpinner({ size = 44 }: { size?: number }) {
         width: size,
         height: size,
         borderRadius: '50%',
-        background: 'conic-gradient(from 0deg, transparent 0deg, #EF4958 300deg, transparent 360deg)',
+        background: 'conic-gradient(from 0deg, transparent 0deg, var(--acc, #EF4958) 300deg, transparent 360deg)',
         WebkitMask: 'radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 4px))',
         mask: 'radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 4px))',
         animation: 'spin 900ms linear infinite',
