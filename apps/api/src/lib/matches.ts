@@ -1,12 +1,6 @@
-import type { MatchDetail, MatchKill, MatchPlayerRow, MatchV4Data, RoundResult, StrategyTag } from "@callout/shared";
+import type { MatchDetail, MatchKill, MatchPlayerRow, MatchV4Data, RoundResult } from "@callout/shared";
 import { prisma } from "./prisma.js";
-import { listComments } from "./comments.js";
 import { loadAgentColorsByName } from "./assets.js";
-
-async function loadTaggedStrategies(matchId: string): Promise<StrategyTag[]> {
-  const usages = await prisma.strategyUsage.findMany({ where: { matchId }, include: { strategy: true } });
-  return usages.map((u) => ({ id: u.strategy.id, title: u.strategy.titulo }));
-}
 
 const WEEKDAY_LABELS = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
 
@@ -116,8 +110,6 @@ export async function buildMatchDetail(matchId: string, selfPuuid: string): Prom
     score: scoreFor(raw, selfRow.teamId),
     rounds,
     players: [...own, ...opponents],
-    comments: await listComments("match", match.id),
-    taggedStrategies: await loadTaggedStrategies(match.id),
     myStats: {
       acs: selfRow.acs,
       kda: selfRow.deaths > 0 ? Math.round(((selfRow.kills + selfRow.assists) / selfRow.deaths) * 100) / 100 : selfRow.kills + selfRow.assists,

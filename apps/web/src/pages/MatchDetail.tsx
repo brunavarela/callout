@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
-import { useOutletContext, useParams } from 'react-router-dom';
-import type { CommentDTO, MatchDetail as MatchDetailDTO, StrategyTag } from '@callout/shared';
+import { useNavigate, useParams } from 'react-router-dom';
+import type { MatchDetail as MatchDetailDTO } from '@callout/shared';
 import { apiFetch } from '../lib/api';
-import type { OutletContext } from '../components/AppShell';
+import { LoadingFill } from '../components/Spinner';
 
 const cardStyle: React.CSSProperties = { borderRadius: 'var(--radius-lg)', background: 'var(--surface)', border: '1px solid var(--surface-border)' };
 const scoreCols = '1fr 100px 62px 54px 54px 54px 62px';
@@ -13,17 +13,10 @@ function fmtKda(v: number) {
 
 export function MatchDetail() {
   const { id } = useParams();
-  const { strategies, strategiesLoading, loadStrategies } = useOutletContext<OutletContext>();
+  const navigate = useNavigate();
   const [match, setMatch] = useState<MatchDetailDTO | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [commentText, setCommentText] = useState('');
-  const [postingComment, setPostingComment] = useState(false);
-  const [taggingBusy, setTaggingBusy] = useState(false);
-
-  useEffect(() => {
-    if (strategies === null && !strategiesLoading) loadStrategies();
-  }, [strategies, strategiesLoading, loadStrategies]);
 
   useEffect(() => {
     if (!id) return;
@@ -35,57 +28,20 @@ export function MatchDetail() {
       .finally(() => setLoading(false));
   }, [id]);
 
-  async function submitComment() {
-    const texto = commentText.trim();
-    if (!texto || !id || postingComment) return;
-    setPostingComment(true);
-    try {
-      const created = await apiFetch<CommentDTO>('/comments', {
-        method: 'POST',
-        body: JSON.stringify({ entidadeTipo: 'match', entidadeId: id, texto }),
-      });
-      setMatch((prev) => (prev ? { ...prev, comments: [...prev.comments, created] } : prev));
-      setCommentText('');
-    } catch {
-      // TODO: mostrar erro de comentário — por ora falha silenciosa
-    } finally {
-      setPostingComment(false);
-    }
-  }
-
-  async function tagStrategy(strategyId: string) {
-    if (!id || taggingBusy) return;
-    setTaggingBusy(true);
-    try {
-      const updated = await apiFetch<StrategyTag[]>(`/matches/${id}/strategy-usage`, { method: 'POST', body: JSON.stringify({ strategyId }) });
-      setMatch((prev) => (prev ? { ...prev, taggedStrategies: updated } : prev));
-    } catch {
-      // TODO: mostrar erro — por ora falha silenciosa
-    } finally {
-      setTaggingBusy(false);
-    }
-  }
-
-  async function untagStrategy(strategyId: string) {
-    if (!id || taggingBusy) return;
-    setTaggingBusy(true);
-    try {
-      const updated = await apiFetch<StrategyTag[]>(`/matches/${id}/strategy-usage/${strategyId}`, { method: 'DELETE' });
-      setMatch((prev) => (prev ? { ...prev, taggedStrategies: updated } : prev));
-    } catch {
-      // TODO: mostrar erro — por ora falha silenciosa
-    } finally {
-      setTaggingBusy(false);
-    }
-  }
-
   if (loading) {
-    return <div style={{ padding: 26, color: 'var(--text-muted)' }}>Carregando…</div>;
+    return (
+      <div style={{ padding: 26, display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <LoadingFill />
+      </div>
+    );
   }
 
   if (error || !match) {
     return (
-      <div style={{ padding: 26 }}>
+      <div style={{ padding: 26, display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <button className="btn-secondary" style={{ alignSelf: 'flex-start' }} onClick={() => navigate('/partidas')}>
+          ← Voltar pras partidas
+        </button>
         <div style={{ ...cardStyle, padding: 40, textAlign: 'center', color: 'var(--text-muted)', fontSize: 14 }}>
           {error ?? 'Partida não encontrada.'}
         </div>
@@ -104,6 +60,10 @@ export function MatchDetail() {
 
   return (
     <div style={{ padding: 26, display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <button className="btn-secondary" style={{ alignSelf: 'flex-start' }} onClick={() => navigate('/partidas')}>
+        ← Voltar pras partidas
+      </button>
+
       <div style={{ ...cardStyle, padding: '22px 24px', display: 'flex', alignItems: 'center', gap: 32, flexWrap: 'wrap', position: 'relative', overflow: 'hidden' }}>
         <div
           style={{
@@ -175,93 +135,15 @@ export function MatchDetail() {
         ))}
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 330px', gap: 16 }}>
-        <div style={{ ...cardStyle, padding: '20px 22px' }}>
-          <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 16 }}>
-            Comentários <span style={{ color: 'var(--text-dim)', fontWeight: 400 }}>· {match.comments.length}</span>
-          </div>
-          {match.comments.length === 0 && (
-            <div style={{ padding: '13px 0', fontSize: 13, color: 'var(--text-muted)' }}>Nenhum comentário ainda.</div>
-          )}
-          {match.comments.map((c) => (
-            <div key={c.id} style={{ display: 'grid', gridTemplateColumns: '30px 1fr', gap: 12, padding: '13px 0', borderBottom: '1px solid var(--divider)' }}>
-              {c.authorAvatarUrl ? (
-                <img src={c.authorAvatarUrl} alt="" style={{ width: 30, height: 30, borderRadius: 9 }} />
-              ) : (
-                <div style={{ width: 30, height: 30, borderRadius: 9, background: 'var(--avatar-bg)' }} />
-              )}
-              <div>
-                <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 4 }}>
-                  {c.authorName} · {c.createdAtLabel}
-                </div>
-                <div style={{ fontSize: 14, lineHeight: 1.5, color: 'var(--text-2)' }}>{c.text}</div>
-              </div>
+      <div style={{ ...cardStyle, padding: '20px 22px' }}>
+        <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 16, marginBottom: 14 }}>Meus números</div>
+        <div style={{ display: 'grid', gridTemplateColumns: `repeat(${myStats.length}, 1fr)`, gap: 10 }}>
+          {myStats.map((s) => (
+            <div key={s.label} style={{ display: 'flex', flexDirection: 'column', gap: 6, paddingLeft: 14, borderLeft: '1px solid var(--divider)' }}>
+              <span style={{ fontSize: 11.5, color: 'var(--text-muted)' }}>{s.label}</span>
+              <span style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 22 }}>{s.value}</span>
             </div>
           ))}
-          <input
-            className="input-field"
-            placeholder="Escrever um comentário…"
-            value={commentText}
-            onChange={(e) => setCommentText(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') submitComment();
-            }}
-            disabled={postingComment}
-            style={{ marginTop: 14, padding: '13px 15px', fontSize: 14 }}
-          />
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          <div style={{ ...cardStyle, padding: '20px 22px' }}>
-            <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 16 }}>Estratégia usada</div>
-            {match.taggedStrategies.length === 0 && (
-              <div style={{ padding: '10px 0', fontSize: 13, color: 'var(--text-muted)' }}>Nenhuma marcada ainda.</div>
-            )}
-            {match.taggedStrategies.map((t) => (
-              <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 0', borderBottom: '1px solid var(--divider)', fontSize: 13 }}>
-                <span style={{ flex: 1 }}>{t.title}</span>
-                <button
-                  onClick={() => untagStrategy(t.id)}
-                  disabled={taggingBusy}
-                  title="Desmarcar"
-                  style={{ background: 'none', border: 'none', color: 'var(--text-faint)', cursor: 'pointer', fontSize: 13, lineHeight: 1 }}
-                >
-                  ✕
-                </button>
-              </div>
-            ))}
-            {(() => {
-              const taggedIds = new Set(match.taggedStrategies.map((t) => t.id));
-              const available = (strategies ?? []).filter((s) => s.mapName === match.map && !taggedIds.has(s.id));
-              if (available.length === 0) return null;
-              return (
-                <select
-                  className="input-field"
-                  value=""
-                  disabled={taggingBusy}
-                  onChange={(e) => {
-                    if (e.target.value) tagStrategy(e.target.value);
-                  }}
-                  style={{ marginTop: 12, padding: '9px 12px', fontSize: 13, width: '100%' }}
-                >
-                  <option value="">Marcar estratégia usada…</option>
-                  {available.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.title}
-                    </option>
-                  ))}
-                </select>
-              );
-            })()}
-          </div>
-          <div style={{ ...cardStyle, padding: '20px 22px' }}>
-            <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 16 }}>Meus números</div>
-            {myStats.map((s) => (
-              <div key={s.label} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid var(--divider)', fontSize: 13 }}>
-                <span style={{ color: 'var(--text-muted)' }}>{s.label}</span>
-                <span>{s.value}</span>
-              </div>
-            ))}
-          </div>
         </div>
       </div>
     </div>

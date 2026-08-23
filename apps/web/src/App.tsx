@@ -3,6 +3,7 @@ import { AppShell } from './components/AppShell';
 import { LoginStep1 } from './pages/LoginStep1';
 import { LoginStep2 } from './pages/LoginStep2';
 import { Dashboard } from './pages/Dashboard';
+import { Matches } from './pages/Matches';
 import { MatchDetail } from './pages/MatchDetail';
 import { Team } from './pages/Team';
 import { Board } from './pages/Board';
@@ -16,6 +17,7 @@ function App() {
 
       <Route element={<AppShell />}>
         <Route path="/" element={<Dashboard />} />
+        <Route path="/partidas" element={<Matches />} />
         <Route path="/partida/:id" element={<MatchDetail />} />
         <Route path="/time" element={<Team />} />
         <Route path="/board" element={<Board />} />

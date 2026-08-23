@@ -2,6 +2,7 @@ import { useNavigate, useOutletContext } from 'react-router-dom';
 import type { AgentWinrate, DashboardSummary, MapWinrate, MatchCountFilter, MatchModeFilter, RecentFormInsights, RrHistoryPoint, SessionUser, SidesBreakdown } from '@callout/shared';
 import type { OutletContext } from '../components/AppShell';
 import { LoadingFill, SnakeSpinner } from '../components/Spinner';
+import { MatchRow } from '../components/MatchRow';
 import { useSession } from '../lib/session';
 
 const cardStyle: React.CSSProperties = { borderRadius: 'var(--radius-lg)', background: 'var(--surface)', border: '1px solid var(--surface-border)' };
@@ -295,7 +296,6 @@ function DashboardContent({
   setMatchCountFilter: (n: MatchCountFilter) => void;
   sides: SidesBreakdown | null;
 }) {
-  const navigate = useNavigate();
   const { kpis, hasComparison, mapWinrates, agentWinrates, recentMatches, last14Results } = data;
   const totalInWindow = kpis.winrate.wins + kpis.winrate.losses;
 
@@ -471,53 +471,7 @@ function DashboardContent({
           </div>
           <div style={{ display: 'flex', flexDirection: 'column' }}>
             {recentMatches.map((m) => (
-              <div
-                key={m.id}
-                className="list-row"
-                onClick={() => navigate(`/partida/${m.id}`)}
-                style={{ display: 'flex', flexDirection: 'column', gap: 3, padding: '9px 6px', margin: '0 -6px', borderRadius: 8, cursor: 'pointer', borderTop: '1px solid var(--divider)' }}
-              >
-                <div style={{ display: 'grid', gridTemplateColumns: '24px 1fr 62px 42px', gap: 8, alignItems: 'center' }}>
-                  <span
-                    style={{
-                      fontSize: 10.5,
-                      fontWeight: 700,
-                      borderRadius: 4,
-                      textAlign: 'center',
-                      padding: '3px 0',
-                      color: m.result === 'V' ? WIN : m.result === 'D' ? LOSS : DRAW,
-                      background:
-                        m.result === 'V'
-                          ? 'color-mix(in srgb, var(--pos, #18AAB7) 16%, transparent)'
-                          : m.result === 'D'
-                            ? 'color-mix(in srgb, var(--acc, #EF4958) 14%, transparent)'
-                            : 'color-mix(in srgb, var(--text-muted, #9A9DA1) 16%, transparent)',
-                    }}
-                  >
-                    {m.result}
-                  </span>
-                  <span style={{ fontSize: 12.5, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {m.map} <span style={{ color: 'var(--text-faint)' }}>· {m.agent}</span>
-                    {m.mvp && (
-                      <span style={{ marginLeft: 6, fontSize: 8.5, fontWeight: 700, borderRadius: 4, padding: '1px 5px', color: '#E8B339', background: 'color-mix(in srgb, #E8B339 18%, transparent)' }}>
-                        MVP
-                      </span>
-                    )}
-                    {m.ace && (
-                      <span style={{ marginLeft: 6, fontSize: 8.5, fontWeight: 700, borderRadius: 4, padding: '1px 5px', color: '#A78BFA', background: 'color-mix(in srgb, #A78BFA 18%, transparent)' }}>
-                        ACE
-                      </span>
-                    )}
-                  </span>
-                  <span style={{ fontSize: 11.5, color: 'var(--text-3)', whiteSpace: 'nowrap' }}>{m.score}</span>
-                  <span style={{ fontSize: 11.5, fontWeight: 600, textAlign: 'right', color: m.rr === null ? 'var(--text-faint)' : m.rr >= 0 ? WIN : LOSS }}>
-                    {m.rr === null ? '—' : fmtDelta(m.rr, 0)}
-                  </span>
-                </div>
-                <div style={{ marginLeft: 32, fontSize: 10.5, color: 'var(--text-faint)' }}>
-                  KDA {m.kda} · HS {m.hsPercent}%
-                </div>
-              </div>
+              <MatchRow key={m.id} m={m} />
             ))}
           </div>
         </div>
