@@ -174,10 +174,16 @@ export function useAppData(user: SessionUser | null) {
 
   const riotId = user?.riotId?.puuid;
 
-  // Carga inicial — uma vez por login, não por navegação.
+  // Carga inicial — uma vez por login, não por navegação. Mostra o dado em
+  // cache na hora (loadDashboard/loadTeam abaixo) e já dispara a
+  // sincronização em paralelo, sem esperar clique no botão — quando ela
+  // termina, o efeito de "sync terminou" (mais abaixo) rebusca os dados.
   useEffect(() => {
     if (!riotId) return;
-    apiFetch<SyncStatus>('/sync').then(setSync).catch(() => {});
+    apiFetch<SyncStatus>('/sync').then((status) => {
+      setSync(status);
+      if (status.state !== 'syncing') startSync();
+    }).catch(() => {});
     loadTeam();
     loadDashboard();
     loadSides();
