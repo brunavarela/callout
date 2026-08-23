@@ -457,7 +457,13 @@ export function Dashboard() {
               </div>
             </>
           ) : (
-            <div style={{ marginTop: 20, fontSize: 13, color: 'var(--text-dim)' }}>Sem histórico de RR ainda.</div>
+            <div style={{ marginTop: 20, fontSize: 13, color: 'var(--text-dim)' }}>
+              {modoFilter === 'Unrated'
+                ? 'Sem histórico de RR em partidas Sem Classificação.'
+                : modoFilter === 'Competitive'
+                  ? 'Sem histórico de RR em partidas Competitivas.'
+                  : 'Sem histórico de RR ainda.'}
+            </div>
           )}
           {formInsights.matchesAnalyzed > 0 && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 14, paddingTop: 12, borderTop: '1px solid var(--divider)' }}>
