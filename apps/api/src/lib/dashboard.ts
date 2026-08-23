@@ -1,4 +1,4 @@
-import type { DashboardSummary, MatchV4Data } from "@callout/shared";
+import type { DashboardSummary, MatchCountFilter, MatchV4Data } from "@callout/shared";
 import { prisma } from "./prisma.js";
 import { getMmr, getMmrHistory } from "./henrikdev.js";
 import { getSyncProgress } from "./sync.js";
@@ -42,14 +42,13 @@ function hasAce(rawJson: unknown, puuid: string): boolean {
 
 type Row = Awaited<ReturnType<typeof prisma.matchPlayer.findMany<{ include: { match: true } }>>>[number];
 
-const FORM_INSIGHTS_WINDOW = 20;
-
 // Mapa/agente "principal" das últimas N partidas = o mais jogado nesse
 // recorte (não necessariamente o de maior winrate) — é sobre o que você tem
 // jogado recentemente, não sobre onde você é melhor (isso já é o card de
-// winrate por mapa/agente, calculado sobre outra janela).
-function buildFormInsights(allRows: Row[], maxAcsByMatch: Map<string, number>): DashboardSummary["formInsights"] {
-  const sample = allRows.slice(0, FORM_INSIGHTS_WINDOW);
+// winrate por mapa/agente, calculado sobre outra janela). `matchCount` é o
+// mesmo filtro (7/20) usado pelo gráfico de RR — os dois têm que bater.
+function buildFormInsights(allRows: Row[], maxAcsByMatch: Map<string, number>, matchCount: MatchCountFilter): DashboardSummary["formInsights"] {
+  const sample = allRows.slice(0, matchCount);
   if (sample.length === 0) {
     return { matchesAnalyzed: 0, topMap: null, topAgent: null, negativeKdaMatches: 0, mvpMatches: 0 };
   }
@@ -132,6 +131,7 @@ export async function buildDashboardSummary(
   puuid: string,
   region: string,
   modoFilter?: "Competitive" | "Unrated",
+  matchCount: MatchCountFilter = 20,
 ): Promise<DashboardSummary> {
   const rows = await prisma.matchPlayer.findMany({
     where: { puuid, ...(modoFilter ? { match: { modo: modoFilter } } : {}) },
@@ -246,12 +246,12 @@ export async function buildDashboardSummary(
     .map((r) => matchResult(r.won, rrByMatch.get(r.match.id)));
 
   const recentRows = rows.slice(0, 7);
-  const analysisRows = rows.slice(0, FORM_INSIGHTS_WINDOW);
+  const analysisRows = rows.slice(0, matchCount);
   // MVP = maior ACS da partida entre os 10 jogadores. `rows` só traz as
   // linhas do próprio usuário (filtro `where: { puuid }`), então precisa de
   // uma query separada pegando todo mundo dessas partidas pra comparar.
-  // Calculado sobre a janela de 20 (analysisRows) já cobre as 7 mais
-  // recentes usadas em recentMatches, que é subconjunto dela.
+  // analysisRows (matchCount, 7 ou 20) sempre cobre as 7 mais recentes
+  // usadas em recentMatches, que é subconjunto dela.
   const maxAcsByMatch = new Map<string, number>();
   if (analysisRows.length > 0) {
     const allPlayers = await prisma.matchPlayer.findMany({
@@ -290,7 +290,7 @@ export async function buildDashboardSummary(
     mapWinrates,
     agentWinrates,
     recentMatches,
-    formInsights: buildFormInsights(rows, maxAcsByMatch),
+    formInsights: buildFormInsights(rows, maxAcsByMatch, matchCount),
     sync: getSyncProgress(userId),
   };
 }

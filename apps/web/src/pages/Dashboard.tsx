@@ -1,5 +1,5 @@
 import { useNavigate, useOutletContext } from 'react-router-dom';
-import type { AgentWinrate, DashboardSummary, MapWinrate, MatchModeFilter, RrHistoryPoint, SessionUser, SidesBreakdown } from '@callout/shared';
+import type { AgentWinrate, DashboardSummary, MapWinrate, MatchCountFilter, MatchModeFilter, RrHistoryPoint, SessionUser, SidesBreakdown } from '@callout/shared';
 import type { OutletContext } from '../components/AppShell';
 import { useSession } from '../lib/session';
 
@@ -8,6 +8,10 @@ const MODOS: Array<{ key: MatchModeFilter; label: string }> = [
   { key: 'all', label: 'Todos' },
   { key: 'Competitive', label: 'Competitivo' },
   { key: 'Unrated', label: 'Sem classificação' },
+];
+const MATCH_COUNTS: Array<{ key: MatchCountFilter; label: string }> = [
+  { key: 7, label: 'Últimas 7' },
+  { key: 20, label: 'Últimas 20' },
 ];
 
 const WIN = 'var(--pos, #18AAB7)';
@@ -243,6 +247,34 @@ function ModoFilterButtons({ modoFilter, setModoFilter }: { modoFilter: MatchMod
   );
 }
 
+// Mesmo padrão visual do ModoFilterButtons, só que mais compacto pra caber
+// no header do card de RR. Controla a janela de partidas (7/20) do gráfico
+// de RR e dos 4 tópicos de análise — os dois usam o mesmo filtro pra bater.
+function MatchCountButtons({ matchCountFilter, setMatchCountFilter }: { matchCountFilter: MatchCountFilter; setMatchCountFilter: (n: MatchCountFilter) => void }) {
+  return (
+    <div style={{ display: 'flex', gap: 4, background: 'var(--input-bg)', border: '1px solid var(--surface-border)', borderRadius: 9, padding: 3, flex: 'none' }}>
+      {MATCH_COUNTS.map((c) => (
+        <button
+          key={c.key}
+          onClick={() => setMatchCountFilter(c.key)}
+          style={{
+            padding: '5px 11px',
+            borderRadius: 6,
+            border: 'none',
+            cursor: 'pointer',
+            fontSize: 11.5,
+            whiteSpace: 'nowrap',
+            background: matchCountFilter === c.key ? 'var(--acc, #EF4958)' : 'transparent',
+            color: matchCountFilter === c.key ? '#141415' : 'var(--text-muted)',
+          }}
+        >
+          {c.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 // "Cobrinha" girando — arco com gradiente que esmaece de #EF4958 até
 // transparente, mascarado em anel e rotacionando (reaproveita a keyframe
 // `spin` já usada no ícone de sync do AppShell).
@@ -279,11 +311,17 @@ function DashboardContent({
   data,
   modoFilter,
   rrHistory,
+  rrHistoryLoading,
+  matchCountFilter,
+  setMatchCountFilter,
   sides,
 }: {
   data: DashboardSummary;
   modoFilter: MatchModeFilter;
   rrHistory: RrHistoryPoint[];
+  rrHistoryLoading: boolean;
+  matchCountFilter: MatchCountFilter;
+  setMatchCountFilter: (n: MatchCountFilter) => void;
   sides: SidesBreakdown | null;
 }) {
   const navigate = useNavigate();
@@ -357,23 +395,30 @@ function DashboardContent({
 
       <div style={{ display: 'grid', gridTemplateColumns: '1.45fr 1fr', gap: 14 }}>
         <div style={{ ...cardStyle, padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: 4 }}>
-          <div>
-            <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 16 }}>RR ganho e perdido</div>
-            <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 3 }}>
-              Soma acumulada de RR — cada ponto é uma partida.
-              {rrHistory.length > 0 && (
-                <>
-                  {' '}
-                  Fechou em{' '}
-                  <span style={{ color: rrHistory.reduce((s, p) => s + p.delta, 0) >= 0 ? 'var(--pos, #18AAB7)' : 'var(--text-muted-2)' }}>
-                    {fmtDelta(rrHistory.reduce((s, p) => s + p.delta, 0), 0)} RR
-                  </span>
-                  .
-                </>
-              )}
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+            <div>
+              <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 16 }}>RR ganho e perdido</div>
+              <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 3 }}>
+                Soma acumulada de RR — cada ponto é uma partida.
+                {rrHistory.length > 0 && (
+                  <>
+                    {' '}
+                    Fechou em{' '}
+                    <span style={{ color: rrHistory.reduce((s, p) => s + p.delta, 0) >= 0 ? 'var(--pos, #18AAB7)' : 'var(--text-muted-2)' }}>
+                      {fmtDelta(rrHistory.reduce((s, p) => s + p.delta, 0), 0)} RR
+                    </span>
+                    .
+                  </>
+                )}
+              </div>
             </div>
+            <MatchCountButtons matchCountFilter={matchCountFilter} setMatchCountFilter={setMatchCountFilter} />
           </div>
-          {rrHistory.length > 0 ? (
+          {rrHistoryLoading ? (
+            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 220 }}>
+              <SnakeSpinner size={32} />
+            </div>
+          ) : rrHistory.length > 0 ? (
             <>
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 14, fontSize: 11.5, color: 'var(--text-dim)', marginTop: 4 }}>
                 <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -637,8 +682,11 @@ export function Dashboard() {
     reloadDashboard,
     modoFilter,
     setModoFilter,
+    matchCountFilter,
+    setMatchCountFilter,
     sides,
     rrHistory,
+    rrHistoryLoading,
   } = useOutletContext<OutletContext>();
   const { user } = useSession();
 
@@ -707,7 +755,15 @@ export function Dashboard() {
             : `Nenhuma partida ${modoFilter === 'Competitive' ? 'competitiva' : 'sem classificação'} nas suas partidas sincronizadas. Troque o filtro acima ou sincronize mais partidas.`}
         </div>
       ) : (
-        <DashboardContent data={data} modoFilter={modoFilter} rrHistory={rrHistory} sides={sides} />
+        <DashboardContent
+          data={data}
+          modoFilter={modoFilter}
+          rrHistory={rrHistory}
+          rrHistoryLoading={rrHistoryLoading}
+          matchCountFilter={matchCountFilter}
+          setMatchCountFilter={setMatchCountFilter}
+          sides={sides}
+        />
       )}
 
       {error && data && (

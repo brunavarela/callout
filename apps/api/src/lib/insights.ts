@@ -1,4 +1,4 @@
-import type { MatchV4Data, RrHistoryPoint, SidesBreakdown } from "@callout/shared";
+import type { MatchCountFilter, MatchV4Data, RrHistoryPoint, SidesBreakdown } from "@callout/shared";
 import { prisma } from "./prisma.js";
 import { getMmrHistory } from "./henrikdev.js";
 import { matchResult } from "./match-result.js";
@@ -7,14 +7,22 @@ import { matchResult } from "./match-result.js";
 // o RR ganho/perdido (`last_change`) já casado com o `match_id`, que é o
 // mesmo id que a gente usa como `Match.id` (ver schema.prisma). Partidas sem
 // entrada correspondente na mmr-history (deathmatch, unrated etc. não geram
-// RR) ficam de fora — não tem o que plotar nelas.
-export async function buildRrHistory(affinity: string, puuid: string, modoFilter?: "Competitive" | "Unrated"): Promise<RrHistoryPoint[]> {
+// RR) ficam de fora — não tem o que plotar nelas. `matchCount` é a mesma
+// janela (7/20) usada nos tópicos de análise do dashboard — pega as
+// matchCount mais recentes primeiro, depois filtra as sem RR.
+export async function buildRrHistory(
+  affinity: string,
+  puuid: string,
+  matchCount: MatchCountFilter,
+  modoFilter?: "Competitive" | "Unrated",
+): Promise<RrHistoryPoint[]> {
   const [history, rows] = await Promise.all([
     getMmrHistory(affinity, puuid),
     prisma.matchPlayer.findMany({
       where: { puuid, ...(modoFilter ? { match: { modo: modoFilter } } : {}) },
       include: { match: true },
-      orderBy: { match: { startedAt: "asc" } },
+      orderBy: { match: { startedAt: "desc" } },
+      take: matchCount,
     }),
   ]);
 
@@ -22,6 +30,7 @@ export async function buildRrHistory(affinity: string, puuid: string, modoFilter
 
   return rows
     .filter((r) => rrByMatch.has(r.match.id))
+    .reverse() // volta pra ordem cronológica (mais antiga primeiro) pro gráfico
     .map((r) => {
       const match = r.match.rawJson as unknown as MatchV4Data;
       return {

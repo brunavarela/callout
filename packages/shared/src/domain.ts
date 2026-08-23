@@ -105,6 +105,11 @@ export interface SyncStatus {
 // com partida ranqueada/não ranqueada que fazem sentido filtrar por aqui.
 export type MatchModeFilter = "all" | "Competitive" | "Unrated";
 
+// Janela de partidas usada pelo gráfico de RR e pelos tópicos de análise
+// (mapa/agente mais jogado, KDA negativo, MVP) — os dois precisam usar a
+// mesma janela pra os números baterem entre si.
+export type MatchCountFilter = 7 | 20;
+
 export interface KpiValue {
   value: number;
   delta: number;
