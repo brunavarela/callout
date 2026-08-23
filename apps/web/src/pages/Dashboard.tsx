@@ -382,11 +382,8 @@ function DashboardContent({
                 <span style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 32, letterSpacing: '-.02em', lineHeight: 1 }}>{k.value}</span>
                 <MiniSparkline values={k.spark} color={color} />
               </div>
-              <div style={{ borderTop: '1px solid var(--divider)', paddingTop: 8, display: 'flex', flexDirection: 'column', gap: 3 }}>
+              <div style={{ borderTop: '1px solid var(--divider)', paddingTop: 8 }}>
                 <span style={{ fontSize: 11.5, lineHeight: 1.35, color: 'var(--text-dim)' }}>{k.explain}</span>
-                <span style={{ fontSize: 10.5, color: 'var(--text-faint)' }}>
-                  {hasComparison ? `${k.deltaLabel} contra os 30 dias anteriores` : 'Ainda sem partidas de 30-60 dias atrás pra comparar'} · linha: últimas partidas, eixo em zero
-                </span>
               </div>
             </div>
           );
