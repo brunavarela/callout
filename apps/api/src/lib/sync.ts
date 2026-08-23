@@ -20,6 +20,17 @@ export function getSyncProgress(userId: string): SyncStatus {
   return progressByUser.get(userId) ?? { state: "idle" };
 }
 
+// A sincronização agora dispara sozinha a cada abertura do app (não só no
+// clique manual) — sem isso, um F5 rápido bateria na HenrikDev de novo sem
+// necessidade (é API não-oficial, com rate limit por chave — CONTEXT.md §5.2).
+const SYNC_COOLDOWN_MS = 60_000;
+
+export function recentlySynced(userId: string): boolean {
+  const lastSuccessAt = progressByUser.get(userId)?.lastSuccessAt;
+  if (!lastSuccessAt) return false;
+  return Date.now() - new Date(lastSuccessAt).getTime() < SYNC_COOLDOWN_MS;
+}
+
 export async function syncUserMatches(userId: string, puuid: string, region: string) {
   progressByUser.set(userId, { state: "syncing", progress: { done: 0, total: 0 } });
 
@@ -27,10 +38,32 @@ export async function syncUserMatches(userId: string, puuid: string, region: str
     const matches = await getMatchlist(region, puuid);
     progressByUser.set(userId, { state: "syncing", progress: { done: 0, total: matches.length } });
 
-    for (let i = 0; i < matches.length; i++) {
-      await persistMatchIfNew(matches[i]!);
-      progressByUser.set(userId, { state: "syncing", progress: { done: i + 1, total: matches.length } });
-    }
+    // Um findMany só pra ver quais dos 30 já existem, em vez de um
+    // findUnique sequencial por partida — no caso comum (sync roda de novo
+    // pouco depois, quase tudo já sincronizado) isso troca ~30 idas ao
+    // banco em série por 1. Partida antiga nunca muda (CONTEXT.md §8), só
+    // as que sobram (novas) precisam ser persistidas, e em paralelo — a
+    // corrida em ensureMapAsset() já é segura (ver Fase 0 do PROGRESS.md).
+    const existingIds = new Set(
+      (
+        await prisma.match.findMany({
+          where: { id: { in: matches.map((m) => m.metadata.match_id) } },
+          select: { id: true },
+        })
+      ).map((m) => m.id),
+    );
+    const newMatches = matches.filter((m) => !existingIds.has(m.metadata.match_id));
+
+    let done = matches.length - newMatches.length;
+    progressByUser.set(userId, { state: "syncing", progress: { done, total: matches.length } });
+
+    await Promise.all(
+      newMatches.map(async (match) => {
+        await persistMatch(match);
+        done++;
+        progressByUser.set(userId, { state: "syncing", progress: { done, total: matches.length } });
+      }),
+    );
 
     progressByUser.set(userId, {
       state: "idle",
@@ -46,12 +79,7 @@ export async function syncUserMatches(userId: string, puuid: string, region: str
   }
 }
 
-// Partida antiga nunca muda — buscou uma vez, persistiu, nunca mais reprocessa
-// esse match_id (CONTEXT.md §8).
-async function persistMatchIfNew(match: MatchV4Data) {
-  const exists = await prisma.match.findUnique({ where: { id: match.metadata.match_id } });
-  if (exists) return;
-
+async function persistMatch(match: MatchV4Data) {
   const roundCount = match.rounds.length || 1;
   const map = await ensureMapAsset(match.metadata.map.name);
 

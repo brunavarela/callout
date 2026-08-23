@@ -1,6 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { requireAuth } from "../lib/session.js";
-import { getSyncProgress, syncUserMatches } from "../lib/sync.js";
+import { getSyncProgress, recentlySynced, syncUserMatches } from "../lib/sync.js";
 
 export async function syncRoutes(app: FastifyInstance) {
   app.post("/sync", { preHandler: requireAuth }, async (request, reply) => {
@@ -10,7 +10,7 @@ export async function syncRoutes(app: FastifyInstance) {
     }
 
     const current = getSyncProgress(user.id);
-    if (current.state === "syncing") {
+    if (current.state === "syncing" || recentlySynced(user.id)) {
       return reply.code(202).send(current);
     }
 
