@@ -430,7 +430,7 @@ export function Spots() {
           placeholder="Buscar na descrição, mapa ou agente…"
           style={{
             marginLeft: 'auto',
-            width: 300,
+            width: 'min(300px, 100%)',
             padding: '12px 15px',
             background: 'var(--control-bg)',
             border: '1px solid var(--surface-border)',
@@ -488,7 +488,7 @@ export function Spots() {
       )}
 
       {spots && spots.length > 0 && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 16 }}>
+        <div className="grid-responsive-4">
           {filtered.map((s) => (
             <div
               key={s.id}

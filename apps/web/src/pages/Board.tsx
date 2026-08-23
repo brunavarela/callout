@@ -372,7 +372,7 @@ export function Board() {
   }
 
   return (
-    <div style={{ padding: 26, display: 'grid', gridTemplateColumns: '1fr 300px', gap: 16, flex: 1, minHeight: 0 }}>
+    <div className="grid-responsive-board" style={{ padding: 26, flex: 1, minHeight: 0 }}>
       <div style={{ borderRadius: 'var(--radius-lg)', position: 'relative', overflow: 'hidden', background: 'var(--surface-sunken)', border: '1px solid var(--surface-border)' }}>
         <div
           ref={containerRef}

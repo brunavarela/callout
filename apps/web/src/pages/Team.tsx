@@ -108,7 +108,7 @@ export function Team() {
       {team.members.length === 0 ? (
         <div style={{ ...cardStyle, padding: 40, textAlign: 'center', color: 'var(--text-muted)', fontSize: 14 }}>Ninguém no time ainda.</div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 16 }}>
+        <div className="grid-responsive-4">
           {team.members.map((p) => (
             <div
               key={p.userId}

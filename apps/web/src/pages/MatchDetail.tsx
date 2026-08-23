@@ -96,48 +96,52 @@ export function MatchDetail() {
       </div>
 
       <div style={{ ...cardStyle, overflow: 'hidden' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: scoreCols, padding: '14px 22px', fontSize: 10.5, letterSpacing: '.12em', color: 'var(--text-dim)' }}>
-          <div>JOGADOR</div>
-          <div>AGENTE</div>
-          <div style={{ textAlign: 'right' }}>ACS</div>
-          <div style={{ textAlign: 'right' }}>K</div>
-          <div style={{ textAlign: 'right' }}>D</div>
-          <div style={{ textAlign: 'right' }}>A</div>
-          <div style={{ textAlign: 'right' }}>HS%</div>
-        </div>
-        {match.players.map((p) => (
-          <div
-            key={p.puuid}
-            style={{
-              display: 'grid',
-              gridTemplateColumns: scoreCols,
-              padding: '11px 22px',
-              borderTop: '1px solid var(--divider)',
-              fontSize: 13,
-              background: p.isSelf ? 'color-mix(in srgb, var(--acc, #EF4958) 9%, transparent)' : 'transparent',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <span style={{ width: 3, height: 16, borderRadius: 2, background: p.side === 'own' ? 'var(--acc, #EF4958)' : 'var(--text-faint)' }} />
-              <span style={{ color: p.side === 'own' ? 'var(--text)' : 'var(--text-muted)', fontWeight: p.isSelf ? 600 : 400 }}>{p.name}</span>
-              <span style={{ fontSize: 10.5, color: 'var(--text-faint)' }}>{p.tag}</span>
+        <div className="scroll-x-mobile">
+          <div>
+            <div style={{ display: 'grid', gridTemplateColumns: scoreCols, padding: '14px 22px', fontSize: 10.5, letterSpacing: '.12em', color: 'var(--text-dim)' }}>
+              <div>JOGADOR</div>
+              <div>AGENTE</div>
+              <div style={{ textAlign: 'right' }}>ACS</div>
+              <div style={{ textAlign: 'right' }}>K</div>
+              <div style={{ textAlign: 'right' }}>D</div>
+              <div style={{ textAlign: 'right' }}>A</div>
+              <div style={{ textAlign: 'right' }}>HS%</div>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--text-muted)' }}>
-              <span style={{ width: 10, height: 10, borderRadius: 3, background: p.agentColor, flex: 'none' }} />
-              {p.agent}
-            </div>
-            <div style={{ textAlign: 'right' }}>{p.acs}</div>
-            <div style={{ textAlign: 'right' }}>{p.kills}</div>
-            <div style={{ textAlign: 'right', color: 'var(--text-muted)' }}>{p.deaths}</div>
-            <div style={{ textAlign: 'right', color: 'var(--text-muted)' }}>{p.assists}</div>
-            <div style={{ textAlign: 'right', color: 'var(--text-muted)' }}>{p.hsPercent}%</div>
+            {match.players.map((p) => (
+              <div
+                key={p.puuid}
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: scoreCols,
+                  padding: '11px 22px',
+                  borderTop: '1px solid var(--divider)',
+                  fontSize: 13,
+                  background: p.isSelf ? 'color-mix(in srgb, var(--acc, #EF4958) 9%, transparent)' : 'transparent',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span style={{ width: 3, height: 16, borderRadius: 2, background: p.side === 'own' ? 'var(--acc, #EF4958)' : 'var(--text-faint)' }} />
+                  <span style={{ color: p.side === 'own' ? 'var(--text)' : 'var(--text-muted)', fontWeight: p.isSelf ? 600 : 400 }}>{p.name}</span>
+                  <span style={{ fontSize: 10.5, color: 'var(--text-faint)' }}>{p.tag}</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--text-muted)' }}>
+                  <span style={{ width: 10, height: 10, borderRadius: 3, background: p.agentColor, flex: 'none' }} />
+                  {p.agent}
+                </div>
+                <div style={{ textAlign: 'right' }}>{p.acs}</div>
+                <div style={{ textAlign: 'right' }}>{p.kills}</div>
+                <div style={{ textAlign: 'right', color: 'var(--text-muted)' }}>{p.deaths}</div>
+                <div style={{ textAlign: 'right', color: 'var(--text-muted)' }}>{p.assists}</div>
+                <div style={{ textAlign: 'right', color: 'var(--text-muted)' }}>{p.hsPercent}%</div>
+              </div>
+            ))}
           </div>
-        ))}
+        </div>
       </div>
 
       <div style={{ ...cardStyle, padding: '20px 22px' }}>
         <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 16, marginBottom: 14 }}>Meus números</div>
-        <div style={{ display: 'grid', gridTemplateColumns: `repeat(${myStats.length}, 1fr)`, gap: 10 }}>
+        <div className="grid-responsive-stats" style={{ gap: 10 }}>
           {myStats.map((s) => (
             <div key={s.label} style={{ display: 'flex', flexDirection: 'column', gap: 6, paddingLeft: 14, borderLeft: '1px solid var(--divider)' }}>
               <span style={{ fontSize: 11.5, color: 'var(--text-muted)' }}>{s.label}</span>

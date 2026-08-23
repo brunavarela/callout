@@ -339,7 +339,7 @@ function DashboardContent({
 
   return (
     <>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14 }}>
+      <div className="grid-responsive-4">
         {kpiCards.map((k) => {
           const positive = k.delta > 0;
           const color = positive ? 'var(--pos, #18AAB7)' : k.delta < 0 ? 'var(--text-muted-2)' : 'var(--text-faint)';
@@ -361,7 +361,7 @@ function DashboardContent({
         })}
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1.45fr 1fr', gap: 14 }}>
+      <div className="grid-responsive-rr">
         <div style={{ ...cardStyle, padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: 4 }}>
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
             <div>
@@ -477,7 +477,7 @@ function DashboardContent({
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14 }}>
+      <div className="grid-responsive-4">
         <RateBlock
           title="Em quais mapas você ganha"
           sub="% de partidas vencidas em cada mapa"

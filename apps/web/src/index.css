@@ -283,6 +283,29 @@ select.input-field {
   .grid-responsive-board {
     grid-template-columns: 1fr;
   }
+  /* Canvas some sem altura própria quando vira só mais uma linha do grid
+     (antes ele herdava a altura da coluna ao lado) — dá um mínimo pra
+     continuar desenhável, com a lista de estratégias rolando embaixo. */
+  .grid-responsive-board > :first-child {
+    min-height: 60vh;
+  }
+}
+
+/* "Meus números" do detalhe de partida — 6 estatísticas em colunas. */
+.grid-responsive-stats {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+}
+@media (max-width: 640px) {
+  .grid-responsive-stats {
+    grid-template-columns: repeat(3, 1fr);
+    row-gap: 18px !important;
+  }
+}
+@media (max-width: 380px) {
+  .grid-responsive-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 
 /* Tabela/linha larga que não pode quebrar (placar de partida, cabeçalho de
