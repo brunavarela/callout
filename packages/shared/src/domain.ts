@@ -317,10 +317,3 @@ export interface Spot {
   side: Lado;
 }
 
-// --- Heatmap ---
-
-export interface HeatmapResult {
-  mapName: string;
-  mapDisplayIcon: string | null;
-  points: Array<{ x: number; y: number }>;
-}

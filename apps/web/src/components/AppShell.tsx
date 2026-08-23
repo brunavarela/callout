@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Navigate, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Swords, Users, PenTool, MapPin, Flame } from 'lucide-react';
+import { LayoutDashboard, Swords, Users, PenTool, MapPin } from 'lucide-react';
 import type { SyncStatus } from '@callout/shared';
 import { useSession } from '../lib/session';
 import { useAppData, type AppData } from '../lib/appData';
@@ -11,7 +11,6 @@ const BASE_NAV_ITEMS = [
   { to: '/time', label: 'Time', icon: Users, match: (p: string) => p === '/time' },
   { to: '/board', label: 'Board', icon: PenTool, match: (p: string) => p.startsWith('/board') },
   { to: '/spots', label: 'Spots', icon: MapPin, match: (p: string) => p === '/spots' },
-  { to: '/heatmap', label: 'Heatmap', icon: Flame, match: (p: string) => p === '/heatmap' },
 ];
 
 export type OutletContext = AppData;
@@ -104,11 +103,6 @@ function SearchBar({ appData }: { appData: AppData }) {
       .slice(0, 5)
       .map((m) => ({ id: m.id, label: `${m.map} · ${m.agent}`, sub: `${m.result === 'V' ? 'Vitória' : 'Derrota'} · ${m.score}`, to: `/partida/${m.id}` }));
 
-    const maps: SearchResult[] = (dashboard?.mapWinrates ?? [])
-      .filter((m) => m.map.toLowerCase().includes(q))
-      .slice(0, 5)
-      .map((m) => ({ id: m.map, label: m.map, sub: `${m.winratePercent}% de winrate`, to: `/heatmap?map=${encodeURIComponent(m.map)}` }));
-
     const strats: SearchResult[] = (strategies ?? [])
       .filter((s) => s.title.toLowerCase().includes(q) || s.mapName.toLowerCase().includes(q))
       .slice(0, 5)
@@ -116,7 +110,6 @@ function SearchBar({ appData }: { appData: AppData }) {
 
     const out: SearchGroup[] = [];
     if (matches.length > 0) out.push({ title: 'Partidas', results: matches });
-    if (maps.length > 0) out.push({ title: 'Mapas', results: maps });
     if (strats.length > 0) out.push({ title: 'Estratégias', results: strats });
     return out;
   }, [query, dashboard, strategies]);
@@ -211,17 +204,16 @@ export function AppShell() {
   const navigate = useNavigate();
   const { user, loading } = useSession();
   const appData = useAppData(user);
-  const { sync, startSync, team, dashboard } = appData;
+  const { sync, startSync, team } = appData;
   const [settingsOpen, setSettingsOpen] = useState(false);
 
   if (loading) return null;
   if (!user) return <Navigate to="/login" replace />;
   if (!user.riotId) return <Navigate to="/login/vincular" replace />;
 
-  const latestMatchId = dashboard?.recentMatches[0]?.id;
   const navItems = [
     BASE_NAV_ITEMS[0]!,
-    { to: latestMatchId ? `/partida/${latestMatchId}` : '/', label: 'Partidas', icon: Swords, match: (p: string) => p.startsWith('/partida') },
+    { to: '/partidas', label: 'Partidas', icon: Swords, match: (p: string) => p.startsWith('/partida') },
     ...BASE_NAV_ITEMS.slice(1),
   ];
 

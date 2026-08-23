@@ -12,7 +12,6 @@ import { matchesRoutes } from "./routes/matches.js";
 import { commentsRoutes } from "./routes/comments.js";
 import { spotsRoutes } from "./routes/spots.js";
 import { agentsRoutes } from "./routes/agents.js";
-import { heatmapRoutes } from "./routes/heatmap.js";
 
 const app = Fastify({ logger: true });
 
@@ -37,7 +36,6 @@ await app.register(matchesRoutes);
 await app.register(commentsRoutes);
 await app.register(spotsRoutes);
 await app.register(agentsRoutes);
-await app.register(heatmapRoutes);
 
 try {
   await app.listen({ port: env.PORT, host: "0.0.0.0" });

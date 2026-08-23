@@ -1,6 +1,7 @@
 import { useNavigate, useOutletContext } from 'react-router-dom';
 import type { AgentWinrate, DashboardSummary, MapWinrate, MatchCountFilter, MatchModeFilter, RecentFormInsights, RrHistoryPoint, SessionUser, SidesBreakdown } from '@callout/shared';
 import type { OutletContext } from '../components/AppShell';
+import { LoadingFill, SnakeSpinner } from '../components/Spinner';
 import { useSession } from '../lib/session';
 
 const cardStyle: React.CSSProperties = { borderRadius: 'var(--radius-lg)', background: 'var(--surface)', border: '1px solid var(--surface-border)' };
@@ -271,38 +272,6 @@ function MatchCountButtons({ matchCountFilter, setMatchCountFilter }: { matchCou
           {c.label}
         </button>
       ))}
-    </div>
-  );
-}
-
-// "Cobrinha" girando — arco com gradiente que esmaece da cor de ação do
-// tema até transparente, mascarado em anel e rotacionando (reaproveita a
-// keyframe `spin` já usada no ícone de sync do AppShell).
-function SnakeSpinner({ size = 44 }: { size?: number }) {
-  return (
-    <div
-      role="status"
-      aria-label="Carregando"
-      style={{
-        width: size,
-        height: size,
-        borderRadius: '50%',
-        background: 'conic-gradient(from 0deg, transparent 0deg, var(--acc, #EF4958) 300deg, transparent 360deg)',
-        WebkitMask: 'radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 4px))',
-        mask: 'radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 4px))',
-        animation: 'spin 900ms linear infinite',
-      }}
-    />
-  );
-}
-
-// Centralizado nos dois eixos dentro do espaço de conteúdo (abaixo do
-// header, que fica fixo) — minHeight aproxima a altura que o dashboard
-// carregado ocupa, pra centralizar de verdade e não só no topo.
-function LoadingFill() {
-  return (
-    <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 'calc(100vh - 260px)' }}>
-      <SnakeSpinner />
     </div>
   );
 }
