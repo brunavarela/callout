@@ -153,7 +153,7 @@ export interface RecentFormInsights {
 
 export interface DashboardSummary {
   rank: { current: string; rr: number; rrDelta7d: number };
-  last14Results: Array<"V" | "D">;
+  last14Results: Array<"V" | "D" | "E">;
   kpis: DashboardKpis;
   mapWinrates: MapWinrate[];
   agentWinrates: AgentWinrate[];

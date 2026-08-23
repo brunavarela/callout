@@ -212,11 +212,6 @@ export async function buildDashboardSummary(userId: string, puuid: string, regio
     }))
     .sort((a, b) => b.winratePercent - a.winratePercent);
 
-  const last14Results = rows
-    .slice(0, 14)
-    .reverse()
-    .map((r) => (r.won ? "V" : "D")) as Array<"V" | "D">;
-
   // getMmr (rank atual) e getMmrHistory (RR por partida) são endpoints
   // independentes da HenrikDev — um falhar não pode derrubar o outro. Antes
   // o histórico só era buscado dentro do try do getMmr, então uma conta sem
@@ -239,6 +234,11 @@ export async function buildDashboardSummary(userId: string, puuid: string, regio
   } catch {
     // sem MMR disponível (conta nova, região errada, API fora) — mantém o placeholder
   }
+
+  const last14Results = rows
+    .slice(0, 14)
+    .reverse()
+    .map((r) => matchResult(r.won, rrByMatch.get(r.match.id)));
 
   const recentRows = rows.slice(0, 7);
   const analysisRows = rows.slice(0, FORM_INSIGHTS_WINDOW);

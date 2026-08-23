@@ -67,7 +67,7 @@ function pickTickIndices(n: number, count = 5): number[] {
   return [...idxs].sort((a, b) => a - b);
 }
 
-function streaks(results: Array<'V' | 'D'>): { currentType: 'V' | 'D' | null; currentCount: number; bestWin: number } {
+function streaks(results: Array<'V' | 'D' | 'E'>): { currentType: 'V' | 'D' | 'E' | null; currentCount: number; bestWin: number } {
   if (results.length === 0) return { currentType: null, currentCount: 0, bestWin: 0 };
   const last = results[results.length - 1]!;
   let currentCount = 0;
@@ -580,7 +580,7 @@ export function Dashboard() {
         <div style={{ ...cardStyle, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 11 }}>
           <div>
             <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 15 }}>Vitórias e derrotas em sequência</div>
-            <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 3 }}>Uma caixa por partida: V venceu, D perdeu</div>
+            <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 3 }}>Uma caixa por partida: V venceu, D perdeu, E empatou</div>
           </div>
           <div>
             <div style={{ display: 'flex', gap: 4 }}>
@@ -596,8 +596,13 @@ export function Dashboard() {
                     justifyContent: 'center',
                     fontSize: 10.5,
                     fontWeight: 700,
-                    background: r === 'V' ? 'color-mix(in srgb, var(--pos, #18AAB7) 18%, transparent)' : 'color-mix(in srgb, var(--acc, #EF4958) 18%, transparent)',
-                    color: r === 'V' ? WIN : LOSS,
+                    background:
+                      r === 'V'
+                        ? 'color-mix(in srgb, var(--pos, #18AAB7) 18%, transparent)'
+                        : r === 'D'
+                          ? 'color-mix(in srgb, var(--acc, #EF4958) 18%, transparent)'
+                          : 'color-mix(in srgb, var(--text-muted, #9A9DA1) 18%, transparent)',
+                    color: r === 'V' ? WIN : r === 'D' ? LOSS : DRAW,
                   }}
                 >
                   {r}
@@ -613,13 +618,15 @@ export function Dashboard() {
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
               <span>Saldo nas {formBoxes.length}</span>
               <b style={{ color: 'var(--text-2)', fontWeight: 600 }}>
-                {formBoxes.filter((r) => r === 'V').length}V–{formBoxes.filter((r) => r === 'D').length}D
+                {formBoxes.filter((r) => r === 'V').length}V–{formBoxes.filter((r) => r === 'D').length}D–{formBoxes.filter((r) => r === 'E').length}E
               </b>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
               <span>Sequência atual</span>
-              <b style={{ color: form.currentType === 'V' ? WIN : 'var(--text-2)', fontWeight: 600 }}>
-                {form.currentType ? plural(form.currentCount, form.currentType === 'V' ? 'vitória' : 'derrota') : '—'}
+              <b style={{ color: form.currentType === 'V' ? WIN : form.currentType === 'E' ? DRAW : 'var(--text-2)', fontWeight: 600 }}>
+                {form.currentType
+                  ? plural(form.currentCount, form.currentType === 'V' ? 'vitória' : form.currentType === 'D' ? 'derrota' : 'empate')
+                  : '—'}
               </b>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
