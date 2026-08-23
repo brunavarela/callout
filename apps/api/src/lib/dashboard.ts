@@ -42,6 +42,56 @@ function hasAce(rawJson: unknown, puuid: string): boolean {
 
 type Row = Awaited<ReturnType<typeof prisma.matchPlayer.findMany<{ include: { match: true } }>>>[number];
 
+const FORM_INSIGHTS_WINDOW = 20;
+
+// Mapa/agente "principal" das últimas N partidas = o mais jogado nesse
+// recorte (não necessariamente o de maior winrate) — é sobre o que você tem
+// jogado recentemente, não sobre onde você é melhor (isso já é o card de
+// winrate por mapa/agente, calculado sobre outra janela).
+function buildFormInsights(allRows: Row[]): DashboardSummary["formInsights"] {
+  const sample = allRows.slice(0, FORM_INSIGHTS_WINDOW);
+  if (sample.length === 0) {
+    return { matchesAnalyzed: 0, topMap: null, topAgent: null, negativeKdaMatches: 0 };
+  }
+
+  const mapCounts = new Map<string, { total: number; wins: number }>();
+  const agentCounts = new Map<string, { total: number; wins: number }>();
+  let negativeKdaMatches = 0;
+
+  for (const r of sample) {
+    const map = mapNameFrom(r.match.rawJson);
+    const mEntry = mapCounts.get(map) ?? { total: 0, wins: 0 };
+    mEntry.total++;
+    if (r.won) mEntry.wins++;
+    mapCounts.set(map, mEntry);
+
+    const aEntry = agentCounts.get(r.agentName) ?? { total: 0, wins: 0 };
+    aEntry.total++;
+    if (r.won) aEntry.wins++;
+    agentCounts.set(r.agentName, aEntry);
+
+    if (r.kills + r.assists < r.deaths) negativeKdaMatches++;
+  }
+
+  const mostPlayed = (counts: Map<string, { total: number; wins: number }>) => {
+    let best: [string, { total: number; wins: number }] | null = null;
+    for (const entry of counts) {
+      if (!best || entry[1].total > best[1].total) best = entry;
+    }
+    return best;
+  };
+
+  const topMap = mostPlayed(mapCounts);
+  const topAgent = mostPlayed(agentCounts);
+
+  return {
+    matchesAnalyzed: sample.length,
+    topMap: topMap ? { map: topMap[0], wins: topMap[1].wins } : null,
+    topAgent: topAgent ? { agent: topAgent[0], wins: topAgent[1].wins } : null,
+    negativeKdaMatches,
+  };
+}
+
 function aggregate(list: Row[]) {
   if (list.length === 0) return { kda: 0, acs: 0, adr: 0, hsPercent: 0, wins: 0, losses: 0 };
   const kills = list.reduce((s, r) => s + r.kills, 0);
@@ -228,6 +278,7 @@ export async function buildDashboardSummary(userId: string, puuid: string, regio
     mapWinrates,
     agentWinrates,
     recentMatches,
+    formInsights: buildFormInsights(rows),
     sync: getSyncProgress(userId),
   };
 }

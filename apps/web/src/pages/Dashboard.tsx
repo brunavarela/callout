@@ -247,7 +247,7 @@ export function Dashboard() {
     );
   }
 
-  const { kpis, mapWinrates, agentWinrates, recentMatches, rank, last14Results } = data;
+  const { kpis, mapWinrates, agentWinrates, recentMatches, rank, last14Results, formInsights } = data;
   const totalInWindow = kpis.winrate.wins + kpis.winrate.losses;
 
   const kpiCards = [
@@ -407,6 +407,42 @@ export function Dashboard() {
             </>
           ) : (
             <div style={{ marginTop: 20, fontSize: 13, color: 'var(--text-dim)' }}>Sem histórico de RR ainda.</div>
+          )}
+          {formInsights.matchesAnalyzed > 0 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 14, paddingTop: 12, borderTop: '1px solid var(--divider)' }}>
+              {formInsights.topMap && (
+                <div style={{ display: 'flex', gap: 8, fontSize: 12.5, color: 'var(--text-dim)', lineHeight: 1.4 }}>
+                  <span style={{ color: 'var(--text-faint)' }}>•</span>
+                  <span>
+                    Nas últimas {formInsights.matchesAnalyzed} partidas você jogou no mapa{' '}
+                    <b style={{ color: 'var(--text-2)', fontWeight: 600 }}>{formInsights.topMap.map}</b> e ganhou{' '}
+                    <b style={{ color: 'var(--text-2)', fontWeight: 600 }}>{formInsights.topMap.wins}</b>{' '}
+                    {formInsights.topMap.wins === 1 ? 'vez' : 'vezes'} nesse mapa.
+                  </span>
+                </div>
+              )}
+              {formInsights.topAgent && (
+                <div style={{ display: 'flex', gap: 8, fontSize: 12.5, color: 'var(--text-dim)', lineHeight: 1.4 }}>
+                  <span style={{ color: 'var(--text-faint)' }}>•</span>
+                  <span>
+                    Nas últimas {formInsights.matchesAnalyzed} partidas você jogou com{' '}
+                    <b style={{ color: 'var(--text-2)', fontWeight: 600 }}>{formInsights.topAgent.agent}</b> e ganhou{' '}
+                    <b style={{ color: 'var(--text-2)', fontWeight: 600 }}>{formInsights.topAgent.wins}</b>{' '}
+                    {formInsights.topAgent.wins === 1 ? 'vez' : 'vezes'}.
+                  </span>
+                </div>
+              )}
+              <div style={{ display: 'flex', gap: 8, fontSize: 12.5, color: 'var(--text-dim)', lineHeight: 1.4 }}>
+                <span style={{ color: 'var(--text-faint)' }}>•</span>
+                <span>
+                  Nas últimas {formInsights.matchesAnalyzed} partidas você ficou com KDA negativo{' '}
+                  <b style={{ color: formInsights.negativeKdaMatches > 0 ? LOSS : 'var(--text-2)', fontWeight: 600 }}>
+                    {formInsights.negativeKdaMatches}
+                  </b>{' '}
+                  {formInsights.negativeKdaMatches === 1 ? 'vez' : 'vezes'}.
+                </span>
+              </div>
+            </div>
           )}
         </div>
 

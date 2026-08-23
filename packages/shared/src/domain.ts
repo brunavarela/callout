@@ -143,6 +143,13 @@ export interface RecentMatchSummary {
   playedAtLabel: string;
 }
 
+export interface RecentFormInsights {
+  matchesAnalyzed: number;
+  topMap: { map: string; wins: number } | null;
+  topAgent: { agent: string; wins: number } | null;
+  negativeKdaMatches: number;
+}
+
 export interface DashboardSummary {
   rank: { current: string; rr: number; rrDelta7d: number };
   last14Results: Array<"V" | "D">;
@@ -150,6 +157,7 @@ export interface DashboardSummary {
   mapWinrates: MapWinrate[];
   agentWinrates: AgentWinrate[];
   recentMatches: RecentMatchSummary[];
+  formInsights: RecentFormInsights;
   sync: SyncStatus;
   dataAgeLabel?: string;
 }
