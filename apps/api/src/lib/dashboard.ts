@@ -281,6 +281,7 @@ export async function buildDashboardSummary(userId: string, puuid: string, regio
     rank,
     last14Results,
     kpis,
+    hasComparison: hasPrevious,
     mapWinrates,
     agentWinrates,
     recentMatches,

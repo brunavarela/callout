@@ -155,6 +155,7 @@ export interface DashboardSummary {
   rank: { current: string; rr: number; rrDelta7d: number };
   last14Results: Array<"V" | "D" | "E">;
   kpis: DashboardKpis;
+  hasComparison: boolean; // false quando não há partida nenhuma nos 30-60 dias anteriores — os deltas dos KPIs vêm forçados a 0 e não devem ser mostrados como "sem variação"
   mapWinrates: MapWinrate[];
   agentWinrates: AgentWinrate[];
   recentMatches: RecentMatchSummary[];

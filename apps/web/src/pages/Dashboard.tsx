@@ -247,7 +247,7 @@ export function Dashboard() {
     );
   }
 
-  const { kpis, mapWinrates, agentWinrates, recentMatches, rank, last14Results, formInsights } = data;
+  const { kpis, hasComparison, mapWinrates, agentWinrates, recentMatches, rank, last14Results, formInsights } = data;
   const totalInWindow = kpis.winrate.wins + kpis.winrate.losses;
 
   const kpiCards = [
@@ -335,7 +335,7 @@ export function Dashboard() {
             <div key={k.label} style={{ ...cardStyle, padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}>
                 <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-3)' }}>{k.label}</span>
-                <span style={{ fontSize: 12, fontWeight: 600, color, whiteSpace: 'nowrap' }}>{k.deltaLabel}</span>
+                {hasComparison && <span style={{ fontSize: 12, fontWeight: 600, color, whiteSpace: 'nowrap' }}>{k.deltaLabel}</span>}
               </div>
               <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 10 }}>
                 <span style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 32, letterSpacing: '-.02em', lineHeight: 1 }}>{k.value}</span>
@@ -343,7 +343,9 @@ export function Dashboard() {
               </div>
               <div style={{ borderTop: '1px solid var(--divider)', paddingTop: 8, display: 'flex', flexDirection: 'column', gap: 3 }}>
                 <span style={{ fontSize: 11.5, lineHeight: 1.35, color: 'var(--text-dim)' }}>{k.explain}</span>
-                <span style={{ fontSize: 10.5, color: 'var(--text-faint)' }}>{k.deltaLabel} contra os 30 dias anteriores · linha: últimas partidas, eixo em zero</span>
+                <span style={{ fontSize: 10.5, color: 'var(--text-faint)' }}>
+                  {hasComparison ? `${k.deltaLabel} contra os 30 dias anteriores` : 'Ainda sem partidas de 30-60 dias atrás pra comparar'} · linha: últimas partidas, eixo em zero
+                </span>
               </div>
             </div>
           );
