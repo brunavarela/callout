@@ -57,13 +57,24 @@ export async function syncUserMatches(userId: string, puuid: string, region: str
     let done = matches.length - newMatches.length;
     progressByUser.set(userId, { state: "syncing", progress: { done, total: matches.length } });
 
-    await Promise.all(
-      newMatches.map(async (match) => {
+    // Paralelo, mas com teto — Promise.all sem limite chegou a abrir uma
+    // query por partida nova de uma vez (findFirst/create de ensureMapAsset
+    // + o create da partida, cada uma pegando uma conexão), estourando o
+    // pool do Prisma/Neon (P2024) quando o backlog de novas era grande
+    // (ex.: primeiro sync depois do auto-sync). Um puuid só tem uma
+    // partida nova por vez de verdade, então nem perde a vantagem do
+    // paralelismo no caso comum — só protege o caso de backlog grande.
+    const PERSIST_CONCURRENCY = 4;
+    let cursor = 0;
+    async function worker() {
+      while (cursor < newMatches.length) {
+        const match = newMatches[cursor++]!;
         await persistMatch(match);
         done++;
         progressByUser.set(userId, { state: "syncing", progress: { done, total: matches.length } });
-      }),
-    );
+      }
+    }
+    await Promise.all(Array.from({ length: Math.min(PERSIST_CONCURRENCY, newMatches.length) }, worker));
 
     progressByUser.set(userId, {
       state: "idle",
