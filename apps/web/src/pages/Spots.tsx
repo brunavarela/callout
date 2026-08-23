@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { PLACEHOLDER_AGENTS, type AgentAsset, type Lado } from '@callout/shared';
 import type { OutletContext } from '../components/AppShell';
+import { LoadingFill } from '../components/Spinner';
 import { compressImageToDataUrl } from '../lib/imageCompress';
 
 const cardStyle: React.CSSProperties = { borderRadius: 'var(--radius-lg)', background: 'var(--surface)', border: '1px solid var(--surface-border)' };
@@ -325,7 +326,7 @@ export function Spots() {
         </div>
       )}
 
-      {!spots && !spotsError && <div style={{ color: 'var(--text-muted)' }}>Carregando…</div>}
+      {!spots && !spotsError && <LoadingFill />}
 
       {spots && spots.length === 0 && (
         <div style={{ ...cardStyle, padding: 40, textAlign: 'center', color: 'var(--text-muted)', fontSize: 14, display: 'flex', flexDirection: 'column', gap: 14, alignItems: 'center' }}>
