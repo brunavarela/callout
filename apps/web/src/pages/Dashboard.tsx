@@ -1,15 +1,9 @@
 import { useNavigate, useOutletContext } from 'react-router-dom';
 import type { AgentWinrate, DashboardSummary, MapWinrate, MatchModeFilter, RrHistoryPoint, SessionUser, SidesBreakdown } from '@callout/shared';
 import type { OutletContext } from '../components/AppShell';
-import type { RrRange } from '../lib/appData';
 import { useSession } from '../lib/session';
 
 const cardStyle: React.CSSProperties = { borderRadius: 'var(--radius-lg)', background: 'var(--surface)', border: '1px solid var(--surface-border)' };
-const RANGES: Array<{ key: RrRange; label: string }> = [
-  { key: '7d', label: '7D' },
-  { key: '30d', label: '30D' },
-  { key: '90d', label: '90D' },
-];
 const MODOS: Array<{ key: MatchModeFilter; label: string }> = [
   { key: 'all', label: 'Todos' },
   { key: 'Competitive', label: 'Competitivo' },
@@ -285,15 +279,11 @@ function DashboardContent({
   data,
   modoFilter,
   rrHistory,
-  rrRange,
-  setRrRange,
   sides,
 }: {
   data: DashboardSummary;
   modoFilter: MatchModeFilter;
   rrHistory: RrHistoryPoint[];
-  rrRange: RrRange;
-  setRrRange: (r: RrRange) => void;
   sides: SidesBreakdown | null;
 }) {
   const navigate = useNavigate();
@@ -367,41 +357,20 @@ function DashboardContent({
 
       <div style={{ display: 'grid', gridTemplateColumns: '1.45fr 1fr', gap: 14 }}>
         <div style={{ ...cardStyle, padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: 4 }}>
-          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
-            <div>
-              <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 16 }}>RR ganho e perdido no período</div>
-              <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 3 }}>
-                Soma acumulada de RR — cada ponto é uma partida.
-                {rrHistory.length > 0 && (
-                  <>
-                    {' '}
-                    Fechou em{' '}
-                    <span style={{ color: rrHistory.reduce((s, p) => s + p.delta, 0) >= 0 ? 'var(--pos, #18AAB7)' : 'var(--text-muted-2)' }}>
-                      {fmtDelta(rrHistory.reduce((s, p) => s + p.delta, 0), 0)} RR
-                    </span>
-                    .
-                  </>
-                )}
-              </div>
-            </div>
-            <div style={{ display: 'flex', gap: 4, background: 'var(--input-bg)', border: '1px solid var(--surface-border)', borderRadius: 9, padding: 3, flex: 'none' }}>
-              {RANGES.map((r) => (
-                <button
-                  key={r.key}
-                  onClick={() => setRrRange(r.key)}
-                  style={{
-                    padding: '5px 11px',
-                    borderRadius: 6,
-                    border: 'none',
-                    cursor: 'pointer',
-                    fontSize: 11.5,
-                    background: rrRange === r.key ? 'var(--acc, #EF4958)' : 'transparent',
-                    color: rrRange === r.key ? '#141415' : 'var(--text-muted)',
-                  }}
-                >
-                  {r.label}
-                </button>
-              ))}
+          <div>
+            <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 16 }}>RR ganho e perdido</div>
+            <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 3 }}>
+              Soma acumulada de RR — cada ponto é uma partida.
+              {rrHistory.length > 0 && (
+                <>
+                  {' '}
+                  Fechou em{' '}
+                  <span style={{ color: rrHistory.reduce((s, p) => s + p.delta, 0) >= 0 ? 'var(--pos, #18AAB7)' : 'var(--text-muted-2)' }}>
+                    {fmtDelta(rrHistory.reduce((s, p) => s + p.delta, 0), 0)} RR
+                  </span>
+                  .
+                </>
+              )}
             </div>
           </div>
           {rrHistory.length > 0 ? (
@@ -669,8 +638,6 @@ export function Dashboard() {
     modoFilter,
     setModoFilter,
     sides,
-    rrRange,
-    setRrRange,
     rrHistory,
   } = useOutletContext<OutletContext>();
   const { user } = useSession();
@@ -740,7 +707,7 @@ export function Dashboard() {
             : `Nenhuma partida ${modoFilter === 'Competitive' ? 'competitiva' : 'sem classificação'} nas suas partidas sincronizadas. Troque o filtro acima ou sincronize mais partidas.`}
         </div>
       ) : (
-        <DashboardContent data={data} modoFilter={modoFilter} rrHistory={rrHistory} rrRange={rrRange} setRrRange={setRrRange} sides={sides} />
+        <DashboardContent data={data} modoFilter={modoFilter} rrHistory={rrHistory} sides={sides} />
       )}
 
       {error && data && (

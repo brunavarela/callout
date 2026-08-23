@@ -15,8 +15,6 @@ import type {
 } from '@callout/shared';
 import { apiFetch } from './api';
 
-export type RrRange = '7d' | '30d' | '90d';
-
 function modoQuery(modo: MatchModeFilter): string {
   return modo === 'all' ? '' : `modo=${encodeURIComponent(modo)}`;
 }
@@ -36,8 +34,7 @@ export function useAppData(user: SessionUser | null) {
 
   const [sides, setSides] = useState<SidesBreakdown | null>(null);
 
-  const [rrRange, setRrRangeState] = useState<RrRange>('30d');
-  const [rrHistoryCache, setRrHistoryCache] = useState<Record<string, RrHistoryPoint[]>>({});
+  const [rrHistoryCache, setRrHistoryCache] = useState<Partial<Record<MatchModeFilter, RrHistoryPoint[]>>>({});
 
   const [modoFilter, setModoFilterState] = useState<MatchModeFilter>('all');
 
@@ -74,30 +71,15 @@ export function useAppData(user: SessionUser | null) {
     }
   }, []);
 
-  // Cache chaveado por modo+range — filtro diferente é um dado diferente,
-  // não dá pra reaproveitar o que já tava em cache pro range sozinho.
-  const rrCacheKey = (range: RrRange, modo: MatchModeFilter) => `${modo}:${range}`;
-
-  const loadRrHistory = useCallback(async (range: RrRange, modo: MatchModeFilter) => {
+  const loadRrHistory = useCallback(async (modo: MatchModeFilter) => {
     try {
-      const modoQs = modoQuery(modo);
-      const points = await apiFetch<RrHistoryPoint[]>(`/dashboard/rr-history?range=${range}${modoQs ? `&${modoQs}` : ''}`);
-      setRrHistoryCache((prev) => ({ ...prev, [rrCacheKey(range, modo)]: points }));
+      const qs = modoQuery(modo);
+      const points = await apiFetch<RrHistoryPoint[]>(`/dashboard/rr-history${qs ? `?${qs}` : ''}`);
+      setRrHistoryCache((prev) => ({ ...prev, [modo]: points }));
     } catch {
       // idem — o card mostra "sem histórico" se não tiver nada em cache
     }
   }, []);
-
-  const setRrRange = useCallback(
-    (range: RrRange) => {
-      setRrRangeState(range);
-      setRrHistoryCache((prev) => {
-        if (!prev[rrCacheKey(range, modoFilter)]) loadRrHistory(range, modoFilter);
-        return prev;
-      });
-    },
-    [loadRrHistory, modoFilter],
-  );
 
   const setModoFilter = useCallback((modo: MatchModeFilter) => {
     setModoFilterState(modo);
@@ -212,7 +194,7 @@ export function useAppData(user: SessionUser | null) {
     if (!riotId) return;
     loadDashboard(modoFilter);
     loadSides(modoFilter);
-    loadRrHistory(rrRange, modoFilter);
+    loadRrHistory(modoFilter);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [riotId, modoFilter]);
 
@@ -240,7 +222,7 @@ export function useAppData(user: SessionUser | null) {
       loadDashboard(modoFilter);
       loadSides(modoFilter);
       loadTeam();
-      loadRrHistory(rrRange, modoFilter);
+      loadRrHistory(modoFilter);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sync?.state]);
@@ -269,9 +251,7 @@ export function useAppData(user: SessionUser | null) {
     modoFilter,
     setModoFilter,
     sides,
-    rrRange,
-    setRrRange,
-    rrHistory: rrHistoryCache[rrCacheKey(rrRange, modoFilter)] ?? [],
+    rrHistory: rrHistoryCache[modoFilter] ?? [],
     strategies,
     strategiesError,
     strategiesLoading,

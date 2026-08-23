@@ -8,17 +8,11 @@ import { matchResult } from "./match-result.js";
 // mesmo id que a gente usa como `Match.id` (ver schema.prisma). Partidas sem
 // entrada correspondente na mmr-history (deathmatch, unrated etc. não geram
 // RR) ficam de fora — não tem o que plotar nelas.
-export async function buildRrHistory(
-  affinity: string,
-  puuid: string,
-  days: number,
-  modoFilter?: "Competitive" | "Unrated",
-): Promise<RrHistoryPoint[]> {
-  const windowStart = new Date(Date.now() - days * 86_400_000);
+export async function buildRrHistory(affinity: string, puuid: string, modoFilter?: "Competitive" | "Unrated"): Promise<RrHistoryPoint[]> {
   const [history, rows] = await Promise.all([
     getMmrHistory(affinity, puuid),
     prisma.matchPlayer.findMany({
-      where: { puuid, match: { startedAt: { gte: windowStart }, ...(modoFilter ? { modo: modoFilter } : {}) } },
+      where: { puuid, ...(modoFilter ? { match: { modo: modoFilter } } : {}) },
       include: { match: true },
       orderBy: { match: { startedAt: "asc" } },
     }),
