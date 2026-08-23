@@ -11,8 +11,9 @@ function Swatch({ color, active, disabled, onClick }: { color: string; active: b
       disabled={disabled}
       title={color}
       style={{
-        width: 26,
-        height: 26,
+        width: 22,
+        height: 22,
+        flex: 'none',
         borderRadius: '50%',
         background: color,
         border: active ? '2px solid var(--text)' : '2px solid transparent',
@@ -78,7 +79,7 @@ export function ThemeSettings({ onClose }: { onClose: () => void }) {
 
       <div>
         <div style={{ fontSize: 10, letterSpacing: '.1em', color: 'var(--text-dim)', marginBottom: 8 }}>COR DE AÇÃO</div>
-        <div style={{ display: 'flex', gap: 8 }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, rowGap: 10 }}>
           {THEME_PALETTE.map((c) => (
             <Swatch key={c} color={c} active={theme.accentColor === c} disabled={saving} onClick={() => update({ accentColor: c })} />
           ))}
@@ -87,7 +88,7 @@ export function ThemeSettings({ onClose }: { onClose: () => void }) {
 
       <div>
         <div style={{ fontSize: 10, letterSpacing: '.1em', color: 'var(--text-dim)', marginBottom: 8 }}>COR POSITIVA</div>
-        <div style={{ display: 'flex', gap: 8 }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, rowGap: 10 }}>
           {THEME_PALETTE.map((c) => (
             <Swatch
               key={c}
