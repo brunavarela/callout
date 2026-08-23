@@ -33,15 +33,16 @@ export function Matches() {
         </div>
       ) : (
         <div style={{ ...cardStyle, padding: '10px 20px 6px' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '24px 1fr 62px 42px', gap: 8, padding: '10px 0 6px', borderBottom: '1px solid var(--divider)', fontSize: 9.5, letterSpacing: '.08em', color: 'var(--text-faint)' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '24px 1fr 62px 42px 24px', gap: 8, padding: '10px 0 6px', borderBottom: '1px solid var(--divider)', fontSize: 9.5, letterSpacing: '.08em', color: 'var(--text-faint)' }}>
             <span>V/D</span>
             <span>MAPA · AGENTE</span>
             <span>PLACAR</span>
             <span style={{ textAlign: 'right' }}>RR</span>
+            <span />
           </div>
           <div style={{ display: 'flex', flexDirection: 'column' }}>
             {data.recentMatches.map((m) => (
-              <MatchRow key={m.id} m={m} />
+              <MatchRow key={m.id} m={m} showViewIcon />
             ))}
           </div>
         </div>

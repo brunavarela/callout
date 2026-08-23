@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom';
+import { Eye } from 'lucide-react';
 import type { RecentMatchSummary } from '@callout/shared';
 
 const WIN = 'var(--pos, #18AAB7)';
@@ -14,8 +15,10 @@ function fmtRr(n: number): string {
 
 // Uma linha de partida — badge V/D/E, mapa · agente (com MVP/ACE), placar,
 // RR e uma segunda linha com KDA/HS%. Usado tanto na lista compacta do
-// Dashboard quanto na página cheia de Partidas.
-export function MatchRow({ m }: { m: RecentMatchSummary }) {
+// Dashboard quanto na página cheia de Partidas. `showViewIcon` liga o
+// ícone de olho no final da linha — só na página de Partidas por ora, pra
+// não apertar o card compacto do Dashboard.
+export function MatchRow({ m, showViewIcon }: { m: RecentMatchSummary; showViewIcon?: boolean }) {
   const navigate = useNavigate();
   return (
     <div
@@ -24,7 +27,7 @@ export function MatchRow({ m }: { m: RecentMatchSummary }) {
       onClick={() => navigate(`/partida/${m.id}`)}
       style={{ display: 'flex', flexDirection: 'column', gap: 3, padding: '9px 6px', margin: '0 -6px', borderRadius: 8, cursor: 'pointer', borderTop: '1px solid var(--divider)' }}
     >
-      <div style={{ display: 'grid', gridTemplateColumns: '24px 1fr 62px 42px', gap: 8, alignItems: 'center' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: showViewIcon ? '24px 1fr 62px 42px 24px' : '24px 1fr 62px 42px', gap: 8, alignItems: 'center' }}>
         <span
           style={{
             fontSize: 10.5,
@@ -60,6 +63,11 @@ export function MatchRow({ m }: { m: RecentMatchSummary }) {
         <span style={{ fontSize: 11.5, fontWeight: 600, textAlign: 'right', color: m.rr === null ? 'var(--text-faint)' : m.rr >= 0 ? WIN : LOSS }}>
           {m.rr === null ? '—' : fmtRr(m.rr)}
         </span>
+        {showViewIcon && (
+          <span title="Ver detalhes" style={{ display: 'flex', justifyContent: 'flex-end', color: 'var(--text-faint)' }}>
+            <Eye size={15} strokeWidth={1.75} />
+          </span>
+        )}
       </div>
       <div style={{ marginLeft: 32, fontSize: 10.5, color: 'var(--text-faint)' }}>
         KDA {m.kda} · HS {m.hsPercent}%
