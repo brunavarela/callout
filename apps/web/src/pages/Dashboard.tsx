@@ -1,5 +1,5 @@
 import { useNavigate, useOutletContext } from 'react-router-dom';
-import type { AgentWinrate, MapWinrate, MatchModeFilter, RrHistoryPoint, SessionUser, SidesBreakdown } from '@callout/shared';
+import type { AgentWinrate, DashboardSummary, MapWinrate, MatchModeFilter, RrHistoryPoint, SessionUser, SidesBreakdown } from '@callout/shared';
 import type { OutletContext } from '../components/AppShell';
 import type { RrRange } from '../lib/appData';
 import { useSession } from '../lib/session';
@@ -249,59 +249,55 @@ function ModoFilterButtons({ modoFilter, setModoFilter }: { modoFilter: MatchMod
   );
 }
 
-export function Dashboard() {
+// "Cobrinha" girando — arco com gradiente que esmaece de #EF4958 até
+// transparente, mascarado em anel e rotacionando (reaproveita a keyframe
+// `spin` já usada no ícone de sync do AppShell).
+function SnakeSpinner({ size = 44 }: { size?: number }) {
+  return (
+    <div
+      role="status"
+      aria-label="Carregando"
+      style={{
+        width: size,
+        height: size,
+        borderRadius: '50%',
+        background: 'conic-gradient(from 0deg, transparent 0deg, #EF4958 300deg, transparent 360deg)',
+        WebkitMask: 'radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 4px))',
+        mask: 'radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 4px))',
+        animation: 'spin 900ms linear infinite',
+      }}
+    />
+  );
+}
+
+// Centralizado nos dois eixos dentro do espaço de conteúdo (abaixo do
+// header, que fica fixo) — minHeight aproxima a altura que o dashboard
+// carregado ocupa, pra centralizar de verdade e não só no topo.
+function LoadingFill() {
+  return (
+    <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 'calc(100vh - 260px)' }}>
+      <SnakeSpinner />
+    </div>
+  );
+}
+
+function DashboardContent({
+  data,
+  modoFilter,
+  rrHistory,
+  rrRange,
+  setRrRange,
+  sides,
+}: {
+  data: DashboardSummary;
+  modoFilter: MatchModeFilter;
+  rrHistory: RrHistoryPoint[];
+  rrRange: RrRange;
+  setRrRange: (r: RrRange) => void;
+  sides: SidesBreakdown | null;
+}) {
   const navigate = useNavigate();
-  const {
-    sync,
-    startSync,
-    dashboard: data,
-    dashboardError: error,
-    dashboardLoading: loading,
-    reloadDashboard,
-    modoFilter,
-    setModoFilter,
-    sides,
-    rrRange,
-    setRrRange,
-    rrHistory,
-  } = useOutletContext<OutletContext>();
-  const { user } = useSession();
-
-  if (loading) {
-    return <div style={{ padding: 26, color: 'var(--text-muted)' }}>Carregando…</div>;
-  }
-
-  if (error && !data) {
-    return (
-      <div style={{ padding: 26 }}>
-        <div style={{ ...cardStyle, padding: 22, display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'flex-start' }}>
-          <div style={{ fontSize: 14, color: 'var(--text-3)' }}>{error}</div>
-          <button className="btn-secondary" onClick={reloadDashboard}>
-            Tentar de novo
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  if (!data) return null;
-
-  if (data.recentMatches.length === 0) {
-    return (
-      <div style={{ padding: 26, display: 'flex', flexDirection: 'column', gap: 16 }}>
-        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-          <ModoFilterButtons modoFilter={modoFilter} setModoFilter={setModoFilter} />
-        </div>
-        <div style={{ ...cardStyle, padding: 40, textAlign: 'center', color: 'var(--text-muted)', fontSize: 14 }}>
-          {modoFilter === 'all'
-            ? 'Nenhuma partida sincronizada ainda. Clica no ícone de sincronizar lá em cima pra buscar suas últimas partidas.'
-            : `Nenhuma partida ${modoFilter === 'Competitive' ? 'competitiva' : 'sem classificação'} nas suas partidas sincronizadas. Troque o filtro acima ou sincronize mais partidas.`}
-        </div>
-      </div>
-    );
-  }
-
-  const { kpis, hasComparison, mapWinrates, agentWinrates, recentMatches, rank, last14Results, formInsights } = data;
+  const { kpis, hasComparison, mapWinrates, agentWinrates, recentMatches, last14Results, formInsights } = data;
   const totalInWindow = kpis.winrate.wins + kpis.winrate.losses;
 
   const kpiCards = [
@@ -343,50 +339,7 @@ export function Dashboard() {
   const formBoxes = last14Results.slice(-10);
 
   return (
-    <div style={{ padding: 26, display: 'flex', flexDirection: 'column', gap: 16 }}>
-      <div style={{ display: 'flex', alignItems: 'flex-end', gap: 20, flexWrap: 'wrap' }}>
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <h1 style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 700, fontSize: 34, letterSpacing: '-.025em', margin: 0 }}>
-              De volta, {firstName(user)}
-            </h1>
-            {rank.current !== '—' && (
-              <span
-                style={{
-                  fontSize: 12,
-                  color: 'var(--text-muted)',
-                  border: '1px solid var(--surface-border)',
-                  borderRadius: 'var(--radius-pill)',
-                  padding: '5px 11px',
-                }}
-              >
-                {rank.current} · {rank.rr} RR
-                {rank.rrDelta7d !== 0 && (
-                  <span style={{ color: rank.rrDelta7d > 0 ? 'var(--pos, #18AAB7)' : 'var(--text-muted-2)' }}> {fmtDelta(rank.rrDelta7d, 0)}</span>
-                )}
-              </span>
-            )}
-          </div>
-          <div style={{ fontSize: 14, color: 'var(--text-muted)', marginTop: 6 }}>
-            {plural(totalInWindow, 'partida')} · 30 dias · {kpis.winrate.wins}V–{kpis.winrate.losses}D
-          </div>
-        </div>
-        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10 }}>
-          <ModoFilterButtons modoFilter={modoFilter} setModoFilter={setModoFilter} />
-          <button className="btn-secondary" style={{ height: 40, display: 'flex', alignItems: 'center', padding: '0 17px' }} onClick={() => navigate('/board')}>
-            Abrir board
-          </button>
-          <button
-            className="btn-primary"
-            style={{ height: 40, display: 'flex', alignItems: 'center', padding: '0 17px', fontSize: 13 }}
-            onClick={startSync}
-            disabled={sync?.state === 'syncing'}
-          >
-            + Sincronizar
-          </button>
-        </div>
-      </div>
-
+    <>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14 }}>
         {kpiCards.map((k) => {
           const positive = k.delta > 0;
@@ -700,8 +653,97 @@ export function Dashboard() {
           </div>
         </div>
       </div>
+    </>
+  );
+}
 
-      {error && (
+export function Dashboard() {
+  const navigate = useNavigate();
+  const {
+    sync,
+    startSync,
+    dashboard: data,
+    dashboardError: error,
+    dashboardLoading: loading,
+    reloadDashboard,
+    modoFilter,
+    setModoFilter,
+    sides,
+    rrRange,
+    setRrRange,
+    rrHistory,
+  } = useOutletContext<OutletContext>();
+  const { user } = useSession();
+
+  return (
+    <div style={{ padding: 26, display: 'flex', flexDirection: 'column', gap: 16 }}>
+      {/* Header fixo — greeting, filtro de modo e ações não saem da tela
+          durante o loading, só o conteúdo abaixo troca por um spinner. */}
+      <div style={{ display: 'flex', alignItems: 'flex-end', gap: 20, flexWrap: 'wrap' }}>
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <h1 style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 700, fontSize: 34, letterSpacing: '-.025em', margin: 0 }}>
+              De volta, {firstName(user)}
+            </h1>
+            {data && data.rank.current !== '—' && (
+              <span
+                style={{
+                  fontSize: 12,
+                  color: 'var(--text-muted)',
+                  border: '1px solid var(--surface-border)',
+                  borderRadius: 'var(--radius-pill)',
+                  padding: '5px 11px',
+                }}
+              >
+                {data.rank.current} · {data.rank.rr} RR
+                {data.rank.rrDelta7d !== 0 && (
+                  <span style={{ color: data.rank.rrDelta7d > 0 ? 'var(--pos, #18AAB7)' : 'var(--text-muted-2)' }}> {fmtDelta(data.rank.rrDelta7d, 0)}</span>
+                )}
+              </span>
+            )}
+          </div>
+          {data && (
+            <div style={{ fontSize: 14, color: 'var(--text-muted)', marginTop: 6 }}>
+              {plural(data.kpis.winrate.wins + data.kpis.winrate.losses, 'partida')} · 30 dias · {data.kpis.winrate.wins}V–{data.kpis.winrate.losses}D
+            </div>
+          )}
+        </div>
+        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10 }}>
+          <ModoFilterButtons modoFilter={modoFilter} setModoFilter={setModoFilter} />
+          <button className="btn-secondary" style={{ height: 40, display: 'flex', alignItems: 'center', padding: '0 17px' }} onClick={() => navigate('/board')}>
+            Abrir board
+          </button>
+          <button
+            className="btn-primary"
+            style={{ height: 40, display: 'flex', alignItems: 'center', padding: '0 17px', fontSize: 13 }}
+            onClick={startSync}
+            disabled={sync?.state === 'syncing'}
+          >
+            + Sincronizar
+          </button>
+        </div>
+      </div>
+
+      {loading ? (
+        <LoadingFill />
+      ) : error && !data ? (
+        <div style={{ ...cardStyle, padding: 22, display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'flex-start' }}>
+          <div style={{ fontSize: 14, color: 'var(--text-3)' }}>{error}</div>
+          <button className="btn-secondary" onClick={reloadDashboard}>
+            Tentar de novo
+          </button>
+        </div>
+      ) : !data ? null : data.recentMatches.length === 0 ? (
+        <div style={{ ...cardStyle, padding: 40, textAlign: 'center', color: 'var(--text-muted)', fontSize: 14 }}>
+          {modoFilter === 'all'
+            ? 'Nenhuma partida sincronizada ainda. Clica no ícone de sincronizar lá em cima pra buscar suas últimas partidas.'
+            : `Nenhuma partida ${modoFilter === 'Competitive' ? 'competitiva' : 'sem classificação'} nas suas partidas sincronizadas. Troque o filtro acima ou sincronize mais partidas.`}
+        </div>
+      ) : (
+        <DashboardContent data={data} modoFilter={modoFilter} rrHistory={rrHistory} rrRange={rrRange} setRrRange={setRrRange} sides={sides} />
+      )}
+
+      {error && data && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 14, borderRadius: 14, padding: '14px 18px', background: 'var(--acc10, rgba(239,73,88,.1))', border: '1px solid var(--acc25, rgba(239,73,88,.25))' }}>
           <span style={{ fontSize: 11, letterSpacing: '.12em', color: 'var(--acc, #EF4958)', whiteSpace: 'nowrap' }}>API INSTÁVEL</span>
           <span style={{ fontSize: 13, color: 'var(--text-3)' }}>{error} Os números acima são da última carga que deu certo.</span>
