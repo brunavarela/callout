@@ -263,7 +263,7 @@ export interface TeamOverview {
 
 // --- Board de estratégia ---
 
-export type StratItemKind = "agent" | "smoke" | "flash" | "molly" | "arrow" | "line";
+export type StratItemKind = "agent" | "smoke" | "flash" | "molly" | "spike" | "arrow" | "line";
 
 export interface StratItem {
   id: string;

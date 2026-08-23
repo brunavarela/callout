@@ -14,7 +14,7 @@ const createBodySchema = z.object({
 });
 
 const itemSchema = z.object({
-  kind: z.enum(["agent", "smoke", "flash", "molly", "arrow", "line"]),
+  kind: z.enum(["agent", "smoke", "flash", "molly", "spike", "arrow", "line"]),
   label: z.string().max(10).optional(),
   x: z.number(),
   y: z.number(),

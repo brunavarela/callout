@@ -11,15 +11,16 @@ import { ConfirmModal } from '../components/ConfirmModal';
 
 const TOOLS = [
   { id: 'agente', icon: 'AG', title: 'Agente' },
-  { id: 'smoke', icon: '◍', title: 'Smoke' },
-  { id: 'flash', icon: '⚡', title: 'Flash' },
+  { id: 'smoke', icon: '◍', title: 'Smoke', image: '/img/others/smoke.png' },
+  { id: 'flash', icon: '⚡', title: 'Flash', image: '/img/others/bang.png' },
   { id: 'molly', icon: '●', title: 'Molly' },
+  { id: 'spike', icon: 'SP', title: 'Spike', image: '/img/others/spike.png' },
   { id: 'seta', icon: '↗', title: 'Seta' },
   { id: 'linha', icon: '∕', title: 'Linha' },
   { id: 'borracha', icon: '⌫', title: 'Borracha' },
 ] as const;
 
-type PieceKind = 'agent' | 'smoke' | 'flash' | 'molly';
+type PieceKind = 'agent' | 'smoke' | 'flash' | 'molly' | 'spike';
 interface Piece {
   id: string;
   label: string;
@@ -39,7 +40,7 @@ interface Shape {
   points: [Point, Point];
 }
 
-const PIECE_KINDS: readonly PieceKind[] = ['agent', 'smoke', 'flash', 'molly'];
+const PIECE_KINDS: readonly PieceKind[] = ['agent', 'smoke', 'flash', 'molly', 'spike'];
 const SHAPE_KINDS: readonly ShapeKind[] = ['arrow', 'line'];
 const SHAPE_COLOR = 'var(--acc, #EF4958)';
 
@@ -47,6 +48,16 @@ const KIND_META: Record<Exclude<PieceKind, 'agent'>, { label: string; color: str
   smoke: { label: 'S', color: '#18AAB7' },
   flash: { label: 'F', color: '#FCFCFC' },
   molly: { label: 'M', color: '#EF4958' },
+  spike: { label: 'SP', color: '#F2994A' },
+};
+
+// Ícones reais pros pieces de smoke/flash/spike (o usuário subiu esses
+// PNGs em public/img/others) — molly continua só cor+letra, sem imagem
+// própria ainda.
+const KIND_IMAGE: Partial<Record<PieceKind, string>> = {
+  smoke: '/img/others/smoke.png',
+  flash: '/img/others/bang.png',
+  spike: '/img/others/spike.png',
 };
 
 function itemsToPieces(items: StratItemDTO[]): Piece[] {
@@ -261,7 +272,7 @@ export function Board() {
       const agent = AGENTS.find((a) => a.id === selectedAgentId);
       if (!agent) return;
       setPieces((prev) => [...prev, { id: crypto.randomUUID(), label: agent.abbrev, x, y, kind: 'agent', color: agent.color, agentId: agent.id }]);
-    } else if (tool === 'smoke' || tool === 'flash' || tool === 'molly') {
+    } else if (tool === 'smoke' || tool === 'flash' || tool === 'molly' || tool === 'spike') {
       const meta = KIND_META[tool];
       setPieces((prev) => [...prev, { id: crypto.randomUUID(), label: meta.label, x, y, kind: tool, color: meta.color }]);
     } else if (tool === 'seta' || tool === 'linha') {
@@ -372,7 +383,10 @@ export function Board() {
             position: 'absolute',
             inset: 0,
             touchAction: 'none',
-            cursor: tool === 'agente' || tool === 'smoke' || tool === 'flash' || tool === 'molly' || tool === 'seta' || tool === 'linha' ? 'crosshair' : 'default',
+            cursor:
+              tool === 'agente' || tool === 'smoke' || tool === 'flash' || tool === 'molly' || tool === 'spike' || tool === 'seta' || tool === 'linha'
+                ? 'crosshair'
+                : 'default',
           }}
         >
           <div
@@ -483,7 +497,7 @@ export function Board() {
           {pieces.map((p) => {
             const isAgent = p.kind === 'agent';
             const agentName = isAgent ? AGENTS.find((a) => a.id === p.agentId)?.name : undefined;
-            const imageUrl = agentName ? agentImageUrl(agentName) : null;
+            const imageUrl = isAgent ? (agentName ? agentImageUrl(agentName) : null) : (KIND_IMAGE[p.kind] ?? null);
             return (
               <div
                 key={p.id}
@@ -511,7 +525,16 @@ export function Board() {
                   boxShadow: isAgent ? '0 8px 18px rgba(0,0,0,.5)' : 'none',
                 }}
               >
-                {imageUrl ? <img src={imageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} draggable={false} /> : p.label}
+                {imageUrl ? (
+                  <img
+                    src={imageUrl}
+                    alt=""
+                    draggable={false}
+                    style={{ width: isAgent ? '100%' : '68%', height: isAgent ? '100%' : '68%', objectFit: isAgent ? 'cover' : 'contain' }}
+                  />
+                ) : (
+                  p.label
+                )}
               </div>
             );
           })}
@@ -520,6 +543,7 @@ export function Board() {
         <div style={{ position: 'absolute', left: 18, top: 18, display: 'flex', gap: 5, background: 'rgba(18,18,19,.92)', border: '1px solid var(--input-border)', borderRadius: 12, padding: 6 }}>
           {TOOLS.map((t) => {
             const active = tool === t.id;
+            const image = 'image' in t ? t.image : undefined;
             return (
               <button
                 key={t.id}
@@ -528,6 +552,9 @@ export function Board() {
                 style={{
                   width: 34,
                   height: 34,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
                   border: 'none',
                   borderRadius: 8,
                   background: active ? 'var(--acc, #EF4958)' : 'transparent',
@@ -536,7 +563,7 @@ export function Board() {
                   fontWeight: 600,
                 }}
               >
-                {t.icon}
+                {image ? <img src={image} alt="" draggable={false} style={{ width: 20, height: 20, objectFit: 'contain' }} /> : t.icon}
               </button>
             );
           })}

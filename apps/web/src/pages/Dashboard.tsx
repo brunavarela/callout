@@ -649,7 +649,7 @@ export function Dashboard() {
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10 }}>
           <ModoFilterButtons modoFilter={modoFilter} setModoFilter={setModoFilter} />
           <button className="btn-secondary" style={{ height: 40, display: 'flex', alignItems: 'center', padding: '0 17px' }} onClick={() => navigate('/board')}>
-            Abrir board
+            Abrir estratégia
           </button>
           <button
             className="btn-primary"
