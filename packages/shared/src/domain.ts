@@ -169,9 +169,16 @@ export interface DashboardSummary {
   mapWinrates: MapWinrate[];
   agentWinrates: AgentWinrate[];
   recentMatches: RecentMatchSummary[];
-  formInsights: RecentFormInsights;
   sync: SyncStatus;
   dataAgeLabel?: string;
+}
+
+// Resposta de GET /dashboard/rr-history — RR e os 4 tópicos de análise
+// vivem no mesmo card na tela e usam o mesmo filtro de partidas (7/20),
+// então saem juntos numa fetch só, independente do resto do /dashboard.
+export interface RrHistoryResponse {
+  points: RrHistoryPoint[];
+  formInsights: RecentFormInsights;
 }
 
 // --- Detalhe de partida ---

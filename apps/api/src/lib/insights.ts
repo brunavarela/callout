@@ -1,34 +1,99 @@
-import type { MatchCountFilter, MatchV4Data, RrHistoryPoint, SidesBreakdown } from "@callout/shared";
+import type { MatchCountFilter, MatchV4Data, RecentFormInsights, RrHistoryResponse, SidesBreakdown } from "@callout/shared";
 import { prisma } from "./prisma.js";
 import { getMmrHistory } from "./henrikdev.js";
 import { matchResult } from "./match-result.js";
 
-// Histórico de RR real, um ponto por partida (não por dia) — a HenrikDev dá
-// o RR ganho/perdido (`last_change`) já casado com o `match_id`, que é o
-// mesmo id que a gente usa como `Match.id` (ver schema.prisma). Partidas sem
-// entrada correspondente na mmr-history (deathmatch, unrated etc. não geram
-// RR) ficam de fora — não tem o que plotar nelas. `matchCount` é a mesma
-// janela (7/20) usada nos tópicos de análise do dashboard — pega as
-// matchCount mais recentes primeiro, depois filtra as sem RR.
-export async function buildRrHistory(
+type Row = Awaited<ReturnType<typeof prisma.matchPlayer.findMany<{ include: { match: true } }>>>[number];
+
+function mapNameFrom(rawJson: unknown): string {
+  return (rawJson as MatchV4Data).metadata.map.name;
+}
+
+// Mapa/agente "principal" das últimas N partidas = o mais jogado nesse
+// recorte (não necessariamente o de maior winrate) — é sobre o que você tem
+// jogado recentemente, não sobre onde você é melhor (isso já é o card de
+// winrate por mapa/agente, calculado sobre outra janela).
+function buildFormInsights(rows: Row[], maxAcsByMatch: Map<string, number>): RecentFormInsights {
+  if (rows.length === 0) {
+    return { matchesAnalyzed: 0, topMap: null, topAgent: null, negativeKdaMatches: 0, mvpMatches: 0 };
+  }
+
+  const mapCounts = new Map<string, { total: number; wins: number }>();
+  const agentCounts = new Map<string, { total: number; wins: number }>();
+  let negativeKdaMatches = 0;
+  let mvpMatches = 0;
+
+  for (const r of rows) {
+    const map = mapNameFrom(r.match.rawJson);
+    const mEntry = mapCounts.get(map) ?? { total: 0, wins: 0 };
+    mEntry.total++;
+    if (r.won) mEntry.wins++;
+    mapCounts.set(map, mEntry);
+
+    const aEntry = agentCounts.get(r.agentName) ?? { total: 0, wins: 0 };
+    aEntry.total++;
+    if (r.won) aEntry.wins++;
+    agentCounts.set(r.agentName, aEntry);
+
+    if (r.kills + r.assists < r.deaths) negativeKdaMatches++;
+    if (r.acs === maxAcsByMatch.get(r.match.id)) mvpMatches++;
+  }
+
+  const mostPlayed = (counts: Map<string, { total: number; wins: number }>) => {
+    let best: [string, { total: number; wins: number }] | null = null;
+    for (const entry of counts) {
+      if (!best || entry[1].total > best[1].total) best = entry;
+    }
+    return best;
+  };
+
+  const topMap = mostPlayed(mapCounts);
+  const topAgent = mostPlayed(agentCounts);
+
+  return {
+    matchesAnalyzed: rows.length,
+    topMap: topMap ? { map: topMap[0], total: topMap[1].total, wins: topMap[1].wins } : null,
+    topAgent: topAgent ? { agent: topAgent[0], total: topAgent[1].total, wins: topAgent[1].wins } : null,
+    negativeKdaMatches,
+    mvpMatches,
+  };
+}
+
+// RR e os 4 tópicos de análise vivem no mesmo card na tela e usam a mesma
+// janela de partidas (7/20) — saem numa fetch só. Partidas sem entrada
+// correspondente na mmr-history (deathmatch, unrated etc. não geram RR)
+// ficam de fora só dos pontos do gráfico, não da análise (que conta a
+// partida de qualquer forma).
+export async function buildRrAndInsights(
   affinity: string,
   puuid: string,
   matchCount: MatchCountFilter,
   modoFilter?: "Competitive" | "Unrated",
-): Promise<RrHistoryPoint[]> {
-  const [history, rows] = await Promise.all([
+): Promise<RrHistoryResponse> {
+  const rows = await prisma.matchPlayer.findMany({
+    where: { puuid, ...(modoFilter ? { match: { modo: modoFilter } } : {}) },
+    include: { match: true },
+    orderBy: { match: { startedAt: "desc" } },
+    take: matchCount,
+  });
+
+  // MVP (maior ACS da partida entre os 10 jogadores) precisa de todo mundo
+  // dessas partidas, não só das linhas do próprio usuário.
+  const maxAcsByMatch = new Map<string, number>();
+  const [history, allPlayers] = await Promise.all([
     getMmrHistory(affinity, puuid),
-    prisma.matchPlayer.findMany({
-      where: { puuid, ...(modoFilter ? { match: { modo: modoFilter } } : {}) },
-      include: { match: true },
-      orderBy: { match: { startedAt: "desc" } },
-      take: matchCount,
-    }),
+    rows.length > 0
+      ? prisma.matchPlayer.findMany({ where: { matchId: { in: rows.map((r) => r.match.id) } }, select: { matchId: true, acs: true } })
+      : Promise.resolve([]),
   ]);
+  for (const p of allPlayers) {
+    const current = maxAcsByMatch.get(p.matchId) ?? -Infinity;
+    if (p.acs > current) maxAcsByMatch.set(p.matchId, p.acs);
+  }
 
   const rrByMatch = new Map(history.map((h) => [h.match_id, h.last_change]));
 
-  return rows
+  const points = rows
     .filter((r) => rrByMatch.has(r.match.id))
     .reverse() // volta pra ordem cronológica (mais antiga primeiro) pro gráfico
     .map((r) => {
@@ -42,6 +107,8 @@ export async function buildRrHistory(
         result: matchResult(r.won, rrByMatch.get(r.match.id)),
       };
     });
+
+  return { points, formInsights: buildFormInsights(rows, maxAcsByMatch) };
 }
 
 const HALF_1_LAST_ROUND = 12;

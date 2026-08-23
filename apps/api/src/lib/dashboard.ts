@@ -1,4 +1,4 @@
-import type { DashboardSummary, MatchCountFilter, MatchV4Data } from "@callout/shared";
+import type { DashboardSummary, MatchV4Data } from "@callout/shared";
 import { prisma } from "./prisma.js";
 import { getMmr, getMmrHistory } from "./henrikdev.js";
 import { getSyncProgress } from "./sync.js";
@@ -42,58 +42,6 @@ function hasAce(rawJson: unknown, puuid: string): boolean {
 
 type Row = Awaited<ReturnType<typeof prisma.matchPlayer.findMany<{ include: { match: true } }>>>[number];
 
-// Mapa/agente "principal" das últimas N partidas = o mais jogado nesse
-// recorte (não necessariamente o de maior winrate) — é sobre o que você tem
-// jogado recentemente, não sobre onde você é melhor (isso já é o card de
-// winrate por mapa/agente, calculado sobre outra janela). `matchCount` é o
-// mesmo filtro (7/20) usado pelo gráfico de RR — os dois têm que bater.
-function buildFormInsights(allRows: Row[], maxAcsByMatch: Map<string, number>, matchCount: MatchCountFilter): DashboardSummary["formInsights"] {
-  const sample = allRows.slice(0, matchCount);
-  if (sample.length === 0) {
-    return { matchesAnalyzed: 0, topMap: null, topAgent: null, negativeKdaMatches: 0, mvpMatches: 0 };
-  }
-
-  const mapCounts = new Map<string, { total: number; wins: number }>();
-  const agentCounts = new Map<string, { total: number; wins: number }>();
-  let negativeKdaMatches = 0;
-  let mvpMatches = 0;
-
-  for (const r of sample) {
-    const map = mapNameFrom(r.match.rawJson);
-    const mEntry = mapCounts.get(map) ?? { total: 0, wins: 0 };
-    mEntry.total++;
-    if (r.won) mEntry.wins++;
-    mapCounts.set(map, mEntry);
-
-    const aEntry = agentCounts.get(r.agentName) ?? { total: 0, wins: 0 };
-    aEntry.total++;
-    if (r.won) aEntry.wins++;
-    agentCounts.set(r.agentName, aEntry);
-
-    if (r.kills + r.assists < r.deaths) negativeKdaMatches++;
-    if (r.acs === maxAcsByMatch.get(r.match.id)) mvpMatches++;
-  }
-
-  const mostPlayed = (counts: Map<string, { total: number; wins: number }>) => {
-    let best: [string, { total: number; wins: number }] | null = null;
-    for (const entry of counts) {
-      if (!best || entry[1].total > best[1].total) best = entry;
-    }
-    return best;
-  };
-
-  const topMap = mostPlayed(mapCounts);
-  const topAgent = mostPlayed(agentCounts);
-
-  return {
-    matchesAnalyzed: sample.length,
-    topMap: topMap ? { map: topMap[0], total: topMap[1].total, wins: topMap[1].wins } : null,
-    topAgent: topAgent ? { agent: topAgent[0], total: topAgent[1].total, wins: topAgent[1].wins } : null,
-    negativeKdaMatches,
-    mvpMatches,
-  };
-}
-
 function aggregate(list: Row[]) {
   if (list.length === 0) return { kda: 0, acs: 0, adr: 0, hsPercent: 0, wins: 0, losses: 0 };
   const kills = list.reduce((s, r) => s + r.kills, 0);
@@ -131,7 +79,6 @@ export async function buildDashboardSummary(
   puuid: string,
   region: string,
   modoFilter?: "Competitive" | "Unrated",
-  matchCount: MatchCountFilter = 20,
 ): Promise<DashboardSummary> {
   const rows = await prisma.matchPlayer.findMany({
     where: { puuid, ...(modoFilter ? { match: { modo: modoFilter } } : {}) },
@@ -246,16 +193,13 @@ export async function buildDashboardSummary(
     .map((r) => matchResult(r.won, rrByMatch.get(r.match.id)));
 
   const recentRows = rows.slice(0, 7);
-  const analysisRows = rows.slice(0, matchCount);
   // MVP = maior ACS da partida entre os 10 jogadores. `rows` só traz as
   // linhas do próprio usuário (filtro `where: { puuid }`), então precisa de
   // uma query separada pegando todo mundo dessas partidas pra comparar.
-  // analysisRows (matchCount, 7 ou 20) sempre cobre as 7 mais recentes
-  // usadas em recentMatches, que é subconjunto dela.
   const maxAcsByMatch = new Map<string, number>();
-  if (analysisRows.length > 0) {
+  if (recentRows.length > 0) {
     const allPlayers = await prisma.matchPlayer.findMany({
-      where: { matchId: { in: analysisRows.map((r) => r.match.id) } },
+      where: { matchId: { in: recentRows.map((r) => r.match.id) } },
       select: { matchId: true, acs: true },
     });
     for (const p of allPlayers) {
@@ -290,7 +234,6 @@ export async function buildDashboardSummary(
     mapWinrates,
     agentWinrates,
     recentMatches,
-    formInsights: buildFormInsights(rows, maxAcsByMatch, matchCount),
     sync: getSyncProgress(userId),
   };
 }

@@ -1,5 +1,5 @@
 import { useNavigate, useOutletContext } from 'react-router-dom';
-import type { AgentWinrate, DashboardSummary, MapWinrate, MatchCountFilter, MatchModeFilter, RrHistoryPoint, SessionUser, SidesBreakdown } from '@callout/shared';
+import type { AgentWinrate, DashboardSummary, MapWinrate, MatchCountFilter, MatchModeFilter, RecentFormInsights, RrHistoryPoint, SessionUser, SidesBreakdown } from '@callout/shared';
 import type { OutletContext } from '../components/AppShell';
 import { useSession } from '../lib/session';
 
@@ -312,6 +312,7 @@ function DashboardContent({
   modoFilter,
   rrHistory,
   rrHistoryLoading,
+  formInsights,
   matchCountFilter,
   setMatchCountFilter,
   sides,
@@ -320,12 +321,13 @@ function DashboardContent({
   modoFilter: MatchModeFilter;
   rrHistory: RrHistoryPoint[];
   rrHistoryLoading: boolean;
+  formInsights: RecentFormInsights | null;
   matchCountFilter: MatchCountFilter;
   setMatchCountFilter: (n: MatchCountFilter) => void;
   sides: SidesBreakdown | null;
 }) {
   const navigate = useNavigate();
-  const { kpis, hasComparison, mapWinrates, agentWinrates, recentMatches, last14Results, formInsights } = data;
+  const { kpis, hasComparison, mapWinrates, agentWinrates, recentMatches, last14Results } = data;
   const totalInWindow = kpis.winrate.wins + kpis.winrate.losses;
 
   const kpiCards = [
@@ -436,7 +438,7 @@ function DashboardContent({
               {modoFilter === 'Unrated' ? 'Sem histórico de RR em partidas Sem Classificação.' : 'Sem histórico de RR ainda.'}
             </div>
           )}
-          {formInsights.matchesAnalyzed > 0 && (
+          {formInsights && formInsights.matchesAnalyzed > 0 && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 14, paddingTop: 12, borderTop: '1px solid var(--divider)' }}>
               {formInsights.topMap && (
                 <div style={{ display: 'flex', gap: 8, fontSize: 12.5, color: 'var(--text-dim)', lineHeight: 1.4 }}>
@@ -684,6 +686,7 @@ export function Dashboard() {
     sides,
     rrHistory,
     rrHistoryLoading,
+    formInsights,
   } = useOutletContext<OutletContext>();
   const { user } = useSession();
 
@@ -757,6 +760,7 @@ export function Dashboard() {
           modoFilter={modoFilter}
           rrHistory={rrHistory}
           rrHistoryLoading={rrHistoryLoading}
+          formInsights={formInsights}
           matchCountFilter={matchCountFilter}
           setMatchCountFilter={setMatchCountFilter}
           sides={sides}

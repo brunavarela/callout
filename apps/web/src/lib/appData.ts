@@ -5,7 +5,7 @@ import type {
   Lado,
   MatchCountFilter,
   MatchModeFilter,
-  RrHistoryPoint,
+  RrHistoryResponse,
   SessionUser,
   SidesBreakdown,
   Spot,
@@ -18,13 +18,6 @@ import { apiFetch } from './api';
 
 function modoQuery(modo: MatchModeFilter): string {
   return modo === 'all' ? '' : `modo=${encodeURIComponent(modo)}`;
-}
-
-// modo+matches combinados numa query string só — usado por /dashboard e
-// /dashboard/rr-history, que dependem dos dois filtros.
-function dashboardQuery(modo: MatchModeFilter, matchCount: MatchCountFilter): string {
-  const parts = [modoQuery(modo), `matches=${matchCount}`].filter(Boolean);
-  return `?${parts.join('&')}`;
 }
 
 function rrCacheKey(modo: MatchModeFilter, matchCount: MatchCountFilter): string {
@@ -46,7 +39,7 @@ export function useAppData(user: SessionUser | null) {
 
   const [sides, setSides] = useState<SidesBreakdown | null>(null);
 
-  const [rrHistoryCache, setRrHistoryCache] = useState<Record<string, RrHistoryPoint[]>>({});
+  const [rrHistoryCache, setRrHistoryCache] = useState<Record<string, RrHistoryResponse>>({});
   const [rrHistoryLoading, setRrHistoryLoading] = useState(true);
 
   const [modoFilter, setModoFilterState] = useState<MatchModeFilter>('all');
@@ -63,10 +56,11 @@ export function useAppData(user: SessionUser | null) {
     }
   }, []);
 
-  const loadDashboard = useCallback(async (modo: MatchModeFilter, matchCount: MatchCountFilter) => {
+  const loadDashboard = useCallback(async (modo: MatchModeFilter) => {
     setDashboardLoading(true);
     try {
-      setDashboard(await apiFetch<DashboardSummary>(`/dashboard${dashboardQuery(modo, matchCount)}`));
+      const qs = modoQuery(modo);
+      setDashboard(await apiFetch<DashboardSummary>(`/dashboard${qs ? `?${qs}` : ''}`));
       setDashboardError(null);
     } catch {
       setDashboardError('Falha ao carregar o dashboard.');
@@ -84,11 +78,15 @@ export function useAppData(user: SessionUser | null) {
     }
   }, []);
 
+  // RR e os tópicos de análise vêm juntos de /dashboard/rr-history, numa
+  // fetch separada de /dashboard — trocar só a janela de partidas (7/20)
+  // não deve recarregar o resto da página, só esse card.
   const loadRrHistory = useCallback(async (modo: MatchModeFilter, matchCount: MatchCountFilter) => {
     setRrHistoryLoading(true);
     try {
-      const points = await apiFetch<RrHistoryPoint[]>(`/dashboard/rr-history${dashboardQuery(modo, matchCount)}`);
-      setRrHistoryCache((prev) => ({ ...prev, [rrCacheKey(modo, matchCount)]: points }));
+      const qs = modoQuery(modo);
+      const response = await apiFetch<RrHistoryResponse>(`/dashboard/rr-history?matches=${matchCount}${qs ? `&${qs}` : ''}`);
+      setRrHistoryCache((prev) => ({ ...prev, [rrCacheKey(modo, matchCount)]: response }));
     } catch {
       // idem — o card mostra "sem histórico" se não tiver nada em cache
     } finally {
@@ -206,14 +204,21 @@ export function useAppData(user: SessionUser | null) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [riotId]);
 
-  // Recarrega dashboard/sides/RR na carga inicial e sempre que o filtro de
-  // modo (competitivo/sem classificação) mudar — os três endpoints dependem
-  // dele. RR e os tópicos de análise (dentro de /dashboard) também dependem
-  // do filtro de quantidade de partidas (7/20); sides não usa esse filtro.
+  // Recarrega dashboard/sides na carga inicial e sempre que o filtro de modo
+  // (competitivo/sem classificação) mudar — os dois dependem dele, mas não
+  // da janela de partidas do RR (isso é só o card de RR, efeito abaixo).
   useEffect(() => {
     if (!riotId) return;
-    loadDashboard(modoFilter, matchCountFilter);
+    loadDashboard(modoFilter);
     loadSides(modoFilter);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [riotId, modoFilter]);
+
+  // RR + tópicos de análise: além do modo, dependem da janela de partidas
+  // (7/20). Efeito separado do de cima de propósito — trocar só essa janela
+  // não pode disparar o loading do resto da página (dashboardLoading).
+  useEffect(() => {
+    if (!riotId) return;
     loadRrHistory(modoFilter, matchCountFilter);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [riotId, modoFilter, matchCountFilter]);
@@ -239,7 +244,7 @@ export function useAppData(user: SessionUser | null) {
     }
     if (wasSyncing.current && sync?.state === 'idle') {
       wasSyncing.current = false;
-      loadDashboard(modoFilter, matchCountFilter);
+      loadDashboard(modoFilter);
       loadSides(modoFilter);
       loadTeam();
       loadRrHistory(modoFilter, matchCountFilter);
@@ -255,10 +260,9 @@ export function useAppData(user: SessionUser | null) {
     }
   }, []);
 
-  const reloadDashboard = useCallback(
-    () => loadDashboard(modoFilter, matchCountFilter),
-    [loadDashboard, modoFilter, matchCountFilter],
-  );
+  const reloadDashboard = useCallback(() => loadDashboard(modoFilter), [loadDashboard, modoFilter]);
+
+  const rrCached = rrHistoryCache[rrCacheKey(modoFilter, matchCountFilter)];
 
   return {
     sync,
@@ -276,7 +280,8 @@ export function useAppData(user: SessionUser | null) {
     matchCountFilter,
     setMatchCountFilter,
     sides,
-    rrHistory: rrHistoryCache[rrCacheKey(modoFilter, matchCountFilter)] ?? [],
+    rrHistory: rrCached?.points ?? [],
+    formInsights: rrCached?.formInsights ?? null,
     rrHistoryLoading,
     strategies,
     strategiesError,
