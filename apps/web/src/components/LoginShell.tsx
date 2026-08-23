@@ -67,7 +67,8 @@ export function LoginShell({ children }: { children: ReactNode }) {
             style={{
               position: 'absolute',
               inset: 0,
-              background: 'linear-gradient(90deg, var(--bg) 0%, transparent 12%, transparent 88%, var(--bg) 100%)',
+              background:
+                'linear-gradient(90deg, var(--bg) 0%, rgba(15,15,16,.75) 8%, rgba(15,15,16,.35) 16%, transparent 28%, transparent 88%, var(--bg) 100%)',
             }}
           />
         </div>
