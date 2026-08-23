@@ -23,7 +23,20 @@ export function LoginStep1() {
         Suas últimas 30 partidas e as estratégias que o time desenhou. Entre com o Discord do grupo.
       </p>
       <a className="btn-primary" style={{ width: '100%' }} href={`${API_URL}/auth/discord`}>
-        <img src="/img/discord-mark.svg" alt="" width={22} height={20} style={{ display: 'block' }} />
+        <span
+          style={{
+            width: 22,
+            height: 22,
+            borderRadius: '50%',
+            background: '#5865F2',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0,
+          }}
+        >
+          <img src="/img/discord-mark-white.svg" alt="" width={14} height={14} style={{ display: 'block' }} />
+        </span>
         Entrar com Discord
         <span style={{ marginLeft: 'auto', fontSize: 14 }}>→</span>
       </a>
