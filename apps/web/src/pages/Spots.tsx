@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
+import { Trash2 } from 'lucide-react';
 import { PLACEHOLDER_AGENTS, type AgentAsset, type Lado, type Spot as SpotDTO } from '@callout/shared';
 import type { OutletContext } from '../components/AppShell';
 import { LoadingFill } from '../components/Spinner';
+import { ConfirmModal } from '../components/ConfirmModal';
 import { compressImageToDataUrl } from '../lib/imageCompress';
 
 const cardStyle: React.CSSProperties = { borderRadius: 'var(--radius-lg)', background: 'var(--surface)', border: '1px solid var(--surface-border)' };
@@ -277,7 +279,7 @@ function CreateSpotModal({
 
 // Ver um spot salvo: descrição inteira, imagens maiores (clicáveis pra
 // abrir em lightbox) e o link, se tiver.
-function ViewSpotModal({ spot, onClose }: { spot: SpotDTO; onClose: () => void }) {
+function ViewSpotModal({ spot, onClose, onRequestDelete }: { spot: SpotDTO; onClose: () => void; onRequestDelete: () => void }) {
   const [lightbox, setLightbox] = useState<string | null>(null);
 
   return (
@@ -289,7 +291,14 @@ function ViewSpotModal({ spot, onClose }: { spot: SpotDTO; onClose: () => void }
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
           <span style={{ width: 18, height: 18, borderRadius: 6, background: spot.agentColor, flex: 'none' }} />
           <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 17 }}>{spot.agent}</div>
-          <button onClick={onClose} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: 'var(--text-dim)', fontSize: 16, cursor: 'pointer' }}>
+          <button
+            onClick={onRequestDelete}
+            title="Apagar spot"
+            style={{ marginLeft: 'auto', background: 'none', border: 'none', color: 'var(--text-faint)', cursor: 'pointer', display: 'flex', padding: 4 }}
+          >
+            <Trash2 size={15} strokeWidth={1.75} />
+          </button>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-dim)', fontSize: 16, cursor: 'pointer' }}>
             ✕
           </button>
         </div>
@@ -340,13 +349,32 @@ function ViewSpotModal({ spot, onClose }: { spot: SpotDTO; onClose: () => void }
 }
 
 export function Spots() {
-  const { spots, spotsError, spotsLoading, loadSpots, createSpot, agents: realAgents, loadAgents, maps: realMaps, loadMaps } = useOutletContext<OutletContext>();
+  const { spots, spotsError, spotsLoading, loadSpots, createSpot, deleteSpot, agents: realAgents, loadAgents, maps: realMaps, loadMaps } =
+    useOutletContext<OutletContext>();
   const [query, setQuery] = useState('');
   const [filterMap, setFilterMap] = useState('Todos');
   const [filterAgent, setFilterAgent] = useState('Todos');
   const [filterSide, setFilterSide] = useState<'Todos' | Lado>('Todos');
   const [creating, setCreating] = useState(false);
   const [viewing, setViewing] = useState<SpotDTO | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<SpotDTO | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  async function handleConfirmDelete() {
+    if (!confirmDelete || deleting) return;
+    setDeleting(true);
+    setDeleteError(null);
+    try {
+      await deleteSpot(confirmDelete.id);
+      setConfirmDelete(null);
+      setViewing(null);
+    } catch {
+      setDeleteError('Não foi possível apagar esse spot.');
+    } finally {
+      setDeleting(false);
+    }
+  }
 
   useEffect(() => {
     if (spots === null && !spotsLoading) loadSpots();
@@ -508,7 +536,20 @@ export function Spots() {
       )}
 
       {creating && <CreateSpotModal agents={agentOptions} maps={mapOptions} onClose={() => setCreating(false)} onCreate={createSpot} />}
-      {viewing && <ViewSpotModal spot={viewing} onClose={() => setViewing(null)} />}
+      {viewing && <ViewSpotModal spot={viewing} onClose={() => setViewing(null)} onRequestDelete={() => setConfirmDelete(viewing)} />}
+      {confirmDelete && (
+        <ConfirmModal
+          title="Apagar spot?"
+          message="Esse spot vai ser apagado pra sempre, junto com as imagens."
+          busy={deleting}
+          error={deleteError}
+          onConfirm={handleConfirmDelete}
+          onCancel={() => {
+            setConfirmDelete(null);
+            setDeleteError(null);
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -71,4 +71,15 @@ export async function spotsRoutes(app: FastifyInstance) {
     const agentsByUuid = await loadAgentsByUuid();
     return reply.code(201).send(toSpotDTO(spot, agentsByUuid));
   });
+
+  // Spot é global (sem teamId, ver comentário acima) — qualquer usuário
+  // autenticado pode apagar, igual já podia editar tudo mais por aqui.
+  app.delete("/spots/:id", { preHandler: requireAuth }, async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const existing = await prisma.spot.findUnique({ where: { id } });
+    if (!existing) return reply.code(404).send({ error: "Spot não encontrado." });
+
+    await prisma.spot.delete({ where: { id } });
+    return reply.code(204).send();
+  });
 }

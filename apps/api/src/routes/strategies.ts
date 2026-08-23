@@ -130,4 +130,18 @@ export async function strategiesRoutes(app: FastifyInstance) {
     const usage = (await loadUsageStats([updated.id])).get(updated.id);
     return toStrategyDTO(updated, usage);
   });
+
+  // items e usages têm onDelete: Cascade no schema — apagar a estratégia já
+  // limpa os dois, sem precisar de transação manual aqui.
+  app.delete("/strategies/:id", { preHandler: requireAuth }, async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const teamId = await getUserTeamId(request.user!.id);
+    if (!teamId) return reply.code(404).send({ error: "Nenhum time encontrado." });
+
+    const existing = await prisma.strategy.findFirst({ where: { id, teamId } });
+    if (!existing) return reply.code(404).send({ error: "Estratégia não encontrada." });
+
+    await prisma.strategy.delete({ where: { id } });
+    return reply.code(204).send();
+  });
 }

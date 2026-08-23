@@ -137,6 +137,11 @@ export function useAppData(user: SessionUser | null) {
     return created;
   }, []);
 
+  const deleteStrategy = useCallback(async (id: string) => {
+    await apiFetch<void>(`/strategies/${id}`, { method: 'DELETE' });
+    setStrategies((prev) => (prev ? prev.filter((s) => s.id !== id) : prev));
+  }, []);
+
   const [spots, setSpots] = useState<Spot[] | null>(null);
   const [spotsError, setSpotsError] = useState<string | null>(null);
   const [spotsLoading, setSpotsLoading] = useState(false);
@@ -163,6 +168,11 @@ export function useAppData(user: SessionUser | null) {
     },
     [],
   );
+
+  const deleteSpot = useCallback(async (id: string) => {
+    await apiFetch<void>(`/spots/${id}`, { method: 'DELETE' });
+    setSpots((prev) => (prev ? prev.filter((s) => s.id !== id) : prev));
+  }, []);
 
   const [agents, setAgents] = useState<AgentAsset[] | null>(null);
   const [agentsLoading, setAgentsLoading] = useState(false);
@@ -297,11 +307,13 @@ export function useAppData(user: SessionUser | null) {
     loadStrategies,
     saveStrategy,
     createStrategy,
+    deleteStrategy,
     spots,
     spotsError,
     spotsLoading,
     loadSpots,
     createSpot,
+    deleteSpot,
     agents,
     agentsLoading,
     loadAgents,

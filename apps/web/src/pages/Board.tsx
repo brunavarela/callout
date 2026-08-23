@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useOutletContext, useParams } from 'react-router-dom';
+import { Trash2 } from 'lucide-react';
 import type { Lado, StratItem as StratItemDTO } from '@callout/shared';
 import { PLACEHOLDER_AGENTS } from '@callout/shared';
 import { MapSchematic } from '../components/MapSchematic';
 import { boardArrows, boardCallouts } from '../data/mock';
 import type { OutletContext } from '../components/AppShell';
 import { agentImageUrl } from '../lib/agentImages';
+import { ConfirmModal } from '../components/ConfirmModal';
 
 const TOOLS = [
   { id: 'agente', icon: 'AG', title: 'Agente' },
@@ -163,7 +165,8 @@ function CreateStrategyModal({
 export function Board() {
   const navigate = useNavigate();
   const { id } = useParams();
-  const { strategies, strategiesError, strategiesLoading, loadStrategies, saveStrategy, createStrategy, agents, loadAgents, maps, loadMaps } = useOutletContext<OutletContext>();
+  const { strategies, strategiesError, strategiesLoading, loadStrategies, saveStrategy, createStrategy, deleteStrategy, agents, loadAgents, maps, loadMaps } =
+    useOutletContext<OutletContext>();
 
   useEffect(() => {
     if (strategies === null && !strategiesLoading) loadStrategies();
@@ -200,6 +203,9 @@ export function Board() {
   const [description, setDescription] = useState('');
   const [saving, setSaving] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const dragId = useRef<string | null>(null);
@@ -305,6 +311,22 @@ export function Board() {
   async function handleCreate(input: { mapName: string; side: Lado; title: string }) {
     const created = await createStrategy(input);
     navigate(`/board/${created.id}`);
+  }
+
+  async function handleConfirmDelete() {
+    if (!confirmDeleteId || deleting) return;
+    setDeleting(true);
+    setDeleteError(null);
+    try {
+      const wasActive = confirmDeleteId === strategy?.id;
+      await deleteStrategy(confirmDeleteId);
+      setConfirmDeleteId(null);
+      if (wasActive) navigate('/board');
+    } catch {
+      setDeleteError('Não foi possível apagar essa estratégia.');
+    } finally {
+      setDeleting(false);
+    }
   }
 
   if (strategiesError && !strategies) {
@@ -613,6 +635,16 @@ export function Board() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <span style={{ fontSize: 13, color: active ? 'var(--acc, #EF4958)' : 'var(--text-2)' }}>{s.title}</span>
                   <span style={{ marginLeft: 'auto', fontSize: 10, color: 'var(--text-faint)' }}>{s.side}</span>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setConfirmDeleteId(s.id);
+                    }}
+                    title="Apagar estratégia"
+                    style={{ background: 'none', border: 'none', color: 'var(--text-faint)', cursor: 'pointer', padding: 2, display: 'flex' }}
+                  >
+                    <Trash2 size={13} strokeWidth={1.75} />
+                  </button>
                 </div>
                 <div style={{ fontSize: 10.5, color: 'var(--text-faint)', marginTop: 3 }}>
                   {s.mapName}
@@ -632,6 +664,19 @@ export function Board() {
         </div>
       </div>
       {showCreateModal && <CreateStrategyModal maps={maps ?? []} onClose={() => setShowCreateModal(false)} onCreate={handleCreate} />}
+      {confirmDeleteId && (
+        <ConfirmModal
+          title="Apagar estratégia?"
+          message={`"${strategies.find((s) => s.id === confirmDeleteId)?.title ?? ''}" será apagada pra sempre — inclusive o que tiver desenhado nela.`}
+          busy={deleting}
+          error={deleteError}
+          onConfirm={handleConfirmDelete}
+          onCancel={() => {
+            setConfirmDeleteId(null);
+            setDeleteError(null);
+          }}
+        />
+      )}
     </div>
   );
 }
