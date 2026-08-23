@@ -3,7 +3,7 @@ import type { ThemePreferences } from '@callout/shared';
 import { useSession } from './session';
 import { apiFetch } from './api';
 
-export const THEME_PALETTE = ['#EF4958', '#18AAB7', '#192573', '#421662'] as const;
+export const THEME_PALETTE = ['#EF4958', '#18AAB7', '#192573', '#421662', '#2FB170', '#F2994A'] as const;
 
 const DEFAULT_THEME: ThemePreferences = {
   accentColor: '#EF4958',
