@@ -32,7 +32,7 @@ export function Matches() {
           Nenhuma partida sincronizada ainda.
         </div>
       ) : (
-        <div style={{ ...cardStyle, padding: '10px 20px 6px', maxWidth: 640 }}>
+        <div style={{ ...cardStyle, padding: '10px 20px 6px' }}>
           <div style={{ display: 'grid', gridTemplateColumns: '24px 1fr 62px 42px', gap: 8, padding: '10px 0 6px', borderBottom: '1px solid var(--divider)', fontSize: 9.5, letterSpacing: '.08em', color: 'var(--text-faint)' }}>
             <span>V/D</span>
             <span>MAPA · AGENTE</span>
