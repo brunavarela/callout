@@ -48,7 +48,7 @@ export function LoginStep2() {
   return (
     <LoginShell>
       <div style={{ fontSize: 11, letterSpacing: '.14em', color: 'var(--acc, #EF4958)', marginBottom: 18 }}>ETAPA 2 DE 2</div>
-      <h1 style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 700, fontSize: 50, lineHeight: 1.06, letterSpacing: '-.03em', margin: '0 0 16px' }}>
+      <h1 className="login-heading" style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 700, lineHeight: 1.06, letterSpacing: '-.03em', margin: '0 0 16px' }}>
         Vincule
         <br />
         sua conta.

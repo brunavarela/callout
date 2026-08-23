@@ -218,18 +218,8 @@ export function AppShell() {
   ];
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '232px 1fr', height: '100vh', overflow: 'hidden' }}>
-      <aside
-        style={{
-          background: 'var(--surface)',
-          display: 'flex',
-          flexDirection: 'column',
-          position: 'relative',
-          height: '100%',
-          overflow: 'hidden',
-          borderRight: '1px solid #202023',
-        }}
-      >
+    <div className="app-shell-grid">
+      <aside className="app-sidebar">
         <div
           style={{
             position: 'absolute',
@@ -242,7 +232,7 @@ export function AppShell() {
             pointerEvents: 'none',
           }}
         />
-        <div style={{ position: 'relative', padding: '24px 22px 16px' }}>
+        <div className="app-sidebar-header" style={{ position: 'relative', padding: '24px 22px 16px' }}>
           <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 700, fontSize: 22, letterSpacing: '-.02em' }}>
             callout<span style={{ color: 'var(--acc, #EF4958)' }}>.</span>
           </div>
@@ -251,7 +241,7 @@ export function AppShell() {
           </div>
         </div>
 
-        <nav style={{ position: 'relative', display: 'flex', flexDirection: 'column', padding: '10px 12px', gap: 4 }}>
+        <nav className="app-sidebar-nav" style={{ position: 'relative', padding: '10px 12px', gap: 4 }}>
           {navItems.map((item) => {
             const active = item.match(location.pathname);
             const Icon = item.icon;
@@ -284,7 +274,7 @@ export function AppShell() {
           })}
         </nav>
 
-        <div style={{ position: 'relative', marginTop: 'auto', padding: 14 }}>
+        <div className="app-sidebar-promo" style={{ position: 'relative', marginTop: 'auto', padding: 14 }}>
           <div
             style={{
               borderRadius: 14,
@@ -310,6 +300,7 @@ export function AppShell() {
         <div style={{ position: 'relative' }}>
           {settingsOpen && <ThemeSettings onClose={() => setSettingsOpen(false)} />}
           <div
+            className="app-sidebar-profile"
             style={{
               padding: '14px 18px 18px',
               display: 'flex',
@@ -321,12 +312,13 @@ export function AppShell() {
             onClick={() => setSettingsOpen((v) => !v)}
           >
             {user.discordAvatarUrl ? (
-              <img src={user.discordAvatarUrl} alt="" style={{ width: 34, height: 34, borderRadius: 10 }} />
+              <img src={user.discordAvatarUrl} alt="" style={{ width: 34, height: 34, borderRadius: 10, flex: 'none' }} />
             ) : (
               <div
                 style={{
                   width: 34,
                   height: 34,
+                  flex: 'none',
                   borderRadius: 10,
                   background: 'var(--avatar-bg)',
                   display: 'flex',
@@ -340,19 +332,21 @@ export function AppShell() {
                 {initialsOf(user.discordUsername)}
               </div>
             )}
-            <div style={{ minWidth: 0 }}>
+            <div className="app-sidebar-profile-text" style={{ minWidth: 0 }}>
               <div style={{ fontSize: 13, fontWeight: 500 }}>
                 {user.riotId.name}#{user.riotId.tag}
               </div>
               <div style={{ fontSize: 11, color: 'var(--text-dim)' }}>{user.discordUsername}</div>
             </div>
-            <span style={{ marginLeft: 'auto', color: 'var(--text-faint)' }}>›</span>
+            <span className="app-sidebar-profile-text" style={{ marginLeft: 'auto', color: 'var(--text-faint)' }}>
+              ›
+            </span>
           </div>
         </div>
       </aside>
 
-      <main style={{ minWidth: 0, height: '100%', display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
-        <header style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '16px 26px', borderBottom: '1px solid var(--divider)' }}>
+      <main className="app-main" style={{ minWidth: 0, height: '100%', display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
+        <header className="app-header" style={{ padding: '16px 26px', borderBottom: '1px solid var(--divider)' }}>
           <SearchBar appData={appData} />
           <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 12 }}>
             <SyncChip sync={sync} />

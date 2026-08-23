@@ -3,18 +3,10 @@ import type { ReactNode } from 'react';
 export function LoginShell({ children }: { children: ReactNode }) {
   return (
     <div style={{ minHeight: '100vh', display: 'flex', justifyContent: 'center', background: 'var(--bg)' }}>
-      <div
-        style={{
-          width: '100%',
-          maxWidth: 1400,
-          minHeight: '100vh',
-          display: 'grid',
-          gridTemplateColumns: '600px 1fr',
-        }}
-      >
+      <div className="login-shell-grid">
         <div
+          className="login-shell-col"
           style={{
-            padding: '52px 48px 52px 64px',
             display: 'flex',
             flexDirection: 'column',
             justifyContent: 'space-between',

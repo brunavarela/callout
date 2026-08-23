@@ -54,11 +54,8 @@ export function ThemeSettings({ onClose }: { onClose: () => void }) {
 
   return (
     <div
+      className="theme-settings-panel"
       style={{
-        position: 'absolute',
-        bottom: 64,
-        left: 14,
-        right: 14,
         background: 'var(--surface)',
         border: '1px solid var(--surface-border)',
         borderRadius: 'var(--radius-lg)',
