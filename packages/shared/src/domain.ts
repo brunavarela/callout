@@ -148,6 +148,7 @@ export interface RecentFormInsights {
   topMap: { map: string; total: number; wins: number } | null;
   topAgent: { agent: string; total: number; wins: number } | null;
   negativeKdaMatches: number;
+  mvpMatches: number;
 }
 
 export interface DashboardSummary {

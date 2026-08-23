@@ -48,15 +48,16 @@ const FORM_INSIGHTS_WINDOW = 20;
 // recorte (não necessariamente o de maior winrate) — é sobre o que você tem
 // jogado recentemente, não sobre onde você é melhor (isso já é o card de
 // winrate por mapa/agente, calculado sobre outra janela).
-function buildFormInsights(allRows: Row[]): DashboardSummary["formInsights"] {
+function buildFormInsights(allRows: Row[], maxAcsByMatch: Map<string, number>): DashboardSummary["formInsights"] {
   const sample = allRows.slice(0, FORM_INSIGHTS_WINDOW);
   if (sample.length === 0) {
-    return { matchesAnalyzed: 0, topMap: null, topAgent: null, negativeKdaMatches: 0 };
+    return { matchesAnalyzed: 0, topMap: null, topAgent: null, negativeKdaMatches: 0, mvpMatches: 0 };
   }
 
   const mapCounts = new Map<string, { total: number; wins: number }>();
   const agentCounts = new Map<string, { total: number; wins: number }>();
   let negativeKdaMatches = 0;
+  let mvpMatches = 0;
 
   for (const r of sample) {
     const map = mapNameFrom(r.match.rawJson);
@@ -71,6 +72,7 @@ function buildFormInsights(allRows: Row[]): DashboardSummary["formInsights"] {
     agentCounts.set(r.agentName, aEntry);
 
     if (r.kills + r.assists < r.deaths) negativeKdaMatches++;
+    if (r.acs === maxAcsByMatch.get(r.match.id)) mvpMatches++;
   }
 
   const mostPlayed = (counts: Map<string, { total: number; wins: number }>) => {
@@ -89,6 +91,7 @@ function buildFormInsights(allRows: Row[]): DashboardSummary["formInsights"] {
     topMap: topMap ? { map: topMap[0], total: topMap[1].total, wins: topMap[1].wins } : null,
     topAgent: topAgent ? { agent: topAgent[0], total: topAgent[1].total, wins: topAgent[1].wins } : null,
     negativeKdaMatches,
+    mvpMatches,
   };
 }
 
@@ -238,13 +241,16 @@ export async function buildDashboardSummary(userId: string, puuid: string, regio
   }
 
   const recentRows = rows.slice(0, 7);
+  const analysisRows = rows.slice(0, FORM_INSIGHTS_WINDOW);
   // MVP = maior ACS da partida entre os 10 jogadores. `rows` só traz as
   // linhas do próprio usuário (filtro `where: { puuid }`), então precisa de
   // uma query separada pegando todo mundo dessas partidas pra comparar.
+  // Calculado sobre a janela de 20 (analysisRows) já cobre as 7 mais
+  // recentes usadas em recentMatches, que é subconjunto dela.
   const maxAcsByMatch = new Map<string, number>();
-  if (recentRows.length > 0) {
+  if (analysisRows.length > 0) {
     const allPlayers = await prisma.matchPlayer.findMany({
-      where: { matchId: { in: recentRows.map((r) => r.match.id) } },
+      where: { matchId: { in: analysisRows.map((r) => r.match.id) } },
       select: { matchId: true, acs: true },
     });
     for (const p of allPlayers) {
@@ -278,7 +284,7 @@ export async function buildDashboardSummary(userId: string, puuid: string, regio
     mapWinrates,
     agentWinrates,
     recentMatches,
-    formInsights: buildFormInsights(rows),
+    formInsights: buildFormInsights(rows, maxAcsByMatch),
     sync: getSyncProgress(userId),
   };
 }

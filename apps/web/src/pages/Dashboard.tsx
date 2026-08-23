@@ -446,6 +446,16 @@ export function Dashboard() {
                   {formInsights.negativeKdaMatches === 1 ? 'vez' : 'vezes'}.
                 </span>
               </div>
+              <div style={{ display: 'flex', gap: 8, fontSize: 12.5, color: 'var(--text-dim)', lineHeight: 1.4 }}>
+                <span style={{ color: 'var(--text-faint)' }}>•</span>
+                <span>
+                  Nas últimas {formInsights.matchesAnalyzed} partidas você foi MVP{' '}
+                  <b style={{ color: formInsights.mvpMatches > 0 ? '#E8B339' : 'var(--text-2)', fontWeight: 600 }}>
+                    {formInsights.mvpMatches}
+                  </b>{' '}
+                  {formInsights.mvpMatches === 1 ? 'vez' : 'vezes'}.
+                </span>
+              </div>
             </div>
           )}
         </div>
