@@ -1,5 +1,6 @@
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { prisma } from "./prisma.js";
+import { env } from "./env.js";
 
 export const SESSION_COOKIE = "callout_session";
 
@@ -7,7 +8,10 @@ export const SESSION_COOKIE = "callout_session";
 // diferentes — o navegador só manda o cookie em fetch cross-site se ele for
 // SameSite=None + Secure. Em dev os dois são http://localhost, então
 // SameSite=Lax sem Secure continua funcionando (Secure exige HTTPS).
-const isProd = process.env.NODE_ENV === "production";
+// Usamos o WEB_ORIGIN (em vez de NODE_ENV) porque o Railway aplica NODE_ENV
+// também no `npm install` do build, derrubando as devDependencies (tsc,
+// prisma) que o build e o start:prod precisam.
+const isProd = env.WEB_ORIGIN.startsWith("https://");
 
 export function setSessionCookie(reply: FastifyReply, userId: string) {
   reply.setCookie(SESSION_COOKIE, userId, {
