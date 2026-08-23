@@ -132,6 +132,7 @@ button {
 
 .btn-primary:hover {
   filter: brightness(1.1);
+  color: #141415;
 }
 
 .btn-secondary {
