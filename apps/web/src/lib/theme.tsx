@@ -1,9 +1,9 @@
 import { createContext, useContext, useMemo, type CSSProperties, type ReactNode } from 'react';
-import type { ThemePreferences } from '@callout/shared';
+import { THEME_PALETTE, type ThemePreferences } from '@callout/shared';
 import { useSession } from './session';
 import { apiFetch } from './api';
 
-export const THEME_PALETTE = ['#EF4958', '#18AAB7', '#192573', '#421662', '#2FB170', '#F2994A'] as const;
+export { THEME_PALETTE };
 
 const DEFAULT_THEME: ThemePreferences = {
   accentColor: '#EF4958',

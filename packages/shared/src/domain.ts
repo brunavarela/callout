@@ -51,6 +51,11 @@ export interface AgentAsset {
 
 // --- Tema (v2 — customização em runtime, ver design_handoff_callout v2) ---
 
+// Paleta fechada — fonte única pro front (seletor de cor) e pro back
+// (validação do PATCH /me/theme). Duplicar isso nos dois lados foi o que
+// causou o bug de "cor nova no seletor mas o back rejeita".
+export const THEME_PALETTE = ["#EF4958", "#18AAB7", "#192573", "#421662", "#2FB170", "#F2994A"] as const;
+
 export interface ThemePreferences {
   accentColor: string;
   positiveColor: string;

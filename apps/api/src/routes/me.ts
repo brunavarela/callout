@@ -1,17 +1,16 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
+import { THEME_PALETTE } from "@callout/shared";
 import { requireAuth } from "../lib/session.js";
 import { toSessionUser } from "../lib/dto.js";
 import { prisma } from "../lib/prisma.js";
 
-// Paleta fechada do handoff — as duas cores (ação e positiva) são
-// independentes de propósito: se fossem a mesma, vermelho passaria a
-// significar vitória (ver README do design_handoff_callout v2).
-const PALETTE = ["#EF4958", "#18AAB7", "#192573", "#421662"] as const;
-
+// As duas cores (ação e positiva) são independentes de propósito: se
+// fossem a mesma, vermelho passaria a significar vitória (ver README do
+// design_handoff_callout v2).
 const themeBodySchema = z.object({
-  accentColor: z.enum(PALETTE),
-  positiveColor: z.enum(PALETTE),
+  accentColor: z.enum(THEME_PALETTE),
+  positiveColor: z.enum(THEME_PALETTE),
   glow: z.number().int().min(0).max(100),
   tintedCards: z.boolean(),
 });
