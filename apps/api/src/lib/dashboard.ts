@@ -3,6 +3,7 @@ import { prisma } from "./prisma.js";
 import { getMmr, getMmrHistory } from "./henrikdev.js";
 import { getSyncProgress } from "./sync.js";
 import { loadAgentColorsByName } from "./assets.js";
+import { matchResult } from "./match-result.js";
 
 const WEEKDAY_LABELS = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
 
@@ -207,7 +208,7 @@ export async function buildDashboardSummary(userId: string, puuid: string, regio
     const shotsTotal = r.headshots + r.bodyshots + r.legshots;
     return {
       id: r.match.id,
-      result: (r.won ? "V" : "D") as "V" | "D",
+      result: matchResult(r.won, rrByMatch.get(r.match.id)),
       map: mapNameFrom(r.match.rawJson),
       agent: r.agentName,
       score: `${score.own}—${score.opponent}`,

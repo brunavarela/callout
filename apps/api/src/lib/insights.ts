@@ -1,6 +1,7 @@
 import type { MatchV4Data, RrHistoryPoint, SidesBreakdown } from "@callout/shared";
 import { prisma } from "./prisma.js";
 import { getMmrHistory } from "./henrikdev.js";
+import { matchResult } from "./match-result.js";
 
 // Histórico de RR real, um ponto por partida (não por dia) — a HenrikDev dá
 // o RR ganho/perdido (`last_change`) já casado com o `match_id`, que é o
@@ -30,7 +31,7 @@ export async function buildRrHistory(affinity: string, puuid: string, days: numb
         delta: rrByMatch.get(r.match.id)!,
         map: match.metadata.map.name,
         agent: r.agentName,
-        result: (r.won ? "V" : "D") as "V" | "D",
+        result: matchResult(r.won, rrByMatch.get(r.match.id)),
       };
     });
 }

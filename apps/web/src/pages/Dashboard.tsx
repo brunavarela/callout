@@ -13,6 +13,7 @@ const RANGES: Array<{ key: RrRange; label: string }> = [
 
 const WIN = 'var(--pos, #18AAB7)';
 const LOSS = 'var(--acc, #EF4958)';
+const DRAW = 'var(--text-muted, #9A9DA1)';
 const LOW_SAMPLE = 'var(--bar-dim)';
 const UNDER_50 = 'color-mix(in srgb, var(--acc, #EF4958) 42%, var(--track))';
 const MIN_SAMPLE = 3;
@@ -146,13 +147,14 @@ function RrLineChart({ points }: { points: RrHistoryPoint[] }) {
           cy={y(v)}
           r={3.4}
           fill="var(--surface)"
-          stroke={points[i]!.delta >= 0 ? WIN : LOSS}
+          stroke={points[i]!.result === 'V' ? WIN : points[i]!.result === 'D' ? LOSS : DRAW}
           strokeWidth={2}
           style={{ cursor: 'pointer' }}
           onClick={() => navigate(`/partida/${points[i]!.matchId}`)}
         >
           <title>
-            {points[i]!.label} · {points[i]!.map} · {points[i]!.agent} · {points[i]!.result === 'V' ? 'vitória' : 'derrota'} ·{' '}
+            {points[i]!.label} · {points[i]!.map} · {points[i]!.agent} ·{' '}
+            {points[i]!.result === 'V' ? 'vitória' : points[i]!.result === 'D' ? 'derrota' : 'empate'} ·{' '}
             {fmtDelta(points[i]!.delta, 0)} RR
           </title>
         </circle>
@@ -434,8 +436,13 @@ export function Dashboard() {
                       borderRadius: 4,
                       textAlign: 'center',
                       padding: '3px 0',
-                      color: m.result === 'V' ? WIN : LOSS,
-                      background: m.result === 'V' ? 'color-mix(in srgb, var(--pos, #18AAB7) 16%, transparent)' : 'color-mix(in srgb, var(--acc, #EF4958) 14%, transparent)',
+                      color: m.result === 'V' ? WIN : m.result === 'D' ? LOSS : DRAW,
+                      background:
+                        m.result === 'V'
+                          ? 'color-mix(in srgb, var(--pos, #18AAB7) 16%, transparent)'
+                          : m.result === 'D'
+                            ? 'color-mix(in srgb, var(--acc, #EF4958) 14%, transparent)'
+                            : 'color-mix(in srgb, var(--text-muted, #9A9DA1) 16%, transparent)',
                     }}
                   >
                     {m.result}

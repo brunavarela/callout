@@ -76,7 +76,7 @@ export interface RrHistoryPoint {
   delta: number; // RR ganho/perdido especificamente nessa partida
   map: string;
   agent: string;
-  result: "V" | "D";
+  result: "V" | "D" | "E";
 }
 
 // --- Lados (ataque/defesa/overtime) ---
@@ -131,7 +131,7 @@ export interface AgentWinrate {
 
 export interface RecentMatchSummary {
   id: string;
-  result: "V" | "D";
+  result: "V" | "D" | "E";
   map: string;
   agent: string;
   score: string;
