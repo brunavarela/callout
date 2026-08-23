@@ -145,8 +145,8 @@ export interface RecentMatchSummary {
 
 export interface RecentFormInsights {
   matchesAnalyzed: number;
-  topMap: { map: string; wins: number } | null;
-  topAgent: { agent: string; wins: number } | null;
+  topMap: { map: string; total: number; wins: number } | null;
+  topAgent: { agent: string; total: number; wins: number } | null;
   negativeKdaMatches: number;
 }
 

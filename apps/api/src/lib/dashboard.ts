@@ -86,8 +86,8 @@ function buildFormInsights(allRows: Row[]): DashboardSummary["formInsights"] {
 
   return {
     matchesAnalyzed: sample.length,
-    topMap: topMap ? { map: topMap[0], wins: topMap[1].wins } : null,
-    topAgent: topAgent ? { agent: topAgent[0], wins: topAgent[1].wins } : null,
+    topMap: topMap ? { map: topMap[0], total: topMap[1].total, wins: topMap[1].wins } : null,
+    topAgent: topAgent ? { agent: topAgent[0], total: topAgent[1].total, wins: topAgent[1].wins } : null,
     negativeKdaMatches,
   };
 }

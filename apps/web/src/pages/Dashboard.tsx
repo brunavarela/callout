@@ -414,7 +414,9 @@ export function Dashboard() {
                 <div style={{ display: 'flex', gap: 8, fontSize: 12.5, color: 'var(--text-dim)', lineHeight: 1.4 }}>
                   <span style={{ color: 'var(--text-faint)' }}>•</span>
                   <span>
-                    Nas últimas {formInsights.matchesAnalyzed} partidas você jogou no mapa{' '}
+                    Nas últimas {formInsights.matchesAnalyzed} partidas você jogou{' '}
+                    <b style={{ color: 'var(--text-2)', fontWeight: 600 }}>{formInsights.topMap.total}</b>{' '}
+                    {formInsights.topMap.total === 1 ? 'vez' : 'vezes'} no mapa{' '}
                     <b style={{ color: 'var(--text-2)', fontWeight: 600 }}>{formInsights.topMap.map}</b> e ganhou{' '}
                     <b style={{ color: 'var(--text-2)', fontWeight: 600 }}>{formInsights.topMap.wins}</b>{' '}
                     {formInsights.topMap.wins === 1 ? 'vez' : 'vezes'} nesse mapa.
@@ -425,7 +427,9 @@ export function Dashboard() {
                 <div style={{ display: 'flex', gap: 8, fontSize: 12.5, color: 'var(--text-dim)', lineHeight: 1.4 }}>
                   <span style={{ color: 'var(--text-faint)' }}>•</span>
                   <span>
-                    Nas últimas {formInsights.matchesAnalyzed} partidas você jogou com{' '}
+                    Nas últimas {formInsights.matchesAnalyzed} partidas você jogou{' '}
+                    <b style={{ color: 'var(--text-2)', fontWeight: 600 }}>{formInsights.topAgent.total}</b>{' '}
+                    {formInsights.topAgent.total === 1 ? 'vez' : 'vezes'} com{' '}
                     <b style={{ color: 'var(--text-2)', fontWeight: 600 }}>{formInsights.topAgent.agent}</b> e ganhou{' '}
                     <b style={{ color: 'var(--text-2)', fontWeight: 600 }}>{formInsights.topAgent.wins}</b>{' '}
                     {formInsights.topAgent.wins === 1 ? 'vez' : 'vezes'}.
