@@ -192,19 +192,19 @@ model StratItem {
   @@map("strat_items")
 }
 
+// Simplificado de propósito: sem coordenadas de mapa nem vídeo — vira um
+// catálogo filtrável (mapa/agente/lado) com descrição e até 3 imagens
+// (validado na rota, não aqui). Imagens guardadas como data URL (base64)
+// direto na coluna — sem storage de blob externo configurado ainda, e pro
+// tamanho do grupo (<10 usuários) isso é suficiente por ora.
 model Spot {
   id          String   @id @default(cuid())
   mapId       String
   map         MapAsset @relation(fields: [mapId], references: [id])
-  agentUuid   String?
-  habilidade  String
-  xOrigem     Float
-  yOrigem     Float
-  xAlvo       Float
-  yAlvo       Float
-  videoUrl    String?
-  notas       String?
+  agentUuid   String
   side        String // ATK | DEF
+  descricao   String
+  imagens     String[]
   criadoPorId String
   criadoPor   User     @relation("SpotAuthor", fields: [criadoPorId], references: [id])
   createdAt   DateTime @default(now())

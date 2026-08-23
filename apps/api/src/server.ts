@@ -12,8 +12,11 @@ import { matchesRoutes } from "./routes/matches.js";
 import { commentsRoutes } from "./routes/comments.js";
 import { spotsRoutes } from "./routes/spots.js";
 import { agentsRoutes } from "./routes/agents.js";
+import { mapsRoutes } from "./routes/maps.js";
 
-const app = Fastify({ logger: true });
+// Default do Fastify é 1MB — spots levam até 3 imagens comprimidas em
+// base64 (data URL), que sozinhas já passam disso.
+const app = Fastify({ logger: true, bodyLimit: 10 * 1024 * 1024 });
 
 await app.register(cors, {
   origin: env.WEB_ORIGIN,
@@ -36,6 +39,7 @@ await app.register(matchesRoutes);
 await app.register(commentsRoutes);
 await app.register(spotsRoutes);
 await app.register(agentsRoutes);
+await app.register(mapsRoutes);
 
 try {
   await app.listen({ port: env.PORT, host: "0.0.0.0" });

@@ -297,15 +297,13 @@ export interface Strategy {
 
 export interface Spot {
   id: string;
+  mapId: string;
   mapName: string;
-  mapDisplayIcon: string | null;
+  agentId: string;
   agent: string;
   agentColor: string;
-  habilidade: string;
-  origin: { x: number; y: number };
-  target: { x: number; y: number };
-  mediaUrl: string | null;
-  notas: string | null;
+  descricao: string;
+  imagens: string[]; // até 3, data URLs
   author: string;
   side: Lado;
 }

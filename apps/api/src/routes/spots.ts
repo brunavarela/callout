@@ -2,21 +2,20 @@ import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { requireAuth } from "../lib/session.js";
 import { prisma } from "../lib/prisma.js";
-import { ensureMapAsset } from "../lib/strategy.js";
 import { toSpotDTO } from "../lib/spots.js";
 import { loadAgentsByUuid } from "../lib/assets.js";
 
 const SPOT_INCLUDE = { map: true, criadoPor: true } as const;
 
+// Imagem já vem comprimida (canvas, ~1280px/qualidade .75) e em data URL —
+// o limite aqui é só uma rede de segurança contra payload absurdo, não o
+// controle de tamanho de verdade (isso é client-side).
 const createBodySchema = z.object({
-  mapName: z.string().min(1),
-  side: z.enum(["ATK", "DEF"]),
+  mapId: z.string().min(1),
   agentId: z.string().min(1),
-  habilidade: z.string().min(1).max(60),
-  origin: z.object({ x: z.number(), y: z.number() }),
-  target: z.object({ x: z.number(), y: z.number() }),
-  videoUrl: z.string().url().optional(),
-  notas: z.string().max(500).optional(),
+  side: z.enum(["ATK", "DEF"]),
+  descricao: z.string().min(1).max(1000),
+  imagens: z.array(z.string().min(1).max(2_000_000)).max(3).default([]),
 });
 
 export async function spotsRoutes(app: FastifyInstance) {
@@ -36,20 +35,16 @@ export async function spotsRoutes(app: FastifyInstance) {
       return reply.code(400).send({ error: parsed.error.issues[0]?.message ?? "Dados inválidos" });
     }
 
-    const map = await ensureMapAsset(parsed.data.mapName);
+    const map = await prisma.mapAsset.findUnique({ where: { id: parsed.data.mapId } });
+    if (!map) return reply.code(400).send({ error: "Mapa inválido." });
 
     const spot = await prisma.spot.create({
       data: {
         mapId: map.id,
         agentUuid: parsed.data.agentId,
-        habilidade: parsed.data.habilidade,
-        xOrigem: parsed.data.origin.x,
-        yOrigem: parsed.data.origin.y,
-        xAlvo: parsed.data.target.x,
-        yAlvo: parsed.data.target.y,
-        videoUrl: parsed.data.videoUrl ?? null,
-        notas: parsed.data.notas ?? null,
         side: parsed.data.side,
+        descricao: parsed.data.descricao,
+        imagens: parsed.data.imagens,
         criadoPorId: request.user!.id,
       },
       include: SPOT_INCLUDE,

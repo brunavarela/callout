@@ -3,6 +3,7 @@ import type {
   AgentAsset,
   DashboardSummary,
   Lado,
+  MapAsset,
   MatchCountFilter,
   MatchModeFilter,
   RrHistoryResponse,
@@ -155,16 +156,7 @@ export function useAppData(user: SessionUser | null) {
   }, []);
 
   const createSpot = useCallback(
-    async (input: {
-      mapName: string;
-      side: Lado;
-      agentId: string;
-      habilidade: string;
-      origin: { x: number; y: number };
-      target: { x: number; y: number };
-      videoUrl?: string;
-      notas?: string;
-    }) => {
+    async (input: { mapId: string; agentId: string; side: Lado; descricao: string; imagens: string[] }) => {
       const created = await apiFetch<Spot>('/spots', { method: 'POST', body: JSON.stringify(input) });
       setSpots((prev) => (prev ? [created, ...prev] : [created]));
       return created;
@@ -186,6 +178,22 @@ export function useAppData(user: SessionUser | null) {
       // as telas caem pra paleta placeholder se `agents` continuar null
     } finally {
       setAgentsLoading(false);
+    }
+  }, []);
+
+  const [maps, setMaps] = useState<MapAsset[] | null>(null);
+  const [mapsLoading, setMapsLoading] = useState(false);
+
+  // Catálogo real de mapas — só Spots precisa (select de mapa no modal de
+  // criação), carrega sob demanda igual agents.
+  const loadMaps = useCallback(async () => {
+    setMapsLoading(true);
+    try {
+      setMaps(await apiFetch<MapAsset[]>('/maps'));
+    } catch {
+      // select fica vazio — o form não deixa submeter sem mapa escolhido
+    } finally {
+      setMapsLoading(false);
     }
   }, []);
 
@@ -297,6 +305,9 @@ export function useAppData(user: SessionUser | null) {
     agents,
     agentsLoading,
     loadAgents,
+    maps,
+    mapsLoading,
+    loadMaps,
   };
 }
 
