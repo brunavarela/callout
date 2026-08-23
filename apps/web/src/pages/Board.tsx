@@ -430,12 +430,21 @@ export function Board() {
                   style={{
                     width: 26,
                     height: 26,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
                     borderRadius: 8,
                     border: active ? '2px solid #fff' : '1px solid rgba(255,255,255,.22)',
                     background: a.color,
                     cursor: 'pointer',
+                    fontSize: 9,
+                    fontWeight: 700,
+                    color: '#fff',
+                    textShadow: '0 1px 2px rgba(0,0,0,.55)',
                   }}
-                />
+                >
+                  {a.abbrev.slice(0, 2)}
+                </button>
               );
             })}
           </div>
