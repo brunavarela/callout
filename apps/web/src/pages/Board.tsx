@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useOutletContext, useParams } from 'react-router-dom';
-import type { StratItem as StratItemDTO } from '@callout/shared';
+import type { Lado, StratItem as StratItemDTO } from '@callout/shared';
 import { PLACEHOLDER_AGENTS } from '@callout/shared';
 import { MapSchematic } from '../components/MapSchematic';
 import { boardArrows, boardCallouts } from '../data/mock';
 import type { OutletContext } from '../components/AppShell';
+import { agentImageUrl } from '../lib/agentImages';
 
 const TOOLS = [
   { id: 'agente', icon: 'AG', title: 'Agente' },
@@ -60,10 +61,109 @@ function itemsToShapes(items: StratItemDTO[]): Shape[] {
 
 const cardStyle: React.CSSProperties = { borderRadius: 'var(--radius-lg)', background: 'var(--surface)', border: '1px solid var(--surface-border)' };
 
+// Antes toda estratégia nova nascia com mapName: 'Bind' fixo no código —
+// por isso só a Bind aparecia. Agora escolhe o mapa de verdade (mesmo
+// catálogo que Spots usa) antes de criar.
+function CreateStrategyModal({
+  maps,
+  onClose,
+  onCreate,
+}: {
+  maps: Array<{ id: string; nome: string }>;
+  onClose: () => void;
+  onCreate: (input: { mapName: string; side: Lado; title: string }) => Promise<void>;
+}) {
+  const [mapName, setMapName] = useState(maps[0]?.nome ?? '');
+  const [side, setSide] = useState<Lado>('ATK');
+  const [title, setTitle] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function submit() {
+    if (saving || !mapName) return;
+    setSaving(true);
+    setError(null);
+    try {
+      await onCreate({ mapName, side, title: title.trim() || 'Nova estratégia' });
+      onClose();
+    } catch {
+      setError('Não foi possível criar a estratégia.');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div
+      onClick={onClose}
+      style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50 }}
+    >
+      <div onClick={(e) => e.stopPropagation()} style={{ ...cardStyle, width: 420, maxWidth: '92vw', padding: 22 }}>
+        <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 17, marginBottom: 16 }}>Nova estratégia</div>
+
+        {maps.length === 0 ? (
+          <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 16 }}>Nenhum mapa cadastrado ainda.</div>
+        ) : (
+          <select
+            className="input-field"
+            value={mapName}
+            onChange={(e) => setMapName(e.target.value)}
+            style={{ width: '100%', padding: '10px 13px', fontSize: 13, marginBottom: 12 }}
+          >
+            {maps.map((m) => (
+              <option key={m.id} value={m.nome}>
+                {m.nome}
+              </option>
+            ))}
+          </select>
+        )}
+
+        <input
+          className="input-field"
+          placeholder="Título (ex.: Rush A com smoke duplo)"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          style={{ width: '100%', padding: '10px 13px', fontSize: 13, marginBottom: 12 }}
+        />
+
+        <div style={{ display: 'flex', gap: 6, marginBottom: 18 }}>
+          {(['ATK', 'DEF'] as Lado[]).map((s) => (
+            <button
+              key={s}
+              onClick={() => setSide(s)}
+              style={{
+                padding: '7px 14px',
+                borderRadius: 'var(--radius-pill)',
+                border: `1px solid ${side === s ? 'var(--acc25, rgba(239,73,88,.25))' : 'var(--surface-border)'}`,
+                background: side === s ? 'var(--acc10, rgba(239,73,88,.1))' : 'transparent',
+                color: side === s ? 'var(--acc, #EF4958)' : 'var(--text-muted)',
+                fontSize: 12,
+              }}
+            >
+              {s === 'ATK' ? 'Ataque' : 'Defesa'}
+            </button>
+          ))}
+        </div>
+
+        {error && <div style={{ color: 'var(--acc, #EF4958)', fontSize: 12.5, marginBottom: 14 }}>{error}</div>}
+
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button className="btn-primary" style={{ flex: 1, padding: 11, justifyContent: 'center', fontSize: 13 }} onClick={submit} disabled={saving || !mapName}>
+            {saving ? 'Criando…' : 'Criar estratégia'}
+          </button>
+          <button className="btn-secondary" style={{ padding: '11px 15px', color: 'var(--text-muted)' }} onClick={onClose}>
+            Cancelar
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function Board() {
   const navigate = useNavigate();
   const { id } = useParams();
-  const { strategies, strategiesError, strategiesLoading, loadStrategies, saveStrategy, createStrategy, agents, loadAgents } = useOutletContext<OutletContext>();
+  const { strategies, strategiesError, strategiesLoading, loadStrategies, saveStrategy, createStrategy, agents, loadAgents, maps, loadMaps } = useOutletContext<OutletContext>();
 
   useEffect(() => {
     if (strategies === null && !strategiesLoading) loadStrategies();
@@ -72,6 +172,10 @@ export function Board() {
   useEffect(() => {
     if (agents === null) loadAgents();
   }, [agents, loadAgents]);
+
+  useEffect(() => {
+    if (maps === null) loadMaps();
+  }, [maps, loadMaps]);
 
   // Cai pra paleta placeholder enquanto `agents` carrega ou se a Fase 0
   // item 4 (seed) nunca rodou nesse ambiente.
@@ -95,7 +199,7 @@ export function Board() {
   const [selectedAgentId, setSelectedAgentId] = useState<string>(PLACEHOLDER_AGENTS[0].id);
   const [description, setDescription] = useState('');
   const [saving, setSaving] = useState(false);
-  const [creating, setCreating] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const dragId = useRef<string | null>(null);
@@ -198,16 +302,9 @@ export function Board() {
     setPendingPoint(null);
   }
 
-  async function handleCreate() {
-    setCreating(true);
-    try {
-      const created = await createStrategy({ mapName: 'Bind', side: 'ATK', title: 'Nova estratégia' });
-      navigate(`/board/${created.id}`);
-    } catch {
-      // TODO: mostrar erro de criação
-    } finally {
-      setCreating(false);
-    }
+  async function handleCreate(input: { mapName: string; side: Lado; title: string }) {
+    const created = await createStrategy(input);
+    navigate(`/board/${created.id}`);
   }
 
   if (strategiesError && !strategies) {
@@ -232,10 +329,11 @@ export function Board() {
       <div style={{ padding: 26 }}>
         <div style={{ ...cardStyle, padding: 40, textAlign: 'center', color: 'var(--text-muted)', fontSize: 14, display: 'flex', flexDirection: 'column', gap: 14, alignItems: 'center' }}>
           Nenhuma estratégia salva ainda.
-          <button className="btn-primary" onClick={handleCreate} disabled={creating}>
-            {creating ? 'Criando…' : 'Criar a primeira estratégia'}
+          <button className="btn-primary" onClick={() => setShowCreateModal(true)}>
+            Criar a primeira estratégia
           </button>
         </div>
+        {showCreateModal && <CreateStrategyModal maps={maps ?? []} onClose={() => setShowCreateModal(false)} onCreate={handleCreate} />}
       </div>
     );
   }
@@ -362,6 +460,8 @@ export function Board() {
           </svg>
           {pieces.map((p) => {
             const isAgent = p.kind === 'agent';
+            const agentName = isAgent ? AGENTS.find((a) => a.id === p.agentId)?.name : undefined;
+            const imageUrl = agentName ? agentImageUrl(agentName) : null;
             return (
               <div
                 key={p.id}
@@ -375,7 +475,8 @@ export function Board() {
                   width: isAgent ? 36 : 24,
                   height: isAgent ? 36 : 24,
                   borderRadius: isAgent ? 10 : '50%',
-                  background: isAgent ? p.color : 'rgba(18,18,19,.6)',
+                  overflow: isAgent ? 'hidden' : 'visible',
+                  background: isAgent ? (imageUrl ? '#141415' : p.color) : 'rgba(18,18,19,.6)',
                   border: isAgent ? '1px solid rgba(255,255,255,.22)' : `2px solid ${p.color}`,
                   color: isAgent ? '#141415' : p.color,
                   display: 'flex',
@@ -388,7 +489,7 @@ export function Board() {
                   boxShadow: isAgent ? '0 8px 18px rgba(0,0,0,.5)' : 'none',
                 }}
               >
-                {p.label}
+                {imageUrl ? <img src={imageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} draggable={false} /> : p.label}
               </div>
             );
           })}
@@ -422,6 +523,7 @@ export function Board() {
           <div style={{ position: 'absolute', left: 18, top: 62, right: 18, display: 'flex', flexWrap: 'wrap', gap: 5, background: 'rgba(18,18,19,.92)', border: '1px solid var(--input-border)', borderRadius: 12, padding: 6 }}>
             {AGENTS.map((a) => {
               const active = a.id === selectedAgentId;
+              const imageUrl = agentImageUrl(a.name);
               return (
                 <button
                   key={a.id}
@@ -434,16 +536,18 @@ export function Board() {
                     alignItems: 'center',
                     justifyContent: 'center',
                     borderRadius: 8,
+                    overflow: 'hidden',
                     border: active ? '2px solid #fff' : '1px solid rgba(255,255,255,.22)',
-                    background: a.color,
+                    background: imageUrl ? '#141415' : a.color,
                     cursor: 'pointer',
                     fontSize: 9,
                     fontWeight: 700,
                     color: '#fff',
                     textShadow: '0 1px 2px rgba(0,0,0,.55)',
+                    padding: 0,
                   }}
                 >
-                  {a.abbrev.slice(0, 2)}
+                  {imageUrl ? <img src={imageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} draggable={false} /> : a.abbrev.slice(0, 2)}
                 </button>
               );
             })}
@@ -482,8 +586,7 @@ export function Board() {
         <div style={{ padding: '16px 20px 8px', display: 'flex', alignItems: 'center' }}>
           <span style={{ fontSize: 10.5, letterSpacing: '.14em', color: 'var(--text-dim)' }}>ESTRATÉGIAS DO TIME · {strategies.length}</span>
           <button
-            onClick={handleCreate}
-            disabled={creating}
+            onClick={() => setShowCreateModal(true)}
             title="Nova estratégia"
             style={{ marginLeft: 'auto', background: 'none', border: 'none', color: 'var(--acc, #EF4958)', fontSize: 16, lineHeight: 1, cursor: 'pointer' }}
           >
@@ -528,6 +631,7 @@ export function Board() {
           </button>
         </div>
       </div>
+      {showCreateModal && <CreateStrategyModal maps={maps ?? []} onClose={() => setShowCreateModal(false)} onCreate={handleCreate} />}
     </div>
   );
 }
