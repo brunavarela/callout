@@ -217,15 +217,21 @@ function firstName(user: SessionUser | null): string {
   return user?.riotId?.name ?? user?.discordUsername ?? '';
 }
 
+// Altura fixa de 40px pra bater com .btn-secondary/.btn-primary ao lado
+// (11px de padding vertical + linha de texto + borda) — com padding
+// percentual o retângulo do filtro ficava mais baixo que os botões.
 function ModoFilterButtons({ modoFilter, setModoFilter }: { modoFilter: MatchModeFilter; setModoFilter: (m: MatchModeFilter) => void }) {
   return (
-    <div style={{ display: 'flex', gap: 4, background: 'var(--input-bg)', border: '1px solid var(--surface-border)', borderRadius: 9, padding: 3 }}>
+    <div style={{ display: 'flex', alignItems: 'center', height: 40, gap: 4, background: 'var(--input-bg)', border: '1px solid var(--surface-border)', borderRadius: 9, padding: '0 4px' }}>
       {MODOS.map((m) => (
         <button
           key={m.key}
           onClick={() => setModoFilter(m.key)}
           style={{
-            padding: '7px 12px',
+            height: 32,
+            display: 'flex',
+            alignItems: 'center',
+            padding: '0 12px',
             borderRadius: 6,
             border: 'none',
             cursor: 'pointer',
@@ -367,10 +373,15 @@ export function Dashboard() {
         </div>
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10 }}>
           <ModoFilterButtons modoFilter={modoFilter} setModoFilter={setModoFilter} />
-          <button className="btn-secondary" onClick={() => navigate('/board')}>
+          <button className="btn-secondary" style={{ height: 40, display: 'flex', alignItems: 'center', padding: '0 17px' }} onClick={() => navigate('/board')}>
             Abrir board
           </button>
-          <button className="btn-primary" style={{ padding: '11px 17px', fontSize: 13 }} onClick={startSync} disabled={sync?.state === 'syncing'}>
+          <button
+            className="btn-primary"
+            style={{ height: 40, display: 'flex', alignItems: 'center', padding: '0 17px', fontSize: 13 }}
+            onClick={startSync}
+            disabled={sync?.state === 'syncing'}
+          >
             + Sincronizar
           </button>
         </div>
@@ -458,11 +469,7 @@ export function Dashboard() {
             </>
           ) : (
             <div style={{ marginTop: 20, fontSize: 13, color: 'var(--text-dim)' }}>
-              {modoFilter === 'Unrated'
-                ? 'Sem histórico de RR em partidas Sem Classificação.'
-                : modoFilter === 'Competitive'
-                  ? 'Sem histórico de RR em partidas Competitivas.'
-                  : 'Sem histórico de RR ainda.'}
+              {modoFilter === 'Unrated' ? 'Sem histórico de RR em partidas Sem Classificação.' : 'Sem histórico de RR ainda.'}
             </div>
           )}
           {formInsights.matchesAnalyzed > 0 && (
