@@ -136,6 +136,9 @@ export interface RecentMatchSummary {
   agent: string;
   score: string;
   kda: string;
+  hsPercent: number;
+  mvp: boolean;
+  ace: boolean;
   rr: number | null;
   playedAtLabel: string;
 }

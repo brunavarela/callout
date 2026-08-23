@@ -27,6 +27,18 @@ function scoreFor(rawJson: unknown, teamId: string): { own: number; opponent: nu
   return { own: own?.rounds.won ?? 0, opponent: opponent?.rounds.won ?? 0 };
 }
 
+// Ace: 5 kills do jogador no mesmo round. Só existe no raw_json (feed de
+// kills), não é uma coluna persistida.
+function hasAce(rawJson: unknown, puuid: string): boolean {
+  const match = rawJson as MatchV4Data;
+  const killsByRound = new Map<number, number>();
+  for (const kill of match.kills) {
+    if (kill.killer.puuid !== puuid) continue;
+    killsByRound.set(kill.round, (killsByRound.get(kill.round) ?? 0) + 1);
+  }
+  return [...killsByRound.values()].some((count) => count >= 5);
+}
+
 type Row = Awaited<ReturnType<typeof prisma.matchPlayer.findMany<{ include: { match: true } }>>>[number];
 
 function aggregate(list: Row[]) {
@@ -174,8 +186,25 @@ export async function buildDashboardSummary(userId: string, puuid: string, regio
     // sem MMR disponível (conta nova, região errada, API fora) — mantém o placeholder
   }
 
-  const recentMatches = rows.slice(0, 7).map((r) => {
+  const recentRows = rows.slice(0, 7);
+  // MVP = maior ACS da partida entre os 10 jogadores. `rows` só traz as
+  // linhas do próprio usuário (filtro `where: { puuid }`), então precisa de
+  // uma query separada pegando todo mundo dessas partidas pra comparar.
+  const maxAcsByMatch = new Map<string, number>();
+  if (recentRows.length > 0) {
+    const allPlayers = await prisma.matchPlayer.findMany({
+      where: { matchId: { in: recentRows.map((r) => r.match.id) } },
+      select: { matchId: true, acs: true },
+    });
+    for (const p of allPlayers) {
+      const current = maxAcsByMatch.get(p.matchId) ?? -Infinity;
+      if (p.acs > current) maxAcsByMatch.set(p.matchId, p.acs);
+    }
+  }
+
+  const recentMatches = recentRows.map((r) => {
     const score = scoreFor(r.match.rawJson, r.teamId);
+    const shotsTotal = r.headshots + r.bodyshots + r.legshots;
     return {
       id: r.match.id,
       result: (r.won ? "V" : "D") as "V" | "D",
@@ -183,6 +212,9 @@ export async function buildDashboardSummary(userId: string, puuid: string, regio
       agent: r.agentName,
       score: `${score.own}—${score.opponent}`,
       kda: `${r.kills}/${r.deaths}/${r.assists}`,
+      hsPercent: shotsTotal > 0 ? Math.round((r.headshots / shotsTotal) * 100) : 0,
+      mvp: r.acs === maxAcsByMatch.get(r.match.id),
+      ace: hasAce(r.match.rawJson, r.puuid),
       rr: rrByMatch.get(r.match.id) ?? null,
       playedAtLabel: formatPlayedAt(r.match.startedAt, now),
     };
