@@ -2,7 +2,7 @@
 
 > Documento de handoff de **implementação** (o que já existe, como rodar,
 > o que falta). Para o briefing de produto/arquitetura, ver [CONTEXT.md](CONTEXT.md).
-> Última atualização: 2026-08-22.
+> Última atualização: 2026-08-23.
 
 ---
 
@@ -80,6 +80,29 @@ projetos nesta máquina (`iexfy_app_back-end` e `sg-super-web-frontend`).
   ataque/defesa/overtime (`GET /dashboard/sides`, calculado a partir dos
   `rounds` já sincronizados — usa eventos de *plant* como âncora pra
   descobrir qual time atacou em cada metade; ver `apps/api/src/lib/insights.ts`)
+- **v3 — redesign "mosaico compacto" (2026-08-23)**: layout reorganizado a
+  partir de um handoff de design em `Downloads/dashboard`, que apontava
+  três regras de dado erradas no v2 — corrigidas junto (fontes/cores/raios
+  do resto do app mantidos, só o layout mudou):
+  - RR por partida em vez de por dia — um ponto por partida (soma
+    acumulada), casando `last_change`/`match_id` da mmr-history da
+    HenrikDev com `Match.id`; tooltip com data/mapa/agente/resultado/RR,
+    clique abre a partida. RR também aparece na tabela de últimas
+    partidas.
+  - Delta de KPI não finge mais comparação: sem partida nenhuma nos
+    30-60 dias anteriores, o delta fica `0` em vez de "atual − 0".
+  - Winrate por mapa/agente expõe a amostra (`wins`/`total`): barra cinza
+    abaixo de 3 partidas, rótulo "X de Y partidas".
+  - Donut de lados virou duas barras independentes com marca de 50%
+    (donut somava as duas taxas como se fossem 100%, o que era errado).
+  - Novo card de sequência (V/D das últimas 10, sequência atual e melhor
+    sequência de vitórias), a partir do `last14Results` que já existia.
+
+  Bug achado no caminho: `rrByMatch` estava aninhado dentro do
+  `try/catch` de `getMmr()` — uma conta sem rank exposto pela HenrikDev
+  ficava sem RR na tabela mesmo com o histórico de partidas funcionando
+  sozinho. Separado em dois `try/catch` independentes
+  (`apps/api/src/lib/dashboard.ts`, `apps/api/src/lib/insights.ts`).
 
 ### Fase 2 — Time — ✅ completa
 - Time único criado automaticamente no primeiro login (nome vem do
@@ -260,7 +283,16 @@ app de verdade.
 - **Tema**: `apps/web/src/lib/theme.tsx` (`ThemeProvider`/`useTheme`) —
   injeta `--acc`/`--pos`/etc. como CSS custom properties num wrapper.
   Persistido por usuário (`PATCH /me/theme`), editável pelo clique no
-  avatar da sidebar (`ThemeSettings.tsx`).
+  avatar da sidebar (`ThemeSettings.tsx`). O mesmo popover ganhou (2026-08-22)
+  um botão "Sair da conta" no fim (usa o `logout()` que já existia em
+  `session.tsx`), atrás de um modal de confirmação ("Sair da conta?" /
+  Cancelar/Sair — mesmo padrão visual de modal do Board/Spots) em vez de
+  deslogar direto no clique.
+- **Sidebar**: `AppShell.tsx` — grid com altura fixa (`100vh` +
+  `overflow: hidden`) e só o `<main>` rola por dentro; antes o grid usava
+  `minHeight: 100vh` e a sidebar inteira rolava junto com o conteúdo em
+  telas cheias. Itens de navegação usam ícones reais em vez do quadradinho
+  placeholder.
 - **Sessão**: `apps/web/src/lib/session.tsx` (`SessionProvider`/`useSession`)
   — busca `/auth/me` uma vez no boot do app.
 - **Design v2**: cantos arredondados, glows radiais, cards tintados. Se
