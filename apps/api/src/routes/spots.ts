@@ -7,6 +7,18 @@ import { loadAgentsByUuid } from "../lib/assets.js";
 
 const SPOT_INCLUDE = { map: true, criadoPor: true } as const;
 
+// Só YouTube ou Instagram — qualquer outro link (imgur, drive, twitter...)
+// é rejeitado. Validado aqui de novo mesmo o front já bloquear, nunca
+// confia só no client.
+function isAllowedLinkHost(url: string): boolean {
+  try {
+    const host = new URL(url).hostname.replace(/^www\./, "").toLowerCase();
+    return ["youtube.com", "m.youtube.com", "youtu.be", "instagram.com"].includes(host);
+  } catch {
+    return false;
+  }
+}
+
 // Imagem já vem comprimida (canvas, ~1280px/qualidade .75) e em data URL —
 // o limite aqui é só uma rede de segurança contra payload absurdo, não o
 // controle de tamanho de verdade (isso é client-side).
@@ -16,6 +28,11 @@ const createBodySchema = z.object({
   side: z.enum(["ATK", "DEF"]),
   descricao: z.string().min(1).max(1000),
   imagens: z.array(z.string().min(1).max(2_000_000)).max(3).default([]),
+  link: z
+    .string()
+    .url()
+    .refine(isAllowedLinkHost, { message: "Só link do YouTube ou Instagram." })
+    .optional(),
 });
 
 export async function spotsRoutes(app: FastifyInstance) {
@@ -45,6 +62,7 @@ export async function spotsRoutes(app: FastifyInstance) {
         side: parsed.data.side,
         descricao: parsed.data.descricao,
         imagens: parsed.data.imagens,
+        link: parsed.data.link ?? null,
         criadoPorId: request.user!.id,
       },
       include: SPOT_INCLUDE,

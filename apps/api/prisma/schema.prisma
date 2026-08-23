@@ -205,6 +205,7 @@ model Spot {
   side        String // ATK | DEF
   descricao   String
   imagens     String[]
+  link        String? // YouTube ou Instagram, validado na rota
   criadoPorId String
   criadoPor   User     @relation("SpotAuthor", fields: [criadoPorId], references: [id])
   createdAt   DateTime @default(now())

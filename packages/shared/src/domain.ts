@@ -304,6 +304,7 @@ export interface Spot {
   agentColor: string;
   descricao: string;
   imagens: string[]; // até 3, data URLs
+  link: string | null; // YouTube ou Instagram
   author: string;
   side: Lado;
 }

@@ -20,6 +20,7 @@ export function toSpotDTO(spot: SpotWithRelations, agentsByUuid: Map<string, { n
     agentColor: real?.cor ?? placeholder?.color ?? "#9A9DA1",
     descricao: spot.descricao,
     imagens: spot.imagens,
+    link: spot.link,
     author: spot.criadoPor.riotName ?? spot.criadoPor.discordUsername,
     side: spot.side as Lado,
   };

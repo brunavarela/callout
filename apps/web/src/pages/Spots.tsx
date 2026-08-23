@@ -1,16 +1,26 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { PLACEHOLDER_AGENTS, type AgentAsset, type Lado } from '@callout/shared';
+import { PLACEHOLDER_AGENTS, type AgentAsset, type Lado, type Spot as SpotDTO } from '@callout/shared';
 import type { OutletContext } from '../components/AppShell';
 import { LoadingFill } from '../components/Spinner';
 import { compressImageToDataUrl } from '../lib/imageCompress';
 
 const cardStyle: React.CSSProperties = { borderRadius: 'var(--radius-lg)', background: 'var(--surface)', border: '1px solid var(--surface-border)' };
+const ERROR_COLOR = 'var(--acc, #EF4958)';
 
 type AgentOption = { id: string; name: string; color: string };
 type MapOption = { id: string; name: string };
 
 const MAX_IMAGES = 3;
+
+function isAllowedLinkHost(url: string): boolean {
+  try {
+    const host = new URL(url).hostname.replace(/^www\./, '').toLowerCase();
+    return ['youtube.com', 'm.youtube.com', 'youtu.be', 'instagram.com'].includes(host);
+  } catch {
+    return false;
+  }
+}
 
 function emptyForm(defaultMapId: string, defaultAgentId: string) {
   return {
@@ -18,6 +28,7 @@ function emptyForm(defaultMapId: string, defaultAgentId: string) {
     side: 'ATK' as Lado,
     agentId: defaultAgentId,
     descricao: '',
+    link: '',
     imagens: [] as string[],
   };
 }
@@ -105,11 +116,32 @@ function CreateSpotModal({
   const [form, setForm] = useState(() => emptyForm(maps[0]?.id ?? '', agents[0]?.id ?? ''));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [descricaoError, setDescricaoError] = useState(false);
+  const [linkError, setLinkError] = useState<string | null>(null);
+  const shakeTimeout = useRef<number | null>(null);
 
-  const canSubmit = form.mapId !== '' && form.agentId !== '' && form.descricao.trim() !== '';
+  function updateDescricao(value: string) {
+    setForm((f) => ({ ...f, descricao: value }));
+    if (value.trim()) setDescricaoError(false);
+  }
 
   async function submit() {
-    if (!canSubmit || saving) return;
+    if (saving) return;
+
+    const descricao = form.descricao.trim();
+    if (!descricao) {
+      setDescricaoError(true);
+      if (shakeTimeout.current) window.clearTimeout(shakeTimeout.current);
+      shakeTimeout.current = window.setTimeout(() => setDescricaoError(false), 500);
+      return;
+    }
+
+    const link = form.link.trim();
+    if (link && !isAllowedLinkHost(link)) {
+      setLinkError('Só link do YouTube ou Instagram.');
+      return;
+    }
+
     setSaving(true);
     setError(null);
     try {
@@ -117,8 +149,9 @@ function CreateSpotModal({
         mapId: form.mapId,
         agentId: form.agentId,
         side: form.side,
-        descricao: form.descricao.trim(),
+        descricao,
         imagens: form.imagens,
+        link: link || undefined,
       });
       onClose();
     } catch {
@@ -189,19 +222,48 @@ function CreateSpotModal({
         <textarea
           placeholder="Descrição do spot — como jogar, onde mirar, timing…"
           value={form.descricao}
-          onChange={(e) => setForm((f) => ({ ...f, descricao: e.target.value }))}
+          onChange={(e) => updateDescricao(e.target.value)}
           rows={4}
           className="input-field"
-          style={{ width: '100%', padding: '10px 13px', fontSize: 13, marginBottom: 14, resize: 'none' }}
+          style={{
+            width: '100%',
+            padding: '10px 13px',
+            fontSize: 13,
+            marginBottom: 6,
+            resize: 'none',
+            border: descricaoError ? `1px solid ${ERROR_COLOR}` : undefined,
+            animation: descricaoError ? 'shake 500ms' : undefined,
+          }}
         />
+        {descricaoError && <div style={{ color: ERROR_COLOR, fontSize: 11.5, marginBottom: 8 }}>Escreve uma descrição pro spot.</div>}
+
+        <input
+          className="input-field"
+          type="url"
+          placeholder="Link do YouTube ou Instagram (opcional)"
+          value={form.link}
+          onChange={(e) => {
+            setForm((f) => ({ ...f, link: e.target.value }));
+            setLinkError(null);
+          }}
+          style={{
+            width: '100%',
+            padding: '10px 13px',
+            fontSize: 13,
+            marginTop: descricaoError ? 0 : 8,
+            marginBottom: linkError ? 6 : 14,
+            border: linkError ? `1px solid ${ERROR_COLOR}` : undefined,
+          }}
+        />
+        {linkError && <div style={{ color: ERROR_COLOR, fontSize: 11.5, marginBottom: 14 }}>{linkError}</div>}
 
         <div style={{ fontSize: 11, letterSpacing: '.1em', color: 'var(--text-dim)', marginBottom: 8 }}>IMAGENS (ATÉ {MAX_IMAGES})</div>
         <ImagePicker images={form.imagens} onChange={(imagens) => setForm((f) => ({ ...f, imagens }))} />
 
-        {error && <div style={{ color: 'var(--acc, #EF4958)', fontSize: 12.5, margin: '16px 0 0' }}>{error}</div>}
+        {error && <div style={{ color: ERROR_COLOR, fontSize: 12.5, margin: '16px 0 0' }}>{error}</div>}
 
         <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
-          <button className="btn-primary" style={{ flex: 1, padding: 11, justifyContent: 'center', fontSize: 13 }} onClick={submit} disabled={!canSubmit || saving}>
+          <button className="btn-primary" style={{ flex: 1, padding: 11, justifyContent: 'center', fontSize: 13 }} onClick={submit} disabled={saving || maps.length === 0}>
             {saving ? 'Salvando…' : 'Salvar spot'}
           </button>
           <button className="btn-secondary" style={{ padding: '11px 15px', color: 'var(--text-muted)' }} onClick={onClose}>
@@ -213,6 +275,70 @@ function CreateSpotModal({
   );
 }
 
+// Ver um spot salvo: descrição inteira, imagens maiores (clicáveis pra
+// abrir em lightbox) e o link, se tiver.
+function ViewSpotModal({ spot, onClose }: { spot: SpotDTO; onClose: () => void }) {
+  const [lightbox, setLightbox] = useState<string | null>(null);
+
+  return (
+    <div
+      onClick={onClose}
+      style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50 }}
+    >
+      <div onClick={(e) => e.stopPropagation()} style={{ ...cardStyle, width: 520, maxWidth: '92vw', maxHeight: '90vh', overflow: 'auto', padding: 22 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+          <span style={{ width: 18, height: 18, borderRadius: 6, background: spot.agentColor, flex: 'none' }} />
+          <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 17 }}>{spot.agent}</div>
+          <button onClick={onClose} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: 'var(--text-dim)', fontSize: 16, cursor: 'pointer' }}>
+            ✕
+          </button>
+        </div>
+        <div style={{ display: 'flex', gap: 7, fontSize: 10.5, color: 'var(--text-faint)', marginBottom: 16 }}>
+          <span>{spot.mapName}</span>
+          <span>·</span>
+          <span>{spot.side === 'ATK' ? 'ATAQUE' : 'DEFESA'}</span>
+          <span>·</span>
+          <span>{spot.author}</span>
+        </div>
+
+        <div style={{ fontSize: 13.5, lineHeight: 1.6, color: 'var(--text-2)', whiteSpace: 'pre-wrap', marginBottom: 18 }}>{spot.descricao}</div>
+
+        {spot.imagens.length > 0 && (
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 18 }}>
+            {spot.imagens.map((src, i) => (
+              <button
+                key={i}
+                onClick={() => setLightbox(src)}
+                style={{ padding: 0, border: '1px solid var(--surface-border)', borderRadius: 10, overflow: 'hidden', cursor: 'zoom-in', width: 140, height: 140, background: 'none' }}
+              >
+                <img src={src} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              </button>
+            ))}
+          </div>
+        )}
+
+        {spot.link && (
+          <a href={spot.link} target="_blank" rel="noreferrer" className="btn-secondary" style={{ display: 'inline-flex', fontSize: 13, textDecoration: 'none' }}>
+            {spot.link.includes('instagram') ? 'Ver no Instagram ↗' : 'Ver no YouTube ↗'}
+          </a>
+        )}
+      </div>
+
+      {lightbox && (
+        <div
+          onClick={(e) => {
+            e.stopPropagation();
+            setLightbox(null);
+          }}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.9)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60, cursor: 'zoom-out' }}
+        >
+          <img src={lightbox} alt="" style={{ maxWidth: '92vw', maxHeight: '92vh', objectFit: 'contain' }} />
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function Spots() {
   const { spots, spotsError, spotsLoading, loadSpots, createSpot, agents: realAgents, loadAgents, maps: realMaps, loadMaps } = useOutletContext<OutletContext>();
   const [query, setQuery] = useState('');
@@ -220,6 +346,7 @@ export function Spots() {
   const [filterAgent, setFilterAgent] = useState('Todos');
   const [filterSide, setFilterSide] = useState<'Todos' | Lado>('Todos');
   const [creating, setCreating] = useState(false);
+  const [viewing, setViewing] = useState<SpotDTO | null>(null);
 
   useEffect(() => {
     if (spots === null && !spotsLoading) loadSpots();
@@ -340,7 +467,12 @@ export function Spots() {
       {spots && spots.length > 0 && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 16 }}>
           {filtered.map((s) => (
-            <div key={s.id} className="card-hover-acc" style={{ borderRadius: 'var(--radius-lg)', background: 'var(--surface)', border: '1px solid var(--surface-border)', overflow: 'hidden' }}>
+            <div
+              key={s.id}
+              className="card-hover-acc"
+              onClick={() => setViewing(s)}
+              style={{ borderRadius: 'var(--radius-lg)', background: 'var(--surface)', border: '1px solid var(--surface-border)', overflow: 'hidden', cursor: 'pointer' }}
+            >
               {s.imagens.length > 0 ? (
                 <div style={{ display: 'flex', height: 146, borderBottom: '1px solid var(--surface-border)', gap: 1 }}>
                   {s.imagens.map((src, i) => (
@@ -376,6 +508,7 @@ export function Spots() {
       )}
 
       {creating && <CreateSpotModal agents={agentOptions} maps={mapOptions} onClose={() => setCreating(false)} onCreate={createSpot} />}
+      {viewing && <ViewSpotModal spot={viewing} onClose={() => setViewing(null)} />}
     </div>
   );
 }

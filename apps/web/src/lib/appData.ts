@@ -156,7 +156,7 @@ export function useAppData(user: SessionUser | null) {
   }, []);
 
   const createSpot = useCallback(
-    async (input: { mapId: string; agentId: string; side: Lado; descricao: string; imagens: string[] }) => {
+    async (input: { mapId: string; agentId: string; side: Lado; descricao: string; imagens: string[]; link?: string }) => {
       const created = await apiFetch<Spot>('/spots', { method: 'POST', body: JSON.stringify(input) });
       setSpots((prev) => (prev ? [created, ...prev] : [created]));
       return created;
