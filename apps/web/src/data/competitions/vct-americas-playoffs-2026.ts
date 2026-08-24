@@ -7,7 +7,7 @@ import type { Competicao } from './types';
 // "vencedor"/"perdedor" de outro (ver types.ts) resolvem sozinhos.
 export const vctAmericasPlayoffs2026: Competicao = {
   id: 'vct-americas-playoffs-2026',
-  nome: 'VCT Americas · Playoffs',
+  nome: 'VCT Americas · Etapa 2 · Playoffs',
   formato: 'Dupla eliminação · 8 times',
   categorias: ['mista'],
   fase: 'Primeira rodada',
