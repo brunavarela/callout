@@ -25,7 +25,7 @@ function Swatch({ color, active, disabled, onClick }: { color: string; active: b
   );
 }
 
-export function ThemeSettings({ onClose }: { onClose: () => void }) {
+export function ThemeSettings({ onClose, className }: { onClose: () => void; className: string }) {
   const { theme, setTheme } = useTheme();
   const { logout } = useSession();
   const navigate = useNavigate();
@@ -54,7 +54,7 @@ export function ThemeSettings({ onClose }: { onClose: () => void }) {
 
   return (
     <div
-      className="theme-settings-panel"
+      className={className}
       style={{
         background: 'var(--surface)',
         border: '1px solid var(--surface-border)',

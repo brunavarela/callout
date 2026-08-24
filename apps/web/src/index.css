@@ -422,13 +422,6 @@ select.input-field {
     text-align: center;
     white-space: nowrap;
   }
-  .app-sidebar-profile {
-    border-top: none !important;
-    padding: 0 12px !important;
-  }
-  .app-sidebar-profile-text {
-    display: none;
-  }
 }
 
 .app-main {
@@ -440,22 +433,36 @@ select.input-field {
   }
 }
 
-/* Painel de tema/logout — na sidebar de desktop é um popup relativo à
-   própria linha de perfil (estreita); na barra inferior mobile essa linha
-   vira só um botão de avatar, estreito demais pra ancorar o popup, então
-   ele passa a flutuar fixo acima da barra, ocupando a largura da tela. */
-.theme-settings-panel {
+/* Botão de perfil no header (avatar + nick + seta), abre o painel de
+   tema/logout. Em desktop o painel cai como dropdown ancorado no botão;
+   no mobile ele flutua fixo acima da barra de navegação inferior, já que
+   o botão de perfil pode ficar estreito demais pra ancorar um dropdown. */
+.header-profile-trigger:hover {
+  border-color: var(--acc, #ef4958);
+}
+.header-profile-panel {
   position: absolute;
-  bottom: 64px;
-  left: 14px;
-  right: 14px;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 300px;
+  z-index: 50;
 }
 @media (max-width: 900px) {
-  .theme-settings-panel {
+  .header-profile-panel {
     position: fixed;
+    top: auto;
     left: 12px;
     right: 12px;
     bottom: 76px;
+    width: auto;
+  }
+}
+@media (max-width: 420px) {
+  .header-profile-text {
+    display: none;
+  }
+  .header-profile-trigger {
+    padding: 6px !important;
   }
 }
 

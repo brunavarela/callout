@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Navigate, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Swords, Users, PenTool, MapPin } from 'lucide-react';
-import type { SyncStatus } from '@callout/shared';
+import { LayoutDashboard, Swords, Users, PenTool, MapPin, Trophy } from 'lucide-react';
 import { useSession } from '../lib/session';
 import { useAppData, type AppData } from '../lib/appData';
 import { ThemeSettings } from './ThemeSettings';
@@ -11,69 +10,13 @@ const BASE_NAV_ITEMS = [
   { to: '/time', label: 'Time', icon: Users, match: (p: string) => p === '/time' },
   { to: '/board', label: 'Estratégia', icon: PenTool, match: (p: string) => p.startsWith('/board') },
   { to: '/spots', label: 'Spots', icon: MapPin, match: (p: string) => p === '/spots' },
+  { to: '/competicoes', label: 'Competições', icon: Trophy, match: (p: string) => p.startsWith('/competicoes') },
 ];
 
 export type OutletContext = AppData;
 
 function initialsOf(name: string) {
   return name.slice(0, 2).toUpperCase();
-}
-
-function SyncChip({ sync }: { sync: SyncStatus | null }) {
-  if (!sync) return null;
-
-  if (sync.state === 'failed') {
-    return (
-      <div
-        title={sync.reason}
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 8,
-          padding: '8px 13px',
-          border: '1px solid var(--acc25, rgba(239,73,88,.25))',
-          background: 'var(--acc10, rgba(239,73,88,.1))',
-          borderRadius: 'var(--radius-pill)',
-          fontSize: 12,
-          color: 'var(--acc, #EF4958)',
-          maxWidth: 320,
-        }}
-      >
-        <span style={{ whiteSpace: 'nowrap' }}>Sync falhou</span>
-        {sync.reason && <span style={{ color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>· {sync.reason}</span>}
-      </div>
-    );
-  }
-
-  if (sync.state !== 'syncing') return null;
-  const progress = sync.progress;
-  return (
-    <div
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: 8,
-        padding: '8px 13px',
-        border: '1px solid var(--surface-border)',
-        borderRadius: 'var(--radius-pill)',
-        fontSize: 12,
-        color: 'var(--text-muted)',
-      }}
-    >
-      <span
-        style={{
-          width: 10,
-          height: 10,
-          border: '1.5px solid var(--acc, #EF4958)',
-          borderTopColor: 'transparent',
-          borderRadius: '50%',
-          display: 'block',
-          animation: 'spin 900ms linear infinite',
-        }}
-      />
-      sincronizando{progress ? ` · ${progress.done} de ${progress.total}` : '…'}
-    </div>
-  );
 }
 
 interface SearchResult {
@@ -204,7 +147,7 @@ export function AppShell() {
   const navigate = useNavigate();
   const { user, loading } = useSession();
   const appData = useAppData(user);
-  const { sync, startSync, team } = appData;
+  const { team } = appData;
   const [settingsOpen, setSettingsOpen] = useState(false);
 
   if (loading) return null;
@@ -296,62 +239,57 @@ export function AppShell() {
             </button>
           </div>
         </div>
-
-        <div style={{ position: 'relative' }}>
-          {settingsOpen && <ThemeSettings onClose={() => setSettingsOpen(false)} />}
-          <div
-            className="app-sidebar-profile"
-            style={{
-              padding: '14px 18px 18px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 11,
-              borderTop: '1px solid #202023',
-              cursor: 'pointer',
-            }}
-            onClick={() => setSettingsOpen((v) => !v)}
-          >
-            {user.discordAvatarUrl ? (
-              <img src={user.discordAvatarUrl} alt="" style={{ width: 34, height: 34, borderRadius: 10, flex: 'none' }} />
-            ) : (
-              <div
-                style={{
-                  width: 34,
-                  height: 34,
-                  flex: 'none',
-                  borderRadius: 10,
-                  background: 'var(--avatar-bg)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: 12,
-                  fontWeight: 600,
-                  color: 'var(--text-muted)',
-                }}
-              >
-                {initialsOf(user.discordUsername)}
-              </div>
-            )}
-            <div className="app-sidebar-profile-text" style={{ minWidth: 0 }}>
-              <div style={{ fontSize: 13, fontWeight: 500 }}>
-                {user.riotId.name}#{user.riotId.tag}
-              </div>
-              <div style={{ fontSize: 11, color: 'var(--text-dim)' }}>{user.discordUsername}</div>
-            </div>
-            <span className="app-sidebar-profile-text" style={{ marginLeft: 'auto', color: 'var(--text-faint)' }}>
-              ›
-            </span>
-          </div>
-        </div>
       </aside>
 
       <main className="app-main" style={{ minWidth: 0, height: '100%', display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
         <header className="app-header" style={{ padding: '16px 26px', borderBottom: '1px solid var(--divider)' }}>
           <SearchBar appData={appData} />
-          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 12 }}>
-            <SyncChip sync={sync} />
-            <button className="btn-icon" title="Sincronizar" onClick={startSync} disabled={sync?.state === 'syncing'}>
-              ◔
+          <div style={{ marginLeft: 'auto', position: 'relative' }}>
+            {settingsOpen && <ThemeSettings className="header-profile-panel" onClose={() => setSettingsOpen(false)} />}
+            <button
+              className="header-profile-trigger"
+              onClick={() => setSettingsOpen((v) => !v)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 10,
+                background: 'transparent',
+                border: '1px solid var(--surface-border)',
+                borderRadius: 'var(--radius-md)',
+                padding: '6px 12px 6px 6px',
+                cursor: 'pointer',
+              }}
+            >
+              {user.discordAvatarUrl ? (
+                <img src={user.discordAvatarUrl} alt="" style={{ width: 32, height: 32, borderRadius: 9, flex: 'none' }} />
+              ) : (
+                <div
+                  style={{
+                    width: 32,
+                    height: 32,
+                    flex: 'none',
+                    borderRadius: 9,
+                    background: 'var(--avatar-bg)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: 11.5,
+                    fontWeight: 600,
+                    color: 'var(--text-muted)',
+                  }}
+                >
+                  {initialsOf(user.discordUsername)}
+                </div>
+              )}
+              <div className="header-profile-text" style={{ minWidth: 0, textAlign: 'left' }}>
+                <div style={{ fontSize: 12.5, fontWeight: 500 }}>
+                  {user.riotId.name}#{user.riotId.tag}
+                </div>
+                <div style={{ fontSize: 10.5, color: 'var(--text-dim)' }}>{user.discordUsername}</div>
+              </div>
+              <span className="header-profile-text" style={{ color: 'var(--text-faint)' }}>
+                ›
+              </span>
             </button>
           </div>
         </header>
