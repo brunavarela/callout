@@ -101,8 +101,8 @@ function TwitchIcon({ size = 18 }: { size?: number }) {
 function AssistaLinks({ competicao }: { competicao: Competicao }) {
   if (!competicao.linkTwitch && !competicao.linkYoutube) return null;
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8 }}>
-      <span style={{ fontSize: 10, letterSpacing: '.08em', color: 'var(--text-faint)' }}>ASSISTIR</span>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 'none' }}>
+      <span style={{ fontSize: 13, color: 'var(--text)', whiteSpace: 'nowrap' }}>Opções pra assistir:</span>
       {competicao.linkTwitch && (
         <a href={competicao.linkTwitch} target="_blank" rel="noopener noreferrer" className="btn-icon" style={{ width: 30, height: 30 }} title="Assistir na Twitch">
           <TwitchIcon size={14} />
@@ -210,9 +210,9 @@ function ResumoCompeticao({ competicao }: { competicao: Competicao }) {
       <div style={{ flex: 1, minWidth: 200 }}>
         <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 17 }}>{competicao.nome}</div>
         <div style={{ fontSize: 12.5, color: 'var(--text-dim)', marginTop: 3 }}>{competicao.formato}</div>
-        <AssistaLinks competicao={competicao} />
       </div>
-      <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 24, flexWrap: 'wrap' }}>
+        <AssistaLinks competicao={competicao} />
         <div>
           <div style={{ fontSize: 9.5, letterSpacing: '.08em', color: 'var(--text-faint)' }}>FASE</div>
           <div style={{ fontSize: 13, fontWeight: 600, marginTop: 3 }}>{competicao.fase}</div>
