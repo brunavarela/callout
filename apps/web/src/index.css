@@ -280,7 +280,7 @@ select.input-field {
     margin-left: 0;
     width: 100%;
     flex-direction: column-reverse;
-    align-items: stretch;
+    align-items: flex-start;
   }
   .dashboard-action-buttons {
     width: 100%;
