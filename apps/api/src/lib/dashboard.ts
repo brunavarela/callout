@@ -193,18 +193,21 @@ export async function buildDashboardSummary(
     .map((r) => matchResult(r.won, rrByMatch.get(r.match.id)));
 
   const recentRows = rows.slice(0, 7);
-  // MVP = maior ACS da partida entre os 10 jogadores. `rows` só traz as
-  // linhas do próprio usuário (filtro `where: { puuid }`), então precisa de
-  // uma query separada pegando todo mundo dessas partidas pra comparar.
-  const maxAcsByMatch = new Map<string, number>();
+  // MVP = maior ACS do seu próprio time na partida (não dos 10 jogadores —
+  // isso deixaria de fora quem foi o melhor do time mas perdeu de alguém do
+  // time adversário). `rows` só traz as linhas do próprio usuário (filtro
+  // `where: { puuid }`), então precisa de uma query separada pegando todo
+  // mundo dessas partidas pra comparar.
+  const maxAcsByMatchTeam = new Map<string, number>();
   if (recentRows.length > 0) {
     const allPlayers = await prisma.matchPlayer.findMany({
       where: { matchId: { in: recentRows.map((r) => r.match.id) } },
-      select: { matchId: true, acs: true },
+      select: { matchId: true, teamId: true, acs: true },
     });
     for (const p of allPlayers) {
-      const current = maxAcsByMatch.get(p.matchId) ?? -Infinity;
-      if (p.acs > current) maxAcsByMatch.set(p.matchId, p.acs);
+      const key = `${p.matchId}:${p.teamId}`;
+      const current = maxAcsByMatchTeam.get(key) ?? -Infinity;
+      if (p.acs > current) maxAcsByMatchTeam.set(key, p.acs);
     }
   }
 
@@ -219,7 +222,7 @@ export async function buildDashboardSummary(
       score: `${score.own}—${score.opponent}`,
       kda: `${r.kills}/${r.deaths}/${r.assists}`,
       hsPercent: shotsTotal > 0 ? Math.round((r.headshots / shotsTotal) * 100) : 0,
-      mvp: r.acs === maxAcsByMatch.get(r.match.id),
+      mvp: r.acs === maxAcsByMatchTeam.get(`${r.match.id}:${r.teamId}`),
       ace: hasAce(r.match.rawJson, r.puuid),
       rr: rrByMatch.get(r.match.id) ?? null,
       playedAtLabel: formatPlayedAt(r.match.startedAt, now),

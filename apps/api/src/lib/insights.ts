@@ -13,7 +13,7 @@ function mapNameFrom(rawJson: unknown): string {
 // recorte (não necessariamente o de maior winrate) — é sobre o que você tem
 // jogado recentemente, não sobre onde você é melhor (isso já é o card de
 // winrate por mapa/agente, calculado sobre outra janela).
-function buildFormInsights(rows: Row[], maxAcsByMatch: Map<string, number>): RecentFormInsights {
+function buildFormInsights(rows: Row[], maxAcsByMatchTeam: Map<string, number>): RecentFormInsights {
   if (rows.length === 0) {
     return { matchesAnalyzed: 0, topMap: null, topAgent: null, negativeKdaMatches: 0, mvpMatches: 0 };
   }
@@ -36,7 +36,7 @@ function buildFormInsights(rows: Row[], maxAcsByMatch: Map<string, number>): Rec
     agentCounts.set(r.agentName, aEntry);
 
     if (r.kills + r.assists < r.deaths) negativeKdaMatches++;
-    if (r.acs === maxAcsByMatch.get(r.match.id)) mvpMatches++;
+    if (r.acs === maxAcsByMatchTeam.get(`${r.match.id}:${r.teamId}`)) mvpMatches++;
   }
 
   const mostPlayed = (counts: Map<string, { total: number; wins: number }>) => {
@@ -77,18 +77,21 @@ export async function buildRrAndInsights(
     take: matchCount,
   });
 
-  // MVP (maior ACS da partida entre os 10 jogadores) precisa de todo mundo
-  // dessas partidas, não só das linhas do próprio usuário.
-  const maxAcsByMatch = new Map<string, number>();
+  // MVP = maior ACS do seu próprio time na partida (não dos 10 jogadores —
+  // isso deixaria de fora quem foi o melhor do time mas perdeu de alguém do
+  // time adversário). Precisa de todo mundo dessas partidas, não só das
+  // linhas do próprio usuário.
+  const maxAcsByMatchTeam = new Map<string, number>();
   const [history, allPlayers] = await Promise.all([
     getMmrHistory(affinity, puuid),
     rows.length > 0
-      ? prisma.matchPlayer.findMany({ where: { matchId: { in: rows.map((r) => r.match.id) } }, select: { matchId: true, acs: true } })
+      ? prisma.matchPlayer.findMany({ where: { matchId: { in: rows.map((r) => r.match.id) } }, select: { matchId: true, teamId: true, acs: true } })
       : Promise.resolve([]),
   ]);
   for (const p of allPlayers) {
-    const current = maxAcsByMatch.get(p.matchId) ?? -Infinity;
-    if (p.acs > current) maxAcsByMatch.set(p.matchId, p.acs);
+    const key = `${p.matchId}:${p.teamId}`;
+    const current = maxAcsByMatchTeam.get(key) ?? -Infinity;
+    if (p.acs > current) maxAcsByMatchTeam.set(key, p.acs);
   }
 
   const rrByMatch = new Map(history.map((h) => [h.match_id, h.last_change]));
@@ -108,7 +111,7 @@ export async function buildRrAndInsights(
       };
     });
 
-  return { points, formInsights: buildFormInsights(rows, maxAcsByMatch) };
+  return { points, formInsights: buildFormInsights(rows, maxAcsByMatchTeam) };
 }
 
 const HALF_1_LAST_ROUND = 12;
