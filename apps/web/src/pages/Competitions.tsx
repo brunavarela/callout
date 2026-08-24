@@ -4,12 +4,9 @@ import { competicoes, resolverLado, type CategoriaCompeticao, type Competicao, t
 const cardStyle: React.CSSProperties = { borderRadius: 'var(--radius-lg)', background: 'var(--surface)', border: '1px solid var(--surface-border)' };
 const WIN = 'var(--pos, #18AAB7)';
 
-const FILTROS: Array<{ key: CategoriaCompeticao | 'todas'; label: string }> = [
-  { key: 'todas', label: 'Todas' },
+const FILTROS: Array<{ key: CategoriaCompeticao; label: string }> = [
   { key: 'mista', label: 'Mistas' },
   { key: 'inclusiva', label: 'Inclusivas' },
-  { key: 'feminina', label: 'Femininas' },
-  { key: 'aberta', label: 'Abertas' },
 ];
 
 const STATUS_LABEL: Record<Confronto['status'], string> = {
@@ -200,7 +197,7 @@ function ResumoCompeticao({ competicao }: { competicao: Competicao }) {
   );
 }
 
-function FiltroCategorias({ filtro, setFiltro }: { filtro: CategoriaCompeticao | 'todas'; setFiltro: (f: CategoriaCompeticao | 'todas') => void }) {
+function FiltroCategorias({ filtro, setFiltro }: { filtro: CategoriaCompeticao; setFiltro: (f: CategoriaCompeticao) => void }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', height: 40, gap: 4, background: 'var(--input-bg)', border: '1px solid var(--surface-border)', borderRadius: 9, padding: '0 4px', flex: 'none' }}>
       {FILTROS.map((f) => (
@@ -230,8 +227,8 @@ function FiltroCategorias({ filtro, setFiltro }: { filtro: CategoriaCompeticao |
 }
 
 export function Competitions() {
-  const [filtro, setFiltro] = useState<CategoriaCompeticao | 'todas'>('todas');
-  const filtradas = useMemo(() => (filtro === 'todas' ? competicoes : competicoes.filter((c) => c.categorias.includes(filtro))), [filtro]);
+  const [filtro, setFiltro] = useState<CategoriaCompeticao>('mista');
+  const filtradas = useMemo(() => competicoes.filter((c) => c.categorias.includes(filtro)), [filtro]);
 
   return (
     <div style={{ padding: 26, display: 'flex', flexDirection: 'column', gap: 16 }}>
