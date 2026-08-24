@@ -12,6 +12,8 @@ export const vctAmericasPlayoffs2026: Competicao = {
   categorias: ['mista'],
   fase: 'Primeira rodada',
   status: 'agendada',
+  linkTwitch: 'https://www.twitch.tv/valorant_br',
+  linkYoutube: 'https://www.youtube.com/@valesportsbr',
   times: [
     { id: 'loud', nome: 'LOUD', sigla: 'LOUD', cor: '#6FCF44' },
     { id: 'fur', nome: 'FURIA', sigla: 'FUR', cor: '#B9B9BD' },

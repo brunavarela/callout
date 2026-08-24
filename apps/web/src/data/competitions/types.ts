@@ -45,6 +45,8 @@ export const competicaoSchema = z
     formato: z.string(),
     categorias: z.array(categoriaCompeticaoSchema).min(1),
     fase: z.string(),
+    linkTwitch: z.string().url().optional(),
+    linkYoutube: z.string().url().optional(),
     status: z.enum(['agendada', 'em_andamento', 'encerrada']),
     times: z.array(timeSchema),
     confrontos: z.array(confrontoSchema),

@@ -12,6 +12,8 @@ export const gameChangersBrasilEtapaFinal2026: Competicao = {
   categorias: ['inclusiva'],
   fase: 'Chave inferior',
   status: 'em_andamento',
+  linkTwitch: 'https://www.twitch.tv/valorant_br',
+  linkYoutube: 'https://www.youtube.com/@valesportsbr',
   times: [
     { id: 'mibr', nome: 'MIBR', sigla: 'MIBR', cor: '#F2C94C' },
     { id: 'gato', nome: 'GATO', sigla: 'GATO', cor: '#D98E4A' },
