@@ -261,6 +261,39 @@ select.input-field {
   }
 }
 
+/* Header do Dashboard: filtro de modo + botões de ação. Em telas estreitas
+   os botões (Abrir estratégia / Sincronizar) empilham acima do filtro —
+   lado a lado eles não cabem e quebravam o layout. */
+.dashboard-header-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.dashboard-action-buttons {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+@media (max-width: 640px) {
+  .dashboard-header-actions {
+    margin-left: 0;
+    width: 100%;
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+  .dashboard-action-buttons {
+    width: 100%;
+  }
+  .dashboard-action-buttons .btn-secondary,
+  .dashboard-action-buttons .btn-primary {
+    flex: 1;
+    min-width: 0;
+    text-align: center;
+    white-space: normal;
+  }
+}
+
 /* Card de RR + lista de partidas do Dashboard (1.45fr 1fr) */
 .grid-responsive-rr {
   display: grid;

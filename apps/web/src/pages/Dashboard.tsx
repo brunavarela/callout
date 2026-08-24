@@ -646,19 +646,21 @@ export function Dashboard() {
             </div>
           )}
         </div>
-        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10 }}>
+        <div className="dashboard-header-actions">
           <ModoFilterButtons modoFilter={modoFilter} setModoFilter={setModoFilter} />
-          <button className="btn-secondary" style={{ height: 40, display: 'flex', alignItems: 'center', padding: '0 17px' }} onClick={() => navigate('/board')}>
-            Abrir estratégia
-          </button>
-          <button
-            className="btn-primary"
-            style={{ height: 40, display: 'flex', alignItems: 'center', padding: '0 17px', fontSize: 13 }}
-            onClick={startSync}
-            disabled={sync?.state === 'syncing'}
-          >
-            + Sincronizar
-          </button>
+          <div className="dashboard-action-buttons">
+            <button className="btn-secondary" style={{ minHeight: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 17px' }} onClick={() => navigate('/board')}>
+              Abrir estratégia
+            </button>
+            <button
+              className="btn-primary"
+              style={{ minHeight: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 17px', fontSize: 13 }}
+              onClick={startSync}
+              disabled={sync?.state === 'syncing'}
+            >
+              + Sincronizar
+            </button>
+          </div>
         </div>
       </div>
 
