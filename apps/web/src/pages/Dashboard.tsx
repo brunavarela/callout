@@ -222,7 +222,7 @@ function firstName(user: SessionUser | null): string {
 // percentual o retângulo do filtro ficava mais baixo que os botões.
 function ModoFilterButtons({ modoFilter, setModoFilter }: { modoFilter: MatchModeFilter; setModoFilter: (m: MatchModeFilter) => void }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', height: 40, gap: 4, background: 'var(--input-bg)', border: '1px solid var(--surface-border)', borderRadius: 9, padding: '0 4px' }}>
+    <div className="dashboard-mode-filter" style={{ display: 'flex', alignItems: 'center', height: 40, gap: 4, background: 'var(--input-bg)', border: '1px solid var(--surface-border)', borderRadius: 9, padding: '0 4px' }}>
       {MODOS.map((m) => (
         <button
           key={m.key}

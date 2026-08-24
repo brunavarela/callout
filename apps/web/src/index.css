@@ -280,7 +280,11 @@ select.input-field {
     margin-left: 0;
     width: 100%;
     flex-direction: column-reverse;
-    align-items: flex-start;
+    align-items: stretch;
+  }
+  .dashboard-mode-filter button {
+    flex: 1;
+    justify-content: center;
   }
   .dashboard-action-buttons {
     width: 100%;
