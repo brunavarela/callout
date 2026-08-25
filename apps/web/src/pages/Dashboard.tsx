@@ -17,10 +17,10 @@ const MATCH_COUNTS: Array<{ key: MatchCountFilter; label: string }> = [
 ];
 
 const WIN = 'var(--pos, #18AAB7)';
-const LOSS = 'var(--acc, #EF4958)';
+const LOSS = 'var(--neg, #EF4958)';
 const DRAW = 'var(--text-muted, #9A9DA1)';
 const LOW_SAMPLE = 'var(--bar-dim)';
-const UNDER_50 = 'color-mix(in srgb, var(--acc, #EF4958) 42%, var(--track))';
+const UNDER_50 = 'color-mix(in srgb, var(--neg, #EF4958) 42%, var(--track))';
 const MIN_SAMPLE = 3;
 
 function fmtNum(n: number, decimals: number): string {
@@ -553,7 +553,7 @@ function DashboardContent({
                       r === 'V'
                         ? 'color-mix(in srgb, var(--pos, #18AAB7) 18%, transparent)'
                         : r === 'D'
-                          ? 'color-mix(in srgb, var(--acc, #EF4958) 18%, transparent)'
+                          ? 'color-mix(in srgb, var(--neg, #EF4958) 18%, transparent)'
                           : 'color-mix(in srgb, var(--text-muted, #9A9DA1) 18%, transparent)',
                     color: r === 'V' ? WIN : r === 'D' ? LOSS : DRAW,
                   }}

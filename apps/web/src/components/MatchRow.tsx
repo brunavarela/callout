@@ -3,7 +3,7 @@ import { Eye } from 'lucide-react';
 import type { RecentMatchSummary } from '@callout/shared';
 
 const WIN = 'var(--pos, #18AAB7)';
-const LOSS = 'var(--acc, #EF4958)';
+const LOSS = 'var(--neg, #EF4958)';
 const DRAW = 'var(--text-muted, #9A9DA1)';
 
 function fmtRr(n: number): string {
@@ -40,7 +40,7 @@ export function MatchRow({ m, showViewIcon }: { m: RecentMatchSummary; showViewI
               m.result === 'V'
                 ? 'color-mix(in srgb, var(--pos, #18AAB7) 16%, transparent)'
                 : m.result === 'D'
-                  ? 'color-mix(in srgb, var(--acc, #EF4958) 14%, transparent)'
+                  ? 'color-mix(in srgb, var(--neg, #EF4958) 14%, transparent)'
                   : 'color-mix(in srgb, var(--text-muted, #9A9DA1) 16%, transparent)',
           }}
         >

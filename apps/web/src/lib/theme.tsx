@@ -7,7 +7,7 @@ export { THEME_PALETTE };
 
 const DEFAULT_THEME: ThemePreferences = {
   accentColor: '#EF4958',
-  positiveColor: '#18AAB7',
+  negativeColor: '#EF4958',
   glow: 70,
   tintedCards: true,
 };
@@ -44,8 +44,11 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       '--acc18': rgba(theme.accentColor, 0.26 * glow),
       '--acc22': rgba(theme.accentColor, 0.3 * glow),
       '--acc25': rgba(theme.accentColor, 0.3),
-      '--pos': theme.positiveColor,
-      '--pos08': rgba(theme.positiveColor, 0.08),
+      // "positivo" (vitória, deltas positivos) segue a cor principal —
+      // não é mais uma cor separada, ver ThemePreferences.
+      '--pos': theme.accentColor,
+      '--pos08': rgba(theme.accentColor, 0.08),
+      '--neg': theme.negativeColor,
       '--kpi-bg': theme.tintedCards
         ? `radial-gradient(120% 130% at 100% 0%, ${rgba(theme.accentColor, 0.26 * glow)} 0%, var(--surface) 62%)`
         : 'var(--surface)',

@@ -12,7 +12,7 @@ export function toSessionUser(user: User): SessionUser {
         : null,
     theme: {
       accentColor: user.themeAccent,
-      positiveColor: user.themePositive,
+      negativeColor: user.themeNegative,
       glow: user.themeGlow,
       tintedCards: user.themeTintedCards,
     },

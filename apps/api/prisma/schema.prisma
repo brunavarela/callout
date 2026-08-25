@@ -24,10 +24,11 @@ model User {
   createdAt        DateTime @default(now())
 
   // Tema v2 — customizável em runtime (ver design_handoff_callout v2). Cor de
-  // ação e cor "positiva" são independentes de propósito: se fossem a mesma,
-  // vermelho passaria a significar vitória.
+  // ação também colore valores positivos (vitória etc); cor negativa é
+  // independente disso, só pra derrotas/valores negativos — se fossem a
+  // mesma, não daria pra diferenciar vitória de derrota na tela.
   themeAccent      String  @default("#EF4958")
-  themePositive    String  @default("#18AAB7")
+  themeNegative    String  @default("#EF4958")
   themeGlow        Int     @default(70) // 0-100
   themeTintedCards Boolean @default(true)
 

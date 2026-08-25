@@ -57,8 +57,8 @@ export interface AgentAsset {
 export const THEME_PALETTE = ["#EF4958", "#18AAB7", "#192573", "#421662", "#2FB170", "#F2994A"] as const;
 
 export interface ThemePreferences {
-  accentColor: string;
-  positiveColor: string;
+  accentColor: string; // cor principal — também colore valores positivos (vitória, deltas positivos)
+  negativeColor: string; // só derrotas/valores negativos
   glow: number; // 0-100
   tintedCards: boolean;
 }

@@ -101,7 +101,7 @@ export function ThemeSettings({ onClose, className }: { onClose: () => void; cla
       </div>
 
       <div>
-        <div style={{ fontSize: 10, letterSpacing: '.1em', color: 'var(--text-dim)', marginBottom: 8 }}>COR DE AÇÃO</div>
+        <div style={{ fontSize: 10, letterSpacing: '.1em', color: 'var(--text-dim)', marginBottom: 8 }}>COR PRINCIPAL</div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, rowGap: 10 }}>
           {THEME_PALETTE.map((c) => (
             <Swatch key={c} color={c} active={theme.accentColor === c} disabled={saving} onClick={() => update({ accentColor: c })} />
@@ -110,15 +110,15 @@ export function ThemeSettings({ onClose, className }: { onClose: () => void; cla
       </div>
 
       <div>
-        <div style={{ fontSize: 10, letterSpacing: '.1em', color: 'var(--text-dim)', marginBottom: 8 }}>COR POSITIVA</div>
+        <div style={{ fontSize: 10, letterSpacing: '.1em', color: 'var(--text-dim)', marginBottom: 8 }}>COR NEGATIVA</div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, rowGap: 10 }}>
           {THEME_PALETTE.map((c) => (
             <Swatch
               key={c}
               color={c}
-              active={theme.positiveColor === c}
+              active={theme.negativeColor === c}
               disabled={saving || c === theme.accentColor}
-              onClick={() => update({ positiveColor: c })}
+              onClick={() => update({ negativeColor: c })}
             />
           ))}
         </div>
