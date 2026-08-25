@@ -3,6 +3,7 @@ import { useOutletContext } from 'react-router-dom';
 import type { TeamMemberCard } from '@callout/shared';
 import { apiFetch } from '../lib/api';
 import type { OutletContext } from '../components/AppShell';
+import { LoadingFill } from '../components/Spinner';
 
 const cardStyle: React.CSSProperties = { borderRadius: 'var(--radius-lg)', background: 'var(--surface)', border: '1px solid var(--surface-border)' };
 
@@ -94,7 +95,13 @@ export function Team() {
     );
   }
 
-  if (!team) return <div style={{ padding: 26, color: 'var(--text-muted)' }}>Carregando…</div>;
+  if (!team) {
+    return (
+      <div style={{ padding: 26, display: 'flex', flexDirection: 'column' }}>
+        <LoadingFill />
+      </div>
+    );
+  }
 
   return (
     <div style={{ padding: 26, display: 'flex', flexDirection: 'column', gap: 20 }}>

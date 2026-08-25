@@ -8,6 +8,7 @@ import { boardArrows, boardCallouts } from '../data/mock';
 import type { OutletContext } from '../components/AppShell';
 import { agentImageUrl } from '../lib/agentImages';
 import { ConfirmModal } from '../components/ConfirmModal';
+import { LoadingFill } from '../components/Spinner';
 
 const TOOLS = [
   { id: 'agente', icon: 'AG', title: 'Agente' },
@@ -354,7 +355,11 @@ export function Board() {
   }
 
   if (!strategies) {
-    return <div style={{ padding: 26, color: 'var(--text-muted)' }}>Carregando…</div>;
+    return (
+      <div style={{ padding: 26, display: 'flex', flexDirection: 'column' }}>
+        <LoadingFill />
+      </div>
+    );
   }
 
   if (!strategy) {
