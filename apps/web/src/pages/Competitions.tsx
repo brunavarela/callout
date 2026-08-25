@@ -33,6 +33,17 @@ function formatDataConfronto(iso: string): string {
   return `${d.getDate()}/${d.getMonth() + 1} · ${hora}h`;
 }
 
+// "Ao vivo" não precisa de admin nem de job rodando de hora em hora — é só
+// comparar a hora atual do navegador com o horário do confronto. A `data`
+// é sempre horário de Brasília sem timezone (ver types.ts), igual todo
+// mundo que usa o app, então `new Date()` local já bate certo. Só
+// sobrescreve pra exibição — o status salvo no banco continua "agendada"
+// até o admin marcar como encerrada.
+function statusEfetivo(confronto: Confronto): Confronto['status'] {
+  if (confronto.status !== 'agendada') return confronto.status;
+  return new Date() >= new Date(confronto.data) ? 'ao_vivo' : 'agendada';
+}
+
 // Rodada = 1 + a maior rodada entre os confrontos que esse aqui referencia
 // via vencedor/perdedor. Times fixos não contam. Isso posiciona cada
 // confronto na coluna certa do chaveamento sem precisar declarar isso à
@@ -158,13 +169,19 @@ function EdicaoConfronto({
 }) {
   const [placarA, setPlacarA] = useState(confronto.placarA);
   const [placarB, setPlacarB] = useState(confronto.placarB);
-  const [status, setStatus] = useState(confronto.status);
+  const [status, setStatus] = useState(statusEfetivo(confronto));
   const [salvando, setSalvando] = useState(false);
+
+  // Placar decisivo (os dois preenchidos e diferentes) já significa que a
+  // partida acabou — não depende de lembrar de trocar o status também, o
+  // que já causou dado inconsistente (placar salvo, status "agendada").
+  const decidido = placarA !== null && placarB !== null && placarA !== placarB;
+  const statusFinal = decidido ? 'encerrada' : status;
 
   async function salvar() {
     setSalvando(true);
     try {
-      await onSalvar({ status, placarA, placarB });
+      await onSalvar({ status: statusFinal, placarA, placarB });
     } finally {
       setSalvando(false);
     }
@@ -190,11 +207,15 @@ function EdicaoConfronto({
           style={scoreInputStyle}
         />
       </div>
-      <select value={status} onChange={(e) => setStatus(e.target.value as Confronto['status'])} className="input-field" style={{ fontSize: 11, padding: '6px 8px' }}>
-        <option value="agendada">Agendada</option>
-        <option value="ao_vivo">Ao vivo</option>
-        <option value="encerrada">Encerrada</option>
-      </select>
+      {decidido ? (
+        <div style={{ fontSize: 11, color: 'var(--text-faint)', padding: '2px 1px' }}>Encerrada automaticamente — placar decisivo.</div>
+      ) : (
+        <select value={status} onChange={(e) => setStatus(e.target.value as Confronto['status'])} className="input-field" style={{ fontSize: 11, padding: '6px 8px' }}>
+          <option value="agendada">Agendada</option>
+          <option value="ao_vivo">Ao vivo</option>
+          <option value="encerrada">Encerrada</option>
+        </select>
+      )}
       <div style={{ display: 'flex', gap: 6 }}>
         <button onClick={onCancelar} disabled={salvando} className="btn-secondary" style={{ flex: 1, padding: '5px 8px', fontSize: 11, justifyContent: 'center' }}>
           Cancelar
@@ -232,8 +253,8 @@ function MatchCard({
           {confronto.id} · {formatDataConfronto(confronto.data)}
         </span>
         <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <span style={{ color: confronto.status === 'ao_vivo' ? 'var(--acc, #EF4958)' : 'var(--text-faint)', fontWeight: confronto.status === 'ao_vivo' ? 700 : 400 }}>
-            {STATUS_LABEL[confronto.status]}
+          <span style={{ color: statusEfetivo(confronto) === 'ao_vivo' ? 'var(--acc, #EF4958)' : 'var(--text-faint)', fontWeight: statusEfetivo(confronto) === 'ao_vivo' ? 700 : 400 }}>
+            {STATUS_LABEL[statusEfetivo(confronto)]}
           </span>
           {editavel && !editando && (
             <button onClick={() => setEditando(true)} title="Editar placar" style={{ background: 'none', border: 'none', color: 'var(--text-faint)', cursor: 'pointer', padding: 0, display: 'flex' }}>
