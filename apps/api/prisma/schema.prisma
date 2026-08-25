@@ -137,8 +137,9 @@ model TeamMember {
   team    Team    @relation(fields: [teamId], references: [id], onDelete: Cascade)
   userId  String
   user    User    @relation(fields: [userId], references: [id])
-  funcao  String? // controlador | duelista | iniciador | sentinela
-  nota    String? // recado social do card ("Segura o mapa inteiro sozinho..."), editável pelo grupo
+  funcoes         String[] @default([]) // até 2 — controlador | duelista | iniciador | sentinela | flex
+  nota            String?  // recado social do card ("Segura o mapa inteiro sozinho..."), editável pelo grupo
+  mainAgentUuids  String[] @default([]) // até 3, uuid do AgentAsset — editável pelo grupo, igual funcoes/nota
 
   @@unique([teamId, userId])
   @@map("team_members")

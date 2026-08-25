@@ -7,7 +7,7 @@ import { matchResult } from "./match-result.js";
 
 const WEEKDAY_LABELS = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
 
-function formatPlayedAt(date: Date, now: Date): string {
+export function formatPlayedAt(date: Date, now: Date): string {
   const time = date.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
   const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
   const diffDays = Math.round((startOfDay(now) - startOfDay(date)) / 86_400_000);
@@ -17,11 +17,11 @@ function formatPlayedAt(date: Date, now: Date): string {
   return date.toLocaleDateString("pt-BR");
 }
 
-function mapNameFrom(rawJson: unknown): string {
+export function mapNameFrom(rawJson: unknown): string {
   return (rawJson as MatchV4Data).metadata.map.name;
 }
 
-function scoreFor(rawJson: unknown, teamId: string): { own: number; opponent: number } {
+export function scoreFor(rawJson: unknown, teamId: string): { own: number; opponent: number } {
   const match = rawJson as MatchV4Data;
   const own = match.teams.find((t) => t.team_id === teamId);
   const opponent = match.teams.find((t) => t.team_id !== teamId);
@@ -30,7 +30,7 @@ function scoreFor(rawJson: unknown, teamId: string): { own: number; opponent: nu
 
 // Ace: 5 kills do jogador no mesmo round. Só existe no raw_json (feed de
 // kills), não é uma coluna persistida.
-function hasAce(rawJson: unknown, puuid: string): boolean {
+export function hasAce(rawJson: unknown, puuid: string): boolean {
   const match = rawJson as MatchV4Data;
   const killsByRound = new Map<number, number>();
   for (const kill of match.kills) {

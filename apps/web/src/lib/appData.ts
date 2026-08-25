@@ -2,7 +2,9 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type {
   AgentAsset,
   DashboardSummary,
+  Funcao,
   Lado,
+  MainAgent,
   MapAsset,
   MatchCountFilter,
   MatchModeFilter,
@@ -13,6 +15,7 @@ import type {
   Strategy,
   StratItem,
   SyncStatus,
+  TeamMatchSummary,
   TeamOverview,
 } from '@callout/shared';
 import { apiFetch } from './api';
@@ -105,6 +108,29 @@ export function useAppData(user: SessionUser | null) {
 
   const updateTeamMemberNote = useCallback((userId: string, note: string) => {
     setTeam((prev) => (prev ? { ...prev, members: prev.members.map((m) => (m.userId === userId ? { ...m, note } : m)) } : prev));
+  }, []);
+
+  const updateTeamMemberSettings = useCallback((userId: string, roles: Funcao[], mainAgents: MainAgent[]) => {
+    setTeam((prev) => (prev ? { ...prev, members: prev.members.map((m) => (m.userId === userId ? { ...m, roles, mainAgents } : m)) } : prev));
+  }, []);
+
+  const [teamMatches, setTeamMatches] = useState<TeamMatchSummary[] | null>(null);
+  const [teamMatchesError, setTeamMatchesError] = useState<string | null>(null);
+  const [teamMatchesLoading, setTeamMatchesLoading] = useState(false);
+
+  // Histórico completo (>=5 do time juntos) — carrega sob demanda, só quando
+  // a tela de histórico do time é aberta (pode envolver bastante chamada à
+  // HenrikDev pra resolver RR de cada membro).
+  const loadTeamMatches = useCallback(async () => {
+    setTeamMatchesLoading(true);
+    try {
+      setTeamMatches(await apiFetch<TeamMatchSummary[]>('/team/matches'));
+      setTeamMatchesError(null);
+    } catch {
+      setTeamMatchesError('Falha ao carregar o histórico de partidas do time.');
+    } finally {
+      setTeamMatchesLoading(false);
+    }
   }, []);
 
   const [strategies, setStrategies] = useState<Strategy[] | null>(null);
@@ -289,6 +315,11 @@ export function useAppData(user: SessionUser | null) {
     teamError,
     reloadTeam: loadTeam,
     updateTeamMemberNote,
+    updateTeamMemberSettings,
+    teamMatches,
+    teamMatchesError,
+    teamMatchesLoading,
+    loadTeamMatches,
     dashboard,
     dashboardError,
     dashboardLoading,

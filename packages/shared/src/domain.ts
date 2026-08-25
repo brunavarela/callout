@@ -10,7 +10,7 @@
  *    dados que o handoff de design pede em cada tela.
  */
 
-export type Funcao = "controlador" | "duelista" | "iniciador" | "sentinela";
+export type Funcao = "controlador" | "duelista" | "iniciador" | "sentinela" | "flex";
 
 export type Lado = "ATK" | "DEF";
 
@@ -241,16 +241,22 @@ export interface MatchDetail {
 
 // --- Time ---
 
+export interface MainAgent {
+  uuid: string;
+  name: string;
+}
+
 export interface TeamMemberCard {
   userId: string;
   name: string;
   rankLabel: string;
-  role: Funcao;
+  roles: Funcao[]; // até MAX_FUNCOES
   isSelf: boolean;
   kda: number;
   acs: number;
   winratePercent: number;
   note: string;
+  mainAgents: MainAgent[]; // até MAX_MAIN_AGENTS
 }
 
 export interface TeamOverview {
@@ -260,6 +266,41 @@ export interface TeamOverview {
   matchesTogether30d: number;
   groupWinratePercent: number;
   members: TeamMemberCard[];
+}
+
+// Body do PATCH /team/members/:userId/settings — igual "nota", qualquer
+// membro do time pode editar de qualquer outro (ver README do handoff).
+export interface TeamMemberSettingsInput {
+  funcoes: Funcao[]; // até MAX_FUNCOES
+  mainAgentUuids: string[]; // até MAX_MAIN_AGENTS
+}
+export const MAX_FUNCOES = 2;
+export const MAX_MAIN_AGENTS = 3;
+
+// --- Histórico de partidas do time (GET /team/matches) ---
+// Só entram partidas com pelo menos MIN_TEAM_MATCH_PLAYERS membros do time
+// juntos — "meus números" vira uma lista, um item por membro que jogou.
+export const MIN_TEAM_MATCH_PLAYERS = 5;
+
+export interface TeamMatchParticipant {
+  userId: string;
+  name: string;
+  agent: string;
+  kda: string;
+  acs: number;
+  hsPercent: number;
+  mvp: boolean;
+  ace: boolean;
+  rr: number | null;
+  result: "V" | "D" | "E";
+}
+
+export interface TeamMatchSummary {
+  id: string;
+  map: string;
+  score: string;
+  playedAtLabel: string;
+  participants: TeamMatchParticipant[];
 }
 
 // --- Board de estratégia ---

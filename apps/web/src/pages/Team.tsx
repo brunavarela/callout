@@ -1,9 +1,12 @@
-import { useState } from 'react';
-import { useOutletContext } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { useNavigate, useOutletContext } from 'react-router-dom';
+import { Settings, History } from 'lucide-react';
 import type { TeamMemberCard } from '@callout/shared';
 import { apiFetch } from '../lib/api';
 import type { OutletContext } from '../components/AppShell';
 import { LoadingFill } from '../components/Spinner';
+import { TeamSettingsModal } from '../components/TeamSettingsModal';
+import { agentImageUrl } from '../lib/agentImages';
 
 const cardStyle: React.CSSProperties = { borderRadius: 'var(--radius-lg)', background: 'var(--surface)', border: '1px solid var(--surface-border)' };
 
@@ -14,6 +17,40 @@ const acsBarWidth = (acs: number) => Math.max(0, Math.min(100, (acs / 300) * 100
 
 function initialsOf(name: string) {
   return name.slice(0, 2).toUpperCase();
+}
+
+function MainAgentIcons({ agents }: { agents: TeamMemberCard['mainAgents'] }) {
+  if (agents.length === 0) return null;
+  return (
+    <div style={{ display: 'flex', gap: 5, marginTop: 8 }}>
+      {agents.map((a) => {
+        const imageUrl = agentImageUrl(a.name);
+        return (
+          <div
+            key={a.uuid}
+            title={a.name}
+            style={{
+              width: 22,
+              height: 22,
+              borderRadius: 7,
+              overflow: 'hidden',
+              flex: 'none',
+              background: imageUrl ? '#141415' : 'var(--avatar-bg)',
+              border: '1px solid var(--surface-border)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: 7,
+              fontWeight: 700,
+              color: 'var(--text-muted)',
+            }}
+          >
+            {imageUrl ? <img src={imageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : a.name.slice(0, 2).toUpperCase()}
+          </div>
+        );
+      })}
+    </div>
+  );
 }
 
 function NoteEditor({ member, onSave }: { member: TeamMemberCard; onSave: (note: string) => Promise<void> }) {
@@ -71,7 +108,13 @@ function NoteEditor({ member, onSave }: { member: TeamMemberCard; onSave: (note:
 }
 
 export function Team() {
-  const { team, teamError, reloadTeam, updateTeamMemberNote } = useOutletContext<OutletContext>();
+  const navigate = useNavigate();
+  const { team, teamError, reloadTeam, updateTeamMemberNote, updateTeamMemberSettings, agents, loadAgents } = useOutletContext<OutletContext>();
+  const [editingMember, setEditingMember] = useState<TeamMemberCard | null>(null);
+
+  useEffect(() => {
+    if (agents === null) loadAgents();
+  }, [agents, loadAgents]);
 
   async function saveNote(userId: string, note: string) {
     try {
@@ -105,11 +148,17 @@ export function Team() {
 
   return (
     <div style={{ padding: 26, display: 'flex', flexDirection: 'column', gap: 20 }}>
-      <div>
-        <h1 style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 700, fontSize: 32, letterSpacing: '-.025em', margin: 0 }}>{team.name}</h1>
-        <div style={{ fontSize: 14, color: 'var(--text-muted)', marginTop: 6 }}>
-          {team.memberCount} membros · {team.matchesTogether30d} partidas juntos nos últimos 30 dias · {team.groupWinratePercent}% de winrate em grupo
+      <div style={{ display: 'flex', alignItems: 'flex-end', gap: 20, flexWrap: 'wrap' }}>
+        <div>
+          <h1 style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 700, fontSize: 32, letterSpacing: '-.025em', margin: 0 }}>{team.name}</h1>
+          <div style={{ fontSize: 14, color: 'var(--text-muted)', marginTop: 6 }}>
+            {team.memberCount} membros · {team.matchesTogether30d} partidas juntos nos últimos 30 dias · {team.groupWinratePercent}% de winrate em grupo
+          </div>
         </div>
+        <button className="btn-secondary" style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 9 }} onClick={() => navigate('/time/partidas')}>
+          <History size={15} strokeWidth={1.75} />
+          Histórico de partidas
+        </button>
       </div>
 
       {team.members.length === 0 ? (
@@ -143,21 +192,35 @@ export function Team() {
                 >
                   {initialsOf(p.name)}
                 </div>
-                <div
-                  style={{
-                    fontSize: 9.5,
-                    letterSpacing: '.1em',
-                    borderRadius: 'var(--radius-pill)',
-                    border: '1px solid var(--surface-border)',
-                    padding: '5px 9px',
-                    color: p.role === 'duelista' ? 'var(--acc, #EF4958)' : 'var(--text-muted)',
-                  }}
-                >
-                  {p.role.toUpperCase()}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                  {p.roles.map((role) => (
+                    <div
+                      key={role}
+                      style={{
+                        fontSize: 9.5,
+                        letterSpacing: '.1em',
+                        borderRadius: 'var(--radius-pill)',
+                        border: '1px solid var(--surface-border)',
+                        padding: '5px 9px',
+                        whiteSpace: 'nowrap',
+                        color: role === 'duelista' ? 'var(--acc, #EF4958)' : 'var(--text-muted)',
+                      }}
+                    >
+                      {role.toUpperCase()}
+                    </div>
+                  ))}
+                  <button
+                    title="Configurações"
+                    onClick={() => setEditingMember(p)}
+                    style={{ background: 'none', border: 'none', color: 'var(--text-faint)', cursor: 'pointer', padding: 4, display: 'flex' }}
+                  >
+                    <Settings size={14} strokeWidth={1.75} />
+                  </button>
                 </div>
               </div>
               <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 21, marginTop: 15, letterSpacing: '-.01em' }}>{p.name}</div>
               <div style={{ fontSize: 11.5, color: 'var(--text-dim)' }}>{p.rankLabel}</div>
+              <MainAgentIcons agents={p.mainAgents} />
               <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 9 }}>
                 {[
                   { label: 'KDA', value: p.kda.toFixed(2).replace('.', ','), w: kdaBarWidth(p.kda) },
@@ -177,6 +240,15 @@ export function Team() {
             </div>
           ))}
         </div>
+      )}
+
+      {editingMember && (
+        <TeamSettingsModal
+          member={editingMember}
+          agents={agents}
+          onClose={() => setEditingMember(null)}
+          onSaved={(roles, mainAgents) => updateTeamMemberSettings(editingMember.userId, roles, mainAgents)}
+        />
       )}
     </div>
   );
