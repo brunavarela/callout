@@ -176,22 +176,33 @@ export function Team() {
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                <div
-                  style={{
-                    width: 42,
-                    height: 42,
-                    borderRadius: 12,
-                    background: 'var(--avatar-bg)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: 13,
-                    fontWeight: 600,
-                    color: 'var(--text-muted)',
-                  }}
-                >
-                  {initialsOf(p.name)}
-                </div>
+                {(() => {
+                  const avatarImageUrl = p.mainAgents[0] ? agentImageUrl(p.mainAgents[0].name) : null;
+                  return (
+                    <div
+                      title={p.mainAgents[0]?.name}
+                      style={{
+                        width: 42,
+                        height: 42,
+                        borderRadius: 12,
+                        overflow: 'hidden',
+                        background: 'var(--avatar-bg)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: 13,
+                        fontWeight: 600,
+                        color: 'var(--text-muted)',
+                      }}
+                    >
+                      {avatarImageUrl ? (
+                        <img src={avatarImageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      ) : (
+                        initialsOf(p.name)
+                      )}
+                    </div>
+                  );
+                })()}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                   {p.roles.map((role) => (
                     <div
