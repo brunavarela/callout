@@ -4,6 +4,32 @@ import { LogOut } from 'lucide-react';
 import { THEME_PALETTE, useTheme } from '../lib/theme';
 import { useSession } from '../lib/session';
 
+function Switch({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      onClick={() => onChange(!checked)}
+      style={{
+        width: 38,
+        height: 22,
+        borderRadius: 999,
+        border: 'none',
+        padding: 2,
+        display: 'flex',
+        justifyContent: checked ? 'flex-end' : 'flex-start',
+        alignItems: 'center',
+        background: checked ? 'var(--acc, #EF4958)' : 'var(--track)',
+        cursor: 'pointer',
+        flex: 'none',
+      }}
+    >
+      <span style={{ width: 18, height: 18, borderRadius: '50%', background: '#fff', display: 'block' }} />
+    </button>
+  );
+}
+
 function Swatch({ color, active, disabled, onClick }: { color: string; active: boolean; disabled: boolean; onClick: () => void }) {
   return (
     <button
@@ -27,7 +53,7 @@ function Swatch({ color, active, disabled, onClick }: { color: string; active: b
 
 export function ThemeSettings({ onClose, className }: { onClose: () => void; className: string }) {
   const { theme, setTheme } = useTheme();
-  const { logout } = useSession();
+  const { user, logout, adminMode, setAdminMode } = useSession();
   const navigate = useNavigate();
   const [saving, setSaving] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
@@ -119,6 +145,13 @@ export function ThemeSettings({ onClose, className }: { onClose: () => void; cla
         <input type="checkbox" checked={theme.tintedCards} disabled={saving} onChange={(e) => update({ tintedCards: e.target.checked })} />
         Cards tintados
       </label>
+
+      {user?.isAdmin && (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+          <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Administrador</span>
+          <Switch checked={adminMode} onChange={setAdminMode} />
+        </div>
+      )}
 
       <div style={{ borderTop: '1px solid var(--surface-border)', margin: '2px 0' }} />
 

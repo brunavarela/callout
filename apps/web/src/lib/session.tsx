@@ -7,13 +7,32 @@ interface SessionContextValue {
   loading: boolean;
   refresh: () => Promise<void>;
   logout: () => Promise<void>;
+  adminMode: boolean;
+  setAdminMode: (v: boolean) => void;
 }
 
 const SessionContext = createContext<SessionContextValue | null>(null);
+const ADMIN_MODE_KEY = "callout_admin_mode";
 
 export function SessionProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<SessionUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const [adminMode, setAdminModeState] = useState(() => {
+    try {
+      return localStorage.getItem(ADMIN_MODE_KEY) === "1";
+    } catch {
+      return false;
+    }
+  });
+
+  const setAdminMode = useCallback((v: boolean) => {
+    setAdminModeState(v);
+    try {
+      localStorage.setItem(ADMIN_MODE_KEY, v ? "1" : "0");
+    } catch {
+      // storage indisponível (aba privada etc.) — o toggle ainda funciona nessa sessão
+    }
+  }, []);
 
   const refresh = useCallback(async () => {
     try {
@@ -35,7 +54,11 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     setUser(null);
   }, []);
 
-  return <SessionContext.Provider value={{ user, loading, refresh, logout }}>{children}</SessionContext.Provider>;
+  return (
+    <SessionContext.Provider value={{ user, loading, refresh, logout, adminMode: adminMode && Boolean(user?.isAdmin), setAdminMode }}>
+      {children}
+    </SessionContext.Provider>
+  );
 }
 
 export function useSession() {

@@ -31,6 +31,11 @@ model User {
   themeGlow        Int     @default(70) // 0-100
   themeTintedCards Boolean @default(true)
 
+  // Só quem tem isso true vê o switch de Administrador e pode editar
+  // placar de competição. Setado direto no banco, não tem UI pra virar
+  // admin sozinho.
+  isAdmin Boolean @default(false)
+
   teamMemberships TeamMember[]
   ownedTeams      Team[]       @relation("TeamOwner")
   strategiesFeitas Strategy[]  @relation("StrategyAuthor")
@@ -211,6 +216,64 @@ model Spot {
   createdAt   DateTime @default(now())
 
   @@map("spots")
+}
+
+// Chaveamento de competições externas (VCT, Game Changers etc.) que o time
+// acompanha — não são partidas jogadas por vocês. Editado à mão pelo admin
+// pela tela de Competições conforme os jogos acontecem; ver CompeticaoTime
+// e Confronto abaixo.
+model Competicao {
+  id          String   @id
+  nome        String
+  formato     String
+  categorias  String[] // mista | inclusiva | feminina | aberta
+  fase        String
+  status      String // agendada | em_andamento | encerrada
+  linkTwitch  String?
+  linkYoutube String?
+
+  times      CompeticaoTime[]
+  confrontos Confronto[]
+
+  @@map("competicoes")
+}
+
+model CompeticaoTime {
+  id           String     @id @default(cuid())
+  competicaoId String
+  competicao   Competicao @relation(fields: [competicaoId], references: [id], onDelete: Cascade)
+  timeId       String // "loud", "fur" — chave lógica referenciada em Confronto.ladoA/ladoB
+  nome         String
+  sigla        String
+  cor          String
+
+  @@unique([competicaoId, timeId])
+  @@map("competicao_times")
+}
+
+// ladoA/ladoB guardam { tipo: "time", timeId } ou { tipo: "vencedor"|"perdedor",
+// confrontoId } — resolvido em runtime (ver resolverLado em @callout/shared),
+// então atualizar o placar de um confronto já avança quem depende dele sem
+// precisar editar mais nada.
+model Confronto {
+  id           String     @id @default(cuid())
+  competicaoId String
+  competicao   Competicao @relation(fields: [competicaoId], references: [id], onDelete: Cascade)
+  confrontoId  String // "P1", "A5" — chave lógica referenciada por vencedor/perdedor
+  chave        String // superior | inferior | final
+  // String "ingênua" tipo "2026-08-27T18:00", sem timezone — o app inteiro
+  // assume horário de Brasília e interpreta isso como hora local do
+  // navegador. DateTime/timestamptz normalizaria pra UTC e deslocaria o
+  // horário mostrado; de propósito não usamos isso aqui.
+  data         String
+  status       String // encerrada | ao_vivo | agendada
+  ladoA        Json
+  ladoB        Json
+  placarA      Int?
+  placarB      Int?
+
+  @@unique([competicaoId, confrontoId])
+  @@map("confrontos")
 }
 
 model Comment {

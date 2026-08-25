@@ -13,6 +13,7 @@ import { commentsRoutes } from "./routes/comments.js";
 import { spotsRoutes } from "./routes/spots.js";
 import { agentsRoutes } from "./routes/agents.js";
 import { mapsRoutes } from "./routes/maps.js";
+import { competicoesRoutes } from "./routes/competicoes.js";
 
 // Default do Fastify é 1MB — spots levam até 3 imagens comprimidas em
 // base64 (data URL), que sozinhas já passam disso.
@@ -40,6 +41,7 @@ await app.register(commentsRoutes);
 await app.register(spotsRoutes);
 await app.register(agentsRoutes);
 await app.register(mapsRoutes);
+await app.register(competicoesRoutes);
 
 try {
   await app.listen({ port: env.PORT, host: "0.0.0.0" });

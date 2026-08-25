@@ -16,5 +16,6 @@ export function toSessionUser(user: User): SessionUser {
       glow: user.themeGlow,
       tintedCards: user.themeTintedCards,
     },
+    isAdmin: user.isAdmin,
   };
 }

@@ -46,3 +46,11 @@ export async function requireAuth(request: FastifyRequest, reply: FastifyReply) 
   }
   request.user = user;
 }
+
+// Encadear depois de requireAuth (precisa de request.user já preenchido).
+export async function requireAdmin(request: FastifyRequest, reply: FastifyReply) {
+  if (!request.user?.isAdmin) {
+    reply.code(403).send({ error: "só administradores podem fazer isso" });
+    return;
+  }
+}

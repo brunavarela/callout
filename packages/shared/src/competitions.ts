@@ -1,10 +1,13 @@
-import { z } from 'zod';
+import { z } from "zod";
 
-// Dados de competições editados à mão, um arquivo por campeonato/temporada
-// (ver index.ts). Sem banco de propósito — atualização é manual, semanal,
-// feita por uma pessoa só; arquivo + git já dão o histórico de graça.
+// Chaveamento de competições externas (VCT, Game Changers etc.) que o time
+// acompanha. Guardado no banco (tabelas Competicao/CompeticaoTime/Confronto),
+// editado pelo admin na tela de Competições conforme os jogos acontecem —
+// ver apps/api/src/lib/competicoes.ts. Tipos compartilhados entre API e web
+// porque os dois precisam da mesma forma (a API valida e resolve, o web
+// renderiza usando resolverLado).
 
-export const categoriaCompeticaoSchema = z.enum(['mista', 'inclusiva', 'feminina', 'aberta']);
+export const categoriaCompeticaoSchema = z.enum(["mista", "inclusiva", "feminina", "aberta"]);
 export type CategoriaCompeticao = z.infer<typeof categoriaCompeticaoSchema>;
 
 export const timeSchema = z.object({
@@ -16,27 +19,35 @@ export const timeSchema = z.object({
 export type Time = z.infer<typeof timeSchema>;
 
 // Um lado de confronto tanto pode ser um time já definido quanto uma
-// referência a "quem vencer/perder o confronto X" — assim, quando você
+// referência a "quem vencer/perder o confronto X" — assim, quando o admin
 // atualiza o placar de um confronto, os confrontos seguintes que dependem
 // dele resolvem sozinhos, sem precisar editar cada um.
 const ladoConfrontoSchema = z.union([
-  z.object({ tipo: z.literal('time'), timeId: z.string() }),
-  z.object({ tipo: z.literal('vencedor'), confrontoId: z.string() }),
-  z.object({ tipo: z.literal('perdedor'), confrontoId: z.string() }),
+  z.object({ tipo: z.literal("time"), timeId: z.string() }),
+  z.object({ tipo: z.literal("vencedor"), confrontoId: z.string() }),
+  z.object({ tipo: z.literal("perdedor"), confrontoId: z.string() }),
 ]);
 export type LadoConfronto = z.infer<typeof ladoConfrontoSchema>;
 
 export const confrontoSchema = z.object({
   id: z.string(),
-  chave: z.enum(['superior', 'inferior', 'final']),
+  chave: z.enum(["superior", "inferior", "final"]),
   data: z.string().datetime({ offset: true }).or(z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/)),
-  status: z.enum(['encerrada', 'ao_vivo', 'agendada']),
+  status: z.enum(["encerrada", "ao_vivo", "agendada"]),
   ladoA: ladoConfrontoSchema,
   ladoB: ladoConfrontoSchema,
   placarA: z.number().int().nullable(),
   placarB: z.number().int().nullable(),
 });
 export type Confronto = z.infer<typeof confrontoSchema>;
+
+// Body aceito pelo PATCH de admin — só o que dá pra editar num confronto.
+export const atualizarConfrontoSchema = z.object({
+  status: z.enum(["encerrada", "ao_vivo", "agendada"]),
+  placarA: z.number().int().nullable(),
+  placarB: z.number().int().nullable(),
+});
+export type AtualizarConfrontoInput = z.infer<typeof atualizarConfrontoSchema>;
 
 export const competicaoSchema = z
   .object({
@@ -47,7 +58,7 @@ export const competicaoSchema = z
     fase: z.string(),
     linkTwitch: z.string().url().optional(),
     linkYoutube: z.string().url().optional(),
-    status: z.enum(['agendada', 'em_andamento', 'encerrada']),
+    status: z.enum(["agendada", "em_andamento", "encerrada"]),
     times: z.array(timeSchema),
     confrontos: z.array(confrontoSchema),
   })
@@ -57,13 +68,13 @@ export const competicaoSchema = z
 
     for (const confronto of comp.confrontos) {
       for (const [campo, lado] of [
-        ['ladoA', confronto.ladoA],
-        ['ladoB', confronto.ladoB],
+        ["ladoA", confronto.ladoA],
+        ["ladoB", confronto.ladoB],
       ] as const) {
-        if (lado.tipo === 'time' && !timeIds.has(lado.timeId)) {
+        if (lado.tipo === "time" && !timeIds.has(lado.timeId)) {
           ctx.addIssue({ code: z.ZodIssueCode.custom, message: `${confronto.id}.${campo} referencia timeId "${lado.timeId}" que não existe em "times"` });
         }
-        if ((lado.tipo === 'vencedor' || lado.tipo === 'perdedor') && !confrontoIds.has(lado.confrontoId)) {
+        if ((lado.tipo === "vencedor" || lado.tipo === "perdedor") && !confrontoIds.has(lado.confrontoId)) {
           ctx.addIssue({ code: z.ZodIssueCode.custom, message: `${confronto.id}.${campo} referencia confrontoId "${lado.confrontoId}" que não existe em "confrontos"` });
         }
       }
@@ -79,20 +90,20 @@ export function resolverLado(
   confrontos: readonly Confronto[],
   times: readonly Time[],
 ): { time: Time | null; rotulo: string } {
-  if (lado.tipo === 'time') {
+  if (lado.tipo === "time") {
     const time = times.find((t) => t.id === lado.timeId) ?? null;
     return { time, rotulo: time?.nome ?? lado.timeId };
   }
 
   const origem = confrontos.find((c) => c.id === lado.confrontoId);
-  const rotuloPendente = `${lado.tipo === 'vencedor' ? 'Vencedor' : 'Perdedor'} ${lado.confrontoId}`;
+  const rotuloPendente = `${lado.tipo === "vencedor" ? "Vencedor" : "Perdedor"} ${lado.confrontoId}`;
   if (!origem || origem.placarA === null || origem.placarB === null || origem.placarA === origem.placarB) {
     return { time: null, rotulo: rotuloPendente };
   }
 
   const ladoVencedor = origem.placarA > origem.placarB ? origem.ladoA : origem.ladoB;
   const ladoPerdedor = origem.placarA > origem.placarB ? origem.ladoB : origem.ladoA;
-  const alvo = lado.tipo === 'vencedor' ? ladoVencedor : ladoPerdedor;
+  const alvo = lado.tipo === "vencedor" ? ladoVencedor : ladoPerdedor;
   const resolvidoAlvo = resolverLado(alvo, confrontos, times);
   return resolvidoAlvo.time ? resolvidoAlvo : { time: null, rotulo: rotuloPendente };
 }

@@ -1,5 +1,9 @@
-import { useMemo, useState } from 'react';
-import { competicoes, resolverLado, type CategoriaCompeticao, type Competicao, type Confronto, type Time } from '../data/competitions';
+import { useEffect, useMemo, useState } from 'react';
+import { Pencil } from 'lucide-react';
+import { resolverLado, type CategoriaCompeticao, type Competicao, type Confronto, type Time } from '@callout/shared';
+import { apiFetch } from '../lib/api';
+import { useSession } from '../lib/session';
+import { LoadingFill } from '../components/Spinner';
 
 const cardStyle: React.CSSProperties = { borderRadius: 'var(--radius-lg)', background: 'var(--surface)', border: '1px solid var(--surface-border)' };
 const WIN = 'var(--pos, #18AAB7)';
@@ -20,6 +24,8 @@ const STATUS_COMPETICAO_LABEL: Record<Competicao['status'], string> = {
   em_andamento: 'Em andamento',
   encerrada: 'Encerrada',
 };
+
+type PatchConfronto = { status: Confronto['status']; placarA: number | null; placarB: number | null };
 
 function formatDataConfronto(iso: string): string {
   const d = new Date(iso);
@@ -126,7 +132,93 @@ function LadoRow({ lado, placar, destaque }: { lado: { time: Time | null; rotulo
   );
 }
 
-function MatchCard({ confronto, competicao }: { confronto: Confronto; competicao: Competicao }) {
+const scoreInputStyle: React.CSSProperties = {
+  width: 42,
+  background: 'var(--input-bg)',
+  border: '1px solid var(--input-border)',
+  borderRadius: 6,
+  color: 'var(--text)',
+  fontSize: 12,
+  padding: '4px 2px',
+  textAlign: 'center',
+};
+
+function EdicaoConfronto({
+  confronto,
+  ladoA,
+  ladoB,
+  onCancelar,
+  onSalvar,
+}: {
+  confronto: Confronto;
+  ladoA: { time: Time | null; rotulo: string };
+  ladoB: { time: Time | null; rotulo: string };
+  onCancelar: () => void;
+  onSalvar: (patch: PatchConfronto) => Promise<void>;
+}) {
+  const [placarA, setPlacarA] = useState(confronto.placarA);
+  const [placarB, setPlacarB] = useState(confronto.placarB);
+  const [status, setStatus] = useState(confronto.status);
+  const [salvando, setSalvando] = useState(false);
+
+  async function salvar() {
+    setSalvando(true);
+    try {
+      await onSalvar({ status, placarA, placarB });
+    } finally {
+      setSalvando(false);
+    }
+  }
+
+  return (
+    <div style={{ padding: 10, display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+        <TimeChip time={ladoA.time} rotulo={ladoA.rotulo} />
+        <input
+          type="number"
+          value={placarA ?? ''}
+          onChange={(e) => setPlacarA(e.target.value === '' ? null : Number(e.target.value))}
+          style={scoreInputStyle}
+        />
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+        <TimeChip time={ladoB.time} rotulo={ladoB.rotulo} />
+        <input
+          type="number"
+          value={placarB ?? ''}
+          onChange={(e) => setPlacarB(e.target.value === '' ? null : Number(e.target.value))}
+          style={scoreInputStyle}
+        />
+      </div>
+      <select value={status} onChange={(e) => setStatus(e.target.value as Confronto['status'])} className="input-field" style={{ fontSize: 11, padding: '6px 8px' }}>
+        <option value="agendada">Agendada</option>
+        <option value="ao_vivo">Ao vivo</option>
+        <option value="encerrada">Encerrada</option>
+      </select>
+      <div style={{ display: 'flex', gap: 6 }}>
+        <button onClick={onCancelar} disabled={salvando} className="btn-secondary" style={{ flex: 1, padding: '5px 8px', fontSize: 11, justifyContent: 'center' }}>
+          Cancelar
+        </button>
+        <button onClick={salvar} disabled={salvando} className="btn-primary" style={{ flex: 1, padding: '5px 8px', fontSize: 11, justifyContent: 'center' }}>
+          {salvando ? 'Salvando…' : 'Salvar'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function MatchCard({
+  confronto,
+  competicao,
+  editavel,
+  onSalvar,
+}: {
+  confronto: Confronto;
+  competicao: Competicao;
+  editavel: boolean;
+  onSalvar?: (confrontoId: string, patch: PatchConfronto) => Promise<void>;
+}) {
+  const [editando, setEditando] = useState(false);
   const a = resolverLado(confronto.ladoA, competicao.confrontos, competicao.times);
   const b = resolverLado(confronto.ladoB, competicao.confrontos, competicao.times);
   const decidido = confronto.placarA !== null && confronto.placarB !== null && confronto.placarA !== confronto.placarB;
@@ -139,20 +231,58 @@ function MatchCard({ confronto, competicao }: { confronto: Confronto; competicao
         <span>
           {confronto.id} · {formatDataConfronto(confronto.data)}
         </span>
-        <span style={{ color: confronto.status === 'ao_vivo' ? 'var(--acc, #EF4958)' : 'var(--text-faint)', fontWeight: confronto.status === 'ao_vivo' ? 700 : 400 }}>
-          {STATUS_LABEL[confronto.status]}
+        <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span style={{ color: confronto.status === 'ao_vivo' ? 'var(--acc, #EF4958)' : 'var(--text-faint)', fontWeight: confronto.status === 'ao_vivo' ? 700 : 400 }}>
+            {STATUS_LABEL[confronto.status]}
+          </span>
+          {editavel && !editando && (
+            <button onClick={() => setEditando(true)} title="Editar placar" style={{ background: 'none', border: 'none', color: 'var(--text-faint)', cursor: 'pointer', padding: 0, display: 'flex' }}>
+              <Pencil size={11} />
+            </button>
+          )}
         </span>
       </div>
-      <div>
-        <LadoRow lado={a} placar={confronto.placarA} destaque={aVenceu} />
-        <div style={{ borderTop: '1px solid var(--divider)' }} />
-        <LadoRow lado={b} placar={confronto.placarB} destaque={bVenceu} />
-      </div>
+      {editando ? (
+        <EdicaoConfronto
+          confronto={confronto}
+          ladoA={a}
+          ladoB={b}
+          onCancelar={() => setEditando(false)}
+          onSalvar={async (patch) => {
+            await onSalvar?.(confronto.id, patch);
+            setEditando(false);
+          }}
+        />
+      ) : (
+        <div>
+          <LadoRow lado={a} placar={confronto.placarA} destaque={aVenceu} />
+          <div style={{ borderTop: '1px solid var(--divider)' }} />
+          <LadoRow lado={b} placar={confronto.placarB} destaque={bVenceu} />
+        </div>
+      )}
     </div>
   );
 }
 
-function Banda({ titulo, cor, confrontos, rodadaDe, maxRodada, competicao }: { titulo: string; cor: string; confrontos: Confronto[]; rodadaDe: Map<string, number>; maxRodada: number; competicao: Competicao }) {
+function Banda({
+  titulo,
+  cor,
+  confrontos,
+  rodadaDe,
+  maxRodada,
+  competicao,
+  editavel,
+  onSalvar,
+}: {
+  titulo: string;
+  cor: string;
+  confrontos: Confronto[];
+  rodadaDe: Map<string, number>;
+  maxRodada: number;
+  competicao: Competicao;
+  editavel: boolean;
+  onSalvar?: (confrontoId: string, patch: PatchConfronto) => Promise<void>;
+}) {
   if (confrontos.length === 0) return null;
   const colunas: Confronto[][] = Array.from({ length: maxRodada }, (_, i) => confrontos.filter((c) => rodadaDe.get(c.id) === i + 1));
 
@@ -164,7 +294,7 @@ function Banda({ titulo, cor, confrontos, rodadaDe, maxRodada, competicao }: { t
       {colunas.map((cards, i) => (
         <div key={i} style={{ width: 210, flex: 'none', display: 'flex', flexDirection: 'column', gap: 14, justifyContent: 'center' }}>
           {cards.map((c) => (
-            <MatchCard key={c.id} confronto={c} competicao={competicao} />
+            <MatchCard key={c.id} confronto={c} competicao={competicao} editavel={editavel} onSalvar={onSalvar} />
           ))}
         </div>
       ))}
@@ -172,7 +302,15 @@ function Banda({ titulo, cor, confrontos, rodadaDe, maxRodada, competicao }: { t
   );
 }
 
-function Chaveamento({ competicao }: { competicao: Competicao }) {
+function Chaveamento({
+  competicao,
+  editavel,
+  onSalvar,
+}: {
+  competicao: Competicao;
+  editavel: boolean;
+  onSalvar?: (confrontoId: string, patch: PatchConfronto) => Promise<void>;
+}) {
   const rodadaDe = useMemo(() => calcularRodadas(competicao.confrontos), [competicao]);
   const superior = competicao.confrontos.filter((c) => c.chave === 'superior');
   const inferior = competicao.confrontos.filter((c) => c.chave === 'inferior');
@@ -181,16 +319,16 @@ function Chaveamento({ competicao }: { competicao: Competicao }) {
 
   return (
     <div style={{ ...cardStyle, padding: 20, display: 'flex', flexDirection: 'column', gap: 24, overflowX: 'auto' }}>
-      <Banda titulo="CHAVE SUPERIOR" cor="var(--acc, #EF4958)" confrontos={superior} rodadaDe={rodadaDe} maxRodada={maxRodada} competicao={competicao} />
+      <Banda titulo="CHAVE SUPERIOR" cor="var(--acc, #EF4958)" confrontos={superior} rodadaDe={rodadaDe} maxRodada={maxRodada} competicao={competicao} editavel={editavel} onSalvar={onSalvar} />
       {superior.length > 0 && inferior.length > 0 && <div style={{ borderTop: '1px solid var(--divider)' }} />}
-      <Banda titulo="CHAVE INFERIOR" cor="var(--text-muted)" confrontos={inferior} rodadaDe={rodadaDe} maxRodada={maxRodada} competicao={competicao} />
+      <Banda titulo="CHAVE INFERIOR" cor="var(--text-muted)" confrontos={inferior} rodadaDe={rodadaDe} maxRodada={maxRodada} competicao={competicao} editavel={editavel} onSalvar={onSalvar} />
       {final && (
         <>
           <div style={{ borderTop: '1px solid var(--divider)' }} />
           <div style={{ display: 'flex', justifyContent: 'center' }}>
             <div style={{ width: 210 }}>
               <div style={{ fontSize: 10, letterSpacing: '.1em', color: 'var(--acc, #EF4958)', textAlign: 'center', marginBottom: 8, fontWeight: 700 }}>GRANDE FINAL</div>
-              <MatchCard confronto={final} competicao={competicao} />
+              <MatchCard confronto={final} competicao={competicao} editavel={editavel} onSalvar={onSalvar} />
             </div>
           </div>
         </>
@@ -271,8 +409,36 @@ function FiltroCategorias({ filtro, setFiltro }: { filtro: CategoriaCompeticao; 
 }
 
 export function Competitions() {
+  const { adminMode } = useSession();
   const [filtro, setFiltro] = useState<CategoriaCompeticao>('mista');
-  const filtradas = useMemo(() => competicoes.filter((c) => c.categorias.includes(filtro)), [filtro]);
+  const [dados, setDados] = useState<Competicao[] | null>(null);
+  const [erro, setErro] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelado = false;
+    apiFetch<Competicao[]>('/competicoes')
+      .then((r) => {
+        if (!cancelado) setDados(r);
+      })
+      .catch(() => {
+        if (!cancelado) setErro('Não deu pra carregar as competições. Tenta recarregar a página.');
+      });
+    return () => {
+      cancelado = true;
+    };
+  }, []);
+
+  const filtradas = useMemo(() => (dados ?? []).filter((c) => c.categorias.includes(filtro)), [dados, filtro]);
+
+  async function salvarConfronto(competicaoId: string, confrontoId: string, patch: PatchConfronto) {
+    const atualizado = await apiFetch<Confronto>(`/competicoes/${competicaoId}/confrontos/${confrontoId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(patch),
+    });
+    setDados((prev) =>
+      prev?.map((c) => (c.id !== competicaoId ? c : { ...c, confrontos: c.confrontos.map((cf) => (cf.id === confrontoId ? atualizado : cf)) })) ?? prev,
+    );
+  }
 
   return (
     <div style={{ padding: 26, display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -286,13 +452,21 @@ export function Competitions() {
         </div>
       </div>
 
-      {filtradas.length === 0 ? (
+      {erro ? (
+        <div style={{ ...cardStyle, padding: 40, textAlign: 'center', color: 'var(--text-muted)', fontSize: 14 }}>{erro}</div>
+      ) : dados === null ? (
+        <LoadingFill />
+      ) : filtradas.length === 0 ? (
         <div style={{ ...cardStyle, padding: 40, textAlign: 'center', color: 'var(--text-muted)', fontSize: 14 }}>Nenhuma competição nessa categoria ainda.</div>
       ) : (
         filtradas.map((competicao) => (
           <div key={competicao.id} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             <ResumoCompeticao competicao={competicao} />
-            <Chaveamento competicao={competicao} />
+            <Chaveamento
+              competicao={competicao}
+              editavel={adminMode}
+              onSalvar={(confrontoId, patch) => salvarConfronto(competicao.id, confrontoId, patch)}
+            />
           </div>
         ))
       )}

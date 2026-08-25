@@ -71,6 +71,7 @@ export interface SessionUser {
   discordAvatarUrl: string | null;
   riotId: { name: string; tag: string; puuid: string } | null;
   theme: ThemePreferences;
+  isAdmin: boolean;
 }
 
 // --- Progressão de RR ---
