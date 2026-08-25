@@ -69,7 +69,7 @@ export function MatchRow({ m, showViewIcon }: { m: RecentMatchSummary; showViewI
           </span>
         )}
       </div>
-      <div style={{ marginLeft: 32, fontSize: 10.5, color: 'var(--text-faint)' }}>
+      <div style={{ marginLeft: 32, fontSize: 10.5, color: 'var(--text)' }}>
         KDA {m.kda} · HS {m.hsPercent}%
       </div>
     </div>
