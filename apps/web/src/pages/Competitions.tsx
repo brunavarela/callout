@@ -9,8 +9,8 @@ const cardStyle: React.CSSProperties = { borderRadius: 'var(--radius-lg)', backg
 const WIN = 'var(--pos, #18AAB7)';
 
 const FILTROS: Array<{ key: CategoriaCompeticao; label: string }> = [
-  { key: 'mista', label: 'Mistas' },
   { key: 'inclusiva', label: 'Inclusivas' },
+  { key: 'mista', label: 'Mistas' },
 ];
 
 const STATUS_LABEL: Record<Confronto['status'], string> = {
@@ -431,7 +431,7 @@ function FiltroCategorias({ filtro, setFiltro }: { filtro: CategoriaCompeticao; 
 
 export function Competitions() {
   const { adminMode } = useSession();
-  const [filtro, setFiltro] = useState<CategoriaCompeticao>('mista');
+  const [filtro, setFiltro] = useState<CategoriaCompeticao>('inclusiva');
   const [dados, setDados] = useState<Competicao[] | null>(null);
   const [erro, setErro] = useState<string | null>(null);
 
