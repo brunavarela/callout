@@ -9,3 +9,13 @@ export function matchResult(won: boolean, rrDelta: number | null | undefined): "
   if (rrDelta !== null && rrDelta !== undefined && rrDelta >= 0 && rrDelta <= DRAW_MAX_RR_GAIN) return "E";
   return won ? "V" : "D";
 }
+
+// Deathmatch (e Team Deathmatch) não tem round de verdade — a HenrikDev
+// devolve `rounds` com 1 item cobrindo a partida inteira, então
+// `stats.score` vira a pontuação total, não por round. Dividir isso pelo
+// "round" único infla o ACS pra milhares (visto em produção: até 8000+).
+// Usado pra excluir essas partidas de qualquer média/estatística — elas
+// continuam sincronizadas e aparecem nas listas normalmente.
+export function hasRoundBasedAcs(modo: string): boolean {
+  return !modo.toLowerCase().includes("deathmatch");
+}

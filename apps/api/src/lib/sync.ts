@@ -3,6 +3,7 @@ import type { MatchV4Data, SyncStatus } from "@callout/shared";
 import { prisma } from "./prisma.js";
 import { getMatchlist, HenrikDevError } from "./henrikdev.js";
 import { ensureMapAsset } from "./strategy.js";
+import { hasRoundBasedAcs } from "./match-result.js";
 
 function describeSyncFailure(err: unknown): string {
   if (err instanceof ZodError) return "A HenrikDev devolveu um formato de dado inesperado.";
@@ -91,14 +92,21 @@ export async function syncUserMatches(userId: string, puuid: string, region: str
 }
 
 async function persistMatch(match: MatchV4Data) {
-  const roundCount = match.rounds.length || 1;
+  const roundCount = match.rounds.length;
+  const modo = match.metadata.queue.name ?? match.metadata.queue.id;
+  // Deathmatch (e Team Deathmatch) vem com `rounds` de 1 item cobrindo a
+  // partida inteira, não zero — `roundCount || 1` nunca protegia disso.
+  // `stats.score` é a pontuação total da partida, então dividir por esse
+  // "round" único inflava o ACS pra milhares. hasRoundBasedAcs (mesma
+  // checagem usada em dashboard.ts/team.ts pra excluir das médias) evita
+  // gravar esse número sem sentido já na sincronização.
   const map = await ensureMapAsset(match.metadata.map.name);
 
   await prisma.match.create({
     data: {
       id: match.metadata.match_id,
       mapId: map.id,
-      modo: match.metadata.queue.name ?? match.metadata.queue.id,
+      modo,
       startedAt: new Date(match.metadata.started_at),
       durationMs: match.metadata.game_length_in_ms,
       rawJson: match as unknown as object,
@@ -114,7 +122,7 @@ async function persistMatch(match: MatchV4Data) {
             name: p.name,
             tag: p.tag,
             roundsPlayed: roundCount,
-            acs: Math.round(p.stats.score / roundCount),
+            acs: roundCount > 0 && hasRoundBasedAcs(modo) ? Math.round(p.stats.score / roundCount) : 0,
             kills: p.stats.kills,
             deaths: p.stats.deaths,
             assists: p.stats.assists,

@@ -4,7 +4,7 @@ import { prisma } from "./prisma.js";
 import { getMmr, getMmrHistory } from "./henrikdev.js";
 import { loadAgentsByUuid } from "./assets.js";
 import { mapNameFrom, scoreFor, hasAce, formatPlayedAt } from "./dashboard.js";
-import { matchResult } from "./match-result.js";
+import { matchResult, hasRoundBasedAcs } from "./match-result.js";
 
 // App de time único (< 10 amigos, sem multi-tenancy — CONTEXT.md §1). Todo
 // usuário que loga entra automaticamente no único time existente; o primeiro
@@ -43,11 +43,17 @@ export async function buildTeamOverview(): Promise<TeamOverview | null> {
   const windowStart = new Date(Date.now() - 30 * 86_400_000);
   const puuids = team.members.map((m) => m.user.riotPuuid).filter((p): p is string => Boolean(p));
 
+  // Deathmatch etc. (ver hasRoundBasedAcs) não entra em nenhuma estatística
+  // do card do time — ACS fica sem sentido nesses modos, e é mais simples
+  // excluir de tudo (kda/acs/winrate por membro, partidas juntos) do que
+  // só do ACS.
   const rows = puuids.length
-    ? await prisma.matchPlayer.findMany({
-        where: { puuid: { in: puuids }, match: { startedAt: { gte: windowStart } } },
-        include: { match: true },
-      })
+    ? (
+        await prisma.matchPlayer.findMany({
+          where: { puuid: { in: puuids }, match: { startedAt: { gte: windowStart } } },
+          include: { match: true },
+        })
+      ).filter((r) => hasRoundBasedAcs(r.match.modo))
     : [];
 
   const byMatch = new Map<string, typeof rows>();
