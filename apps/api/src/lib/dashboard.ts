@@ -3,7 +3,7 @@ import { prisma } from "./prisma.js";
 import { getMmr, getMmrHistory } from "./henrikdev.js";
 import { getSyncProgress } from "./sync.js";
 import { loadAgentColorsByName } from "./assets.js";
-import { matchResult, hasRoundBasedAcs } from "./match-result.js";
+import { matchResult, countsTowardStats } from "./match-result.js";
 
 const WEEKDAY_LABELS = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
 
@@ -90,11 +90,11 @@ export async function buildDashboardSummary(
   const windowStart = new Date(now.getTime() - 30 * 86_400_000);
   const prevWindowStart = new Date(now.getTime() - 60 * 86_400_000);
 
-  // Deathmatch etc. (ver hasRoundBasedAcs) ficam fora das médias/KPIs, mas
-  // continuam aparecendo em recentMatches/last14Results (que usam `rows`,
-  // não `statRows`) — são partida de verdade, só não tem ACS por round
-  // pra fazer sentido numa média.
-  const statRows = rows.filter((r) => hasRoundBasedAcs(r.match.modo));
+  // Só Competitivo/Sem classificação/Premier entram nas médias/KPIs (ver
+  // countsTowardStats) — continuam aparecendo em recentMatches/
+  // last14Results (que usam `rows`, não `statRows`), só não contam pra
+  // nenhum número agregado.
+  const statRows = rows.filter((r) => countsTowardStats(r.match.modo));
   const current = statRows.filter((r) => r.match.startedAt >= windowStart);
   const previous = statRows.filter((r) => r.match.startedAt >= prevWindowStart && r.match.startedAt < windowStart);
 

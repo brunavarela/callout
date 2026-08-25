@@ -10,12 +10,16 @@ export function matchResult(won: boolean, rrDelta: number | null | undefined): "
   return won ? "V" : "D";
 }
 
-// Deathmatch (e Team Deathmatch) não tem round de verdade — a HenrikDev
-// devolve `rounds` com 1 item cobrindo a partida inteira, então
-// `stats.score` vira a pontuação total, não por round. Dividir isso pelo
-// "round" único infla o ACS pra milhares (visto em produção: até 8000+).
-// Usado pra excluir essas partidas de qualquer média/estatística — elas
-// continuam sincronizadas e aparecem nas listas normalmente.
-export function hasRoundBasedAcs(modo: string): boolean {
-  return !modo.toLowerCase().includes("deathmatch");
+// Só esses 3 modos entram em média/estatística — allowlist, não denylist:
+// qualquer outra coisa (Deathmatch, Spike Rush, Escalation, custom etc.)
+// fica de fora sem precisar listar cada um. Deathmatch em particular nem
+// tem round de verdade (a HenrikDev devolve `rounds` com 1 item cobrindo
+// a partida inteira), então `stats.score` vira pontuação total, não por
+// round — dividir por esse "round" único já inflou ACS pra milhares.
+// Partidas fora da lista continuam sincronizadas e aparecem nas listas
+// normalmente, só não contam pra nenhuma média/KPI.
+const STATS_MODES = new Set(["Competitive", "Unrated", "Premier"]);
+
+export function countsTowardStats(modo: string): boolean {
+  return STATS_MODES.has(modo);
 }
