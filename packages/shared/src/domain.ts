@@ -257,6 +257,7 @@ export interface TeamMemberCard {
   winratePercent: number;
   note: string;
   mainAgents: MainAgent[]; // até MAX_MAIN_AGENTS
+  hasRiotLinked: boolean; // Riot ID vinculado — só esses membros têm painel individual pra ver
 }
 
 export interface TeamOverview {

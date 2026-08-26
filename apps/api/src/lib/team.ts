@@ -1,3 +1,4 @@
+import type { User } from "@prisma/client";
 import type { TeamMatchSummary, TeamOverview } from "@callout/shared";
 import { MIN_TEAM_MATCH_PLAYERS } from "@callout/shared";
 import { prisma } from "./prisma.js";
@@ -33,6 +34,19 @@ export async function ensureTeamMembership(userId: string, guildName: string) {
 }
 
 const round0 = (n: number) => Math.round(n);
+
+// Resolve de quem é o painel que a rota /dashboard* deve montar: o próprio
+// usuário autenticado (sem `targetUserId`) ou outro membro do time — usado
+// pelo filtro "ver painel de outro membro". `null` cobre os dois motivos de
+// recusa (não é membro do time / não existe) — a rota trata os dois como 404.
+export async function resolveDashboardTarget(authUser: User, targetUserId: string | undefined): Promise<User | null> {
+  if (!targetUserId || targetUserId === authUser.id) return authUser;
+
+  const team = await prisma.team.findFirst({ include: { members: true } });
+  if (!team || !team.members.some((m) => m.userId === targetUserId)) return null;
+
+  return prisma.user.findUnique({ where: { id: targetUserId } });
+}
 
 export async function buildTeamOverview(): Promise<TeamOverview | null> {
   const team = await prisma.team.findFirst({
@@ -97,6 +111,7 @@ export async function buildTeamOverview(): Promise<TeamOverview | null> {
         acs: memberRows.length ? round0(acsSum / memberRows.length) : 0,
         winratePercent: memberRows.length ? round0((wins / memberRows.length) * 100) : 0,
         note: m.nota ?? "",
+        hasRiotLinked: Boolean(m.user.riotPuuid && m.user.riotRegion),
         mainAgents: m.mainAgentUuids
           .map((uuid) => {
             const agent = agentsByUuid.get(uuid);

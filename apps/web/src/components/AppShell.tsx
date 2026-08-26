@@ -6,7 +6,7 @@ import { useAppData, type AppData } from '../lib/appData';
 import { ThemeSettings } from './ThemeSettings';
 
 const BASE_NAV_ITEMS = [
-  { to: '/', label: 'Dashboard', icon: LayoutDashboard, match: (p: string) => p === '/' },
+  { to: '/', label: 'Painel', icon: LayoutDashboard, match: (p: string) => p === '/' },
   { to: '/time', label: 'Time', icon: Users, match: (p: string) => p === '/time' },
   { to: '/board', label: 'Estratégia', icon: PenTool, match: (p: string) => p.startsWith('/board') },
   { to: '/spots', label: 'Spots', icon: MapPin, match: (p: string) => p === '/spots' },

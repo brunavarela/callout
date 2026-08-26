@@ -1,5 +1,5 @@
 import { useNavigate, useOutletContext } from 'react-router-dom';
-import type { AgentWinrate, DashboardSummary, MapWinrate, MatchCountFilter, MatchModeFilter, RecentFormInsights, RrHistoryPoint, SessionUser, SidesBreakdown } from '@callout/shared';
+import type { AgentWinrate, DashboardSummary, MapWinrate, MatchCountFilter, MatchModeFilter, RecentFormInsights, RrHistoryPoint, SessionUser, SidesBreakdown, TeamOverview } from '@callout/shared';
 import type { OutletContext } from '../components/AppShell';
 import { LoadingFill, SnakeSpinner } from '../components/Spinner';
 import { MatchRow } from '../components/MatchRow';
@@ -277,6 +277,40 @@ function MatchCountButtons({ matchCountFilter, setMatchCountFilter }: { matchCou
   );
 }
 
+// Filtro "ver painel de outro membro" — só entram membros do time com Riot
+// ID vinculado (m.hasRiotLinked), já que sem isso não tem partida sincronizada
+// pra montar painel nenhum. Não aparece quando ninguém além de você mesmo
+// está nessa condição.
+function MemberFilterSelect({
+  team,
+  selectedMemberId,
+  setSelectedMemberId,
+}: {
+  team: TeamOverview | null;
+  selectedMemberId: string | null;
+  setSelectedMemberId: (id: string | null) => void;
+}) {
+  const options = (team?.members ?? []).filter((m) => m.hasRiotLinked && !m.isSelf);
+  if (options.length === 0) return null;
+
+  return (
+    <select
+      className="input-field"
+      value={selectedMemberId ?? 'self'}
+      onChange={(e) => setSelectedMemberId(e.target.value === 'self' ? null : e.target.value)}
+      title="Ver painel de outro membro do time"
+      style={{ width: 'auto', height: 40, padding: '0 30px 0 14px', borderRadius: 9, fontSize: 12.5, fontWeight: 600, flex: 'none' }}
+    >
+      <option value="self">Você</option>
+      {options.map((m) => (
+        <option key={m.userId} value={m.userId}>
+          {m.name}
+        </option>
+      ))}
+    </select>
+  );
+}
+
 function DashboardContent({
   data,
   modoFilter,
@@ -286,6 +320,8 @@ function DashboardContent({
   matchCountFilter,
   setMatchCountFilter,
   sides,
+  subject,
+  isSelf,
 }: {
   data: DashboardSummary;
   modoFilter: MatchModeFilter;
@@ -295,6 +331,11 @@ function DashboardContent({
   matchCountFilter: MatchCountFilter;
   setMatchCountFilter: (n: MatchCountFilter) => void;
   sides: SidesBreakdown | null;
+  // "você" quando é o próprio painel, ou o nome do membro selecionado no
+  // filtro — "ganha"/"rende"/"jogou" etc. conjugam igual em português pra
+  // "você" e pra 3ª pessoa, então dá pra trocar só o sujeito das frases.
+  subject: string;
+  isSelf: boolean;
 }) {
   const { kpis, hasComparison, mapWinrates, agentWinrates, recentMatches, last14Results } = data;
   const totalInWindow = kpis.winrate.wins + kpis.winrate.losses;
@@ -398,7 +439,7 @@ function DashboardContent({
               </div>
               <RrLineChart points={rrHistory} />
               <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, fontSize: 10.5, color: 'var(--text-faint)', borderTop: '1px solid var(--divider)', paddingTop: 8 }}>
-                <span>Vertical: RR acumulado no período (0 = onde você começou)</span>
+                <span>Vertical: RR acumulado no período (0 = onde {subject} começou)</span>
                 <span>Horizontal: data da partida</span>
               </div>
             </>
@@ -413,7 +454,7 @@ function DashboardContent({
                 <div style={{ display: 'flex', gap: 8, fontSize: 12.5, color: 'var(--text-dim)', lineHeight: 1.4 }}>
                   <span style={{ color: 'var(--text-faint)' }}>•</span>
                   <span>
-                    Nas últimas {formInsights.matchesAnalyzed} partidas você jogou{' '}
+                    Nas últimas {formInsights.matchesAnalyzed} partidas {subject} jogou{' '}
                     <b style={{ color: 'var(--text-2)', fontWeight: 600 }}>{formInsights.topMap.total}</b>{' '}
                     {formInsights.topMap.total === 1 ? 'vez' : 'vezes'} no mapa{' '}
                     <b style={{ color: 'var(--text-2)', fontWeight: 600 }}>{formInsights.topMap.map}</b> e ganhou{' '}
@@ -426,7 +467,7 @@ function DashboardContent({
                 <div style={{ display: 'flex', gap: 8, fontSize: 12.5, color: 'var(--text-dim)', lineHeight: 1.4 }}>
                   <span style={{ color: 'var(--text-faint)' }}>•</span>
                   <span>
-                    Nas últimas {formInsights.matchesAnalyzed} partidas você jogou{' '}
+                    Nas últimas {formInsights.matchesAnalyzed} partidas {subject} jogou{' '}
                     <b style={{ color: 'var(--text-2)', fontWeight: 600 }}>{formInsights.topAgent.total}</b>{' '}
                     {formInsights.topAgent.total === 1 ? 'vez' : 'vezes'} com{' '}
                     <b style={{ color: 'var(--text-2)', fontWeight: 600 }}>{formInsights.topAgent.agent}</b> e ganhou{' '}
@@ -438,7 +479,7 @@ function DashboardContent({
               <div style={{ display: 'flex', gap: 8, fontSize: 12.5, color: 'var(--text-dim)', lineHeight: 1.4 }}>
                 <span style={{ color: 'var(--text-faint)' }}>•</span>
                 <span>
-                  Nas últimas {formInsights.matchesAnalyzed} partidas você ficou com KDA negativo{' '}
+                  Nas últimas {formInsights.matchesAnalyzed} partidas {subject} ficou com KDA negativo{' '}
                   <b style={{ color: formInsights.negativeKdaMatches > 0 ? LOSS : 'var(--text-2)', fontWeight: 600 }}>
                     {formInsights.negativeKdaMatches}
                   </b>{' '}
@@ -448,7 +489,7 @@ function DashboardContent({
               <div style={{ display: 'flex', gap: 8, fontSize: 12.5, color: 'var(--text-dim)', lineHeight: 1.4 }}>
                 <span style={{ color: 'var(--text-faint)' }}>•</span>
                 <span>
-                  Nas últimas {formInsights.matchesAnalyzed} partidas você foi MVP{' '}
+                  Nas últimas {formInsights.matchesAnalyzed} partidas {subject} foi MVP{' '}
                   <b style={{ color: formInsights.mvpMatches > 0 ? '#E8B339' : 'var(--text-2)', fontWeight: 600 }}>
                     {formInsights.mvpMatches}
                   </b>{' '}
@@ -460,7 +501,9 @@ function DashboardContent({
         </div>
 
         <div style={{ ...cardStyle, padding: '18px 20px', display: 'flex', flexDirection: 'column' }}>
-          <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 16 }}>Suas {recentMatches.length} últimas partidas</div>
+          <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 16 }}>
+            {isSelf ? `Suas ${recentMatches.length} últimas partidas` : `${recentMatches.length} últimas partidas de ${subject}`}
+          </div>
           <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 3 }}>Da mais recente para a mais antiga</div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '24px 1fr 62px 42px', gap: 8, padding: '10px 0 6px', marginTop: 8, borderBottom: '1px solid var(--divider)', fontSize: 9.5, letterSpacing: '.08em', color: 'var(--text-faint)' }}>
@@ -479,13 +522,13 @@ function DashboardContent({
 
       <div className="grid-responsive-4">
         <RateBlock
-          title="Em quais mapas você ganha"
+          title={`Em quais mapas ${subject} ganha`}
           sub="% de partidas vencidas em cada mapa"
           rows={mapWinrates.map((m: MapWinrate) => ({ key: m.map, name: m.map, wins: m.wins, total: m.total }))}
           colorFor={rateBarColor}
         />
         <RateBlock
-          title="Com quais agentes você ganha"
+          title={`Com quais agentes ${subject} ganha`}
           sub="% de partidas vencidas com cada agente"
           rows={agentWinrates.map((a: AgentWinrate) => ({ key: a.agent, name: a.agent, wins: a.wins, total: a.total, dot: a.color }))}
           colorFor={rateBarColor}
@@ -493,7 +536,7 @@ function DashboardContent({
 
         <div style={{ ...cardStyle, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 12 }}>
           <div>
-            <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 15 }}>Ataque ou defesa: onde você rende mais</div>
+            <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 15 }}>Ataque ou defesa: onde {subject} rende mais</div>
             <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 3 }}>% de rounds ganhos em cada lado</div>
           </div>
           {sides ? (
@@ -598,6 +641,7 @@ export function Dashboard() {
   const {
     sync,
     startSync,
+    team,
     dashboard: data,
     dashboardError: error,
     dashboardLoading: loading,
@@ -606,12 +650,18 @@ export function Dashboard() {
     setModoFilter,
     matchCountFilter,
     setMatchCountFilter,
+    selectedMemberId,
+    setSelectedMemberId,
     sides,
     rrHistory,
     rrHistoryLoading,
     formInsights,
   } = useOutletContext<OutletContext>();
   const { user } = useSession();
+
+  const selectedMember = selectedMemberId ? (team?.members.find((m) => m.userId === selectedMemberId) ?? null) : null;
+  const isSelf = !selectedMemberId;
+  const subject = selectedMember?.name ?? 'você';
 
   return (
     <div style={{ padding: 26, display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -647,19 +697,22 @@ export function Dashboard() {
           )}
         </div>
         <div className="dashboard-header-actions">
+          <MemberFilterSelect team={team} selectedMemberId={selectedMemberId} setSelectedMemberId={setSelectedMemberId} />
           <ModoFilterButtons modoFilter={modoFilter} setModoFilter={setModoFilter} />
           <div className="dashboard-action-buttons">
             <button className="btn-secondary" style={{ minHeight: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 17px' }} onClick={() => navigate('/board')}>
               Abrir estratégia
             </button>
-            <button
-              className="btn-primary"
-              style={{ minHeight: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 17px', fontSize: 13 }}
-              onClick={startSync}
-              disabled={sync?.state === 'syncing'}
-            >
-              + Sincronizar
-            </button>
+            {isSelf && (
+              <button
+                className="btn-primary"
+                style={{ minHeight: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 17px', fontSize: 13 }}
+                onClick={startSync}
+                disabled={sync?.state === 'syncing'}
+              >
+                + Sincronizar
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -675,9 +728,13 @@ export function Dashboard() {
         </div>
       ) : !data ? null : data.recentMatches.length === 0 ? (
         <div style={{ ...cardStyle, padding: 40, textAlign: 'center', color: 'var(--text-muted)', fontSize: 14 }}>
-          {modoFilter === 'all'
-            ? 'Nenhuma partida sincronizada ainda. Clica no ícone de sincronizar lá em cima pra buscar suas últimas partidas.'
-            : `Nenhuma partida ${modoFilter === 'Competitive' ? 'competitiva' : 'sem classificação'} nas suas partidas sincronizadas. Troque o filtro acima ou sincronize mais partidas.`}
+          {isSelf
+            ? modoFilter === 'all'
+              ? 'Nenhuma partida sincronizada ainda. Clica no ícone de sincronizar lá em cima pra buscar suas últimas partidas.'
+              : `Nenhuma partida ${modoFilter === 'Competitive' ? 'competitiva' : 'sem classificação'} nas suas partidas sincronizadas. Troque o filtro acima ou sincronize mais partidas.`
+            : modoFilter === 'all'
+              ? `Nenhuma partida sincronizada de ${subject} ainda.`
+              : `Nenhuma partida ${modoFilter === 'Competitive' ? 'competitiva' : 'sem classificação'} nas partidas sincronizadas de ${subject}. Troque o filtro acima.`}
         </div>
       ) : (
         <DashboardContent
@@ -689,6 +746,8 @@ export function Dashboard() {
           matchCountFilter={matchCountFilter}
           setMatchCountFilter={setMatchCountFilter}
           sides={sides}
+          subject={subject}
+          isSelf={isSelf}
         />
       )}
 

@@ -1,8 +1,29 @@
-import type { FastifyInstance } from "fastify";
+import type { FastifyInstance, FastifyReply } from "fastify";
+import type { User } from "@prisma/client";
 import type { MatchCountFilter } from "@callout/shared";
 import { requireAuth } from "../lib/session.js";
 import { buildDashboardSummary } from "../lib/dashboard.js";
 import { buildRrAndInsights, buildSidesBreakdown } from "../lib/insights.js";
+import { resolveDashboardTarget } from "../lib/team.js";
+
+// Resolve o membro do time cujo painel a rota deve montar — o próprio
+// usuário autenticado, por padrão, ou outro membro do time quando o filtro
+// "ver painel de outro membro" manda um `userId`. Já responde 404/409 e
+// devolve `null` quando a rota deve parar por aí.
+async function resolveTarget(request: { user?: User; query: unknown }, reply: FastifyReply): Promise<User | null> {
+  const { userId: targetUserId } = request.query as { userId?: string };
+  const target = await resolveDashboardTarget(request.user!, targetUserId);
+  if (!target) {
+    reply.code(404).send({ error: "Membro não encontrado no time." });
+    return null;
+  }
+  if (!target.riotPuuid || !target.riotRegion) {
+    const message = target.id === request.user!.id ? "Vincule seu Riot ID antes de ver o dashboard." : "Esse membro ainda não vinculou o Riot ID.";
+    reply.code(409).send({ error: message });
+    return null;
+  }
+  return target;
+}
 
 // "all" (ou qualquer outro valor) vira `undefined` — sem filtro. Só os dois
 // modos que a Riot ranqueia/não ranqueia fazem sentido pro filtro do
@@ -17,23 +38,19 @@ function parseMatchCount(raw: unknown): MatchCountFilter {
 
 export async function dashboardRoutes(app: FastifyInstance) {
   app.get("/dashboard", { preHandler: requireAuth }, async (request, reply) => {
-    const user = request.user!;
-    if (!user.riotPuuid || !user.riotRegion) {
-      return reply.code(409).send({ error: "Vincule seu Riot ID antes de ver o dashboard." });
-    }
+    const target = await resolveTarget(request, reply);
+    if (!target) return;
     const { modo } = request.query as { modo?: string };
-    return buildDashboardSummary(user.id, user.riotPuuid, user.riotRegion, parseModoFilter(modo));
+    return buildDashboardSummary(target.id, target.riotPuuid!, target.riotRegion!, parseModoFilter(modo));
   });
 
   app.get("/dashboard/rr-history", { preHandler: requireAuth }, async (request, reply) => {
-    const user = request.user!;
-    if (!user.riotPuuid || !user.riotRegion) {
-      return reply.code(409).send({ error: "Vincule seu Riot ID antes de ver o dashboard." });
-    }
+    const target = await resolveTarget(request, reply);
+    if (!target) return;
     const { modo, matches } = request.query as { modo?: string; matches?: string };
 
     try {
-      return await buildRrAndInsights(user.riotRegion, user.riotPuuid, parseMatchCount(matches), parseModoFilter(modo));
+      return await buildRrAndInsights(target.riotRegion!, target.riotPuuid!, parseMatchCount(matches), parseModoFilter(modo));
     } catch (err) {
       request.log.error(err, "falha ao buscar histórico de RR");
       return reply.code(502).send({ error: "Falha ao buscar o histórico de RR na HenrikDev." });
@@ -41,11 +58,9 @@ export async function dashboardRoutes(app: FastifyInstance) {
   });
 
   app.get("/dashboard/sides", { preHandler: requireAuth }, async (request, reply) => {
-    const user = request.user!;
-    if (!user.riotPuuid) {
-      return reply.code(409).send({ error: "Vincule seu Riot ID antes de ver o dashboard." });
-    }
+    const target = await resolveTarget(request, reply);
+    if (!target) return;
     const { modo } = request.query as { modo?: string };
-    return buildSidesBreakdown(user.riotPuuid, parseModoFilter(modo));
+    return buildSidesBreakdown(target.riotPuuid!, parseModoFilter(modo));
   });
 }
