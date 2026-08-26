@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useOutletContext } from 'react-router-dom';
-import { Settings, History } from 'lucide-react';
+import { Settings, History, BarChart3 } from 'lucide-react';
 import type { TeamMemberCard } from '@callout/shared';
 import { apiFetch } from '../lib/api';
 import type { OutletContext } from '../components/AppShell';
@@ -155,10 +155,16 @@ export function Team() {
             {team.memberCount} membros · {team.matchesTogether30d} partidas juntos nos últimos 30 dias · {team.groupWinratePercent}% de winrate em grupo
           </div>
         </div>
-        <button className="btn-secondary" style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 9 }} onClick={() => navigate('/time/partidas')}>
-          <History size={15} strokeWidth={1.75} />
-          Histórico de partidas
-        </button>
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+          <button className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: 9 }} onClick={() => navigate('/time/painel')}>
+            <BarChart3 size={15} strokeWidth={1.75} />
+            Painel do time
+          </button>
+          <button className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: 9 }} onClick={() => navigate('/time/partidas')}>
+            <History size={15} strokeWidth={1.75} />
+            Histórico de partidas
+          </button>
+        </div>
       </div>
 
       {team.members.length === 0 ? (

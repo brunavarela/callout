@@ -4,9 +4,9 @@ import type { OutletContext } from '../components/AppShell';
 import { LoadingFill, SnakeSpinner } from '../components/Spinner';
 import { MatchRow } from '../components/MatchRow';
 import { Select } from '../components/Select';
+import { cardStyle, WIN, LOSS, DRAW, UNDER_50, fmtNum, fmtDelta, plural, rateBarColor, RateBlock } from '../components/statsPrimitives';
 import { useSession } from '../lib/session';
 
-const cardStyle: React.CSSProperties = { borderRadius: 'var(--radius-lg)', background: 'var(--surface)', border: '1px solid var(--surface-border)' };
 const MODOS: Array<{ key: MatchModeFilter; label: string }> = [
   { key: 'all', label: 'Todos' },
   { key: 'Competitive', label: 'Competitivo' },
@@ -16,38 +16,6 @@ const MATCH_COUNTS: Array<{ key: MatchCountFilter; label: string }> = [
   { key: 7, label: 'Últimas 7' },
   { key: 20, label: 'Últimas 20' },
 ];
-
-const WIN = 'var(--pos, #18AAB7)';
-const LOSS = 'var(--neg, #EF4958)';
-const DRAW = 'var(--text-muted, #9A9DA1)';
-const LOW_SAMPLE = 'var(--bar-dim)';
-const UNDER_50 = 'color-mix(in srgb, var(--neg, #EF4958) 42%, var(--track))';
-const MIN_SAMPLE = 3;
-
-function fmtNum(n: number, decimals: number): string {
-  return n.toFixed(decimals).replace('.', ',');
-}
-
-function fmtDelta(n: number, decimals: number, suffix = ''): string {
-  const abs = Math.abs(n);
-  const numStr = decimals > 0 ? fmtNum(abs, decimals) : String(Math.round(abs));
-  if (n > 0) return `+${numStr}${suffix}`;
-  if (n < 0) return `−${numStr}${suffix}`;
-  return `${numStr}${suffix}`;
-}
-
-function pct(a: number, b: number): number {
-  return b > 0 ? Math.round((a / b) * 100) : 0;
-}
-
-function plural(n: number, word: string): string {
-  return `${n} ${word}${n === 1 ? '' : 's'}`;
-}
-
-function rateBarColor(wins: number, total: number): string {
-  if (total < MIN_SAMPLE) return LOW_SAMPLE;
-  return wins / total >= 0.5 ? WIN : UNDER_50;
-}
 
 // Ticks "redondos" cobrindo [min,max] garantindo que 0 caia exatamente numa
 // linha de grade — sem isso a régua vertical fica arbitrária e ilegível.
@@ -171,46 +139,6 @@ function RrLineChart({ points }: { points: RrHistoryPoint[] }) {
         </text>
       ))}
     </svg>
-  );
-}
-
-function RateBlock({ title, sub, rows, colorFor }: { title: string; sub: string; rows: Array<{ key: string; name: string; wins: number; total: number; dot?: string }>; colorFor: (wins: number, total: number) => string }) {
-  return (
-    <div style={{ ...cardStyle, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 11 }}>
-      <div>
-        <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 15 }}>{title}</div>
-        <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 3 }}>{sub}</div>
-      </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
-        {rows.map((r) => (
-          <div key={r.key} style={{ display: 'grid', gridTemplateColumns: '1fr 40px', gap: 10, alignItems: 'center' }}>
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}>
-                <span style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 13, color: 'var(--text-3)' }}>
-                  {r.dot && <span style={{ width: 9, height: 9, borderRadius: 3, background: r.dot, flex: 'none' }} />}
-                  {r.name}
-                </span>
-                <span style={{ fontSize: 11, color: 'var(--text-faint)', whiteSpace: 'nowrap' }}>{plural(r.total, 'partida')}</span>
-              </div>
-              <div style={{ height: 6, borderRadius: 3, background: 'var(--track)', marginTop: 5, position: 'relative' }}>
-                <div style={{ position: 'absolute', inset: '0 auto 0 0', width: `${pct(r.wins, r.total)}%`, borderRadius: 3, background: colorFor(r.wins, r.total) }} />
-              </div>
-            </div>
-            <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-3)', textAlign: 'right' }}>{pct(r.wins, r.total)}%</span>
-          </div>
-        ))}
-      </div>
-      <div style={{ borderTop: '1px solid var(--divider)', paddingTop: 9, display: 'flex', flexDirection: 'column', gap: 4, fontSize: 11, color: 'var(--text-faint)' }}>
-        <span style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-          <span style={{ width: 9, height: 5, borderRadius: 3, background: LOW_SAMPLE }} />
-          menos de {MIN_SAMPLE} partidas: amostra pequena
-        </span>
-        <span style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-          <span style={{ width: 9, height: 5, borderRadius: 3, background: UNDER_50 }} />
-          abaixo de 50%
-        </span>
-      </div>
-    </div>
   );
 }
 

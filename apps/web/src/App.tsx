@@ -7,6 +7,7 @@ import { Matches } from './pages/Matches';
 import { MatchDetail } from './pages/MatchDetail';
 import { Team } from './pages/Team';
 import { TeamMatches } from './pages/TeamMatches';
+import { TeamDashboard } from './pages/TeamDashboard';
 import { Board } from './pages/Board';
 import { Spots } from './pages/Spots';
 import { Competitions } from './pages/Competitions';
@@ -23,6 +24,7 @@ function App() {
         <Route path="/partida/:id" element={<MatchDetail />} />
         <Route path="/time" element={<Team />} />
         <Route path="/time/partidas" element={<TeamMatches />} />
+        <Route path="/time/painel" element={<TeamDashboard />} />
         <Route path="/board" element={<Board />} />
         <Route path="/board/:id" element={<Board />} />
         <Route path="/spots" element={<Spots />} />

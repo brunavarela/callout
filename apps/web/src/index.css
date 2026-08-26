@@ -367,6 +367,18 @@ button {
   }
 }
 
+/* Pares de cards 50/50 do Painel do time (mapa+combinação, ACS+MVP etc.) */
+.grid-responsive-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+@media (max-width: 900px) {
+  .grid-responsive-2 {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* Canvas + sidebar do Board (1fr 300px) */
 .grid-responsive-board {
   display: grid;

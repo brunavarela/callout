@@ -15,6 +15,7 @@ import type {
   Strategy,
   StratItem,
   SyncStatus,
+  TeamDashboardSummary,
   TeamMatchSummary,
   TeamOverview,
 } from '@callout/shared';
@@ -154,6 +155,24 @@ export function useAppData(user: SessionUser | null) {
       setTeamMatchesError('Falha ao carregar o histórico de partidas do time.');
     } finally {
       setTeamMatchesLoading(false);
+    }
+  }, []);
+
+  const [teamDashboard, setTeamDashboard] = useState<TeamDashboardSummary | null>(null);
+  const [teamDashboardError, setTeamDashboardError] = useState<string | null>(null);
+  const [teamDashboardLoading, setTeamDashboardLoading] = useState(false);
+
+  // Igual teamMatches: carrega sob demanda só quando a tela "Painel do
+  // time" é aberta, fica em cache aqui.
+  const loadTeamDashboard = useCallback(async () => {
+    setTeamDashboardLoading(true);
+    try {
+      setTeamDashboard(await apiFetch<TeamDashboardSummary>('/team/dashboard'));
+      setTeamDashboardError(null);
+    } catch {
+      setTeamDashboardError('Falha ao carregar o painel do time.');
+    } finally {
+      setTeamDashboardLoading(false);
     }
   }, []);
 
@@ -349,6 +368,10 @@ export function useAppData(user: SessionUser | null) {
     teamMatchesError,
     teamMatchesLoading,
     loadTeamMatches,
+    teamDashboard,
+    teamDashboardError,
+    teamDashboardLoading,
+    loadTeamDashboard,
     dashboard,
     dashboardError,
     dashboardLoading,

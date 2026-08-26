@@ -3,6 +3,7 @@ import { z } from "zod";
 import { MAX_FUNCOES, MAX_MAIN_AGENTS } from "@callout/shared";
 import { requireAuth } from "../lib/session.js";
 import { buildTeamOverview, buildTeamMatches } from "../lib/team.js";
+import { buildTeamDashboard } from "../lib/teamDashboard.js";
 import { prisma } from "../lib/prisma.js";
 
 const noteBodySchema = z.object({ note: z.string().max(280) });
@@ -69,5 +70,13 @@ export async function teamRoutes(app: FastifyInstance) {
   // dias como o resumo do card do time.
   app.get("/team/matches", { preHandler: requireAuth }, async () => {
     return buildTeamMatches();
+  });
+
+  // Agregado das mesmas "partidas do time" de /team/matches — sem recorte
+  // de data, time único (sem filtro de membro-alvo como /dashboard tem).
+  app.get("/team/dashboard", { preHandler: requireAuth }, async (_request, reply) => {
+    const summary = await buildTeamDashboard();
+    if (!summary) return reply.code(404).send({ error: "Nenhum time encontrado." });
+    return summary;
   });
 }

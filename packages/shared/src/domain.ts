@@ -305,6 +305,71 @@ export interface TeamMatchSummary {
   participants: TeamMatchParticipant[];
 }
 
+// --- Painel do time (GET /team/dashboard) ---
+// Agregado sobre as mesmas partidas "do time" do histórico em grupo
+// (>=MIN_TEAM_MATCH_PLAYERS membros rastreados juntos, do mesmo lado).
+
+// Forma genérica pra qualquer ranking "nome + valor" — ACS médio,
+// assistências, MVPs, first bloods, agentes mais pickados etc. Uma forma só
+// em vez de uma interface quase idêntica pra cada métrica.
+export interface MemberStatRow {
+  userId: string;
+  name: string;
+  value: number;
+  matchesPlayed: number;
+}
+
+export interface MemberClutchRow {
+  userId: string;
+  name: string;
+  clutchesWon: number;
+  clutchesPlayed: number;
+}
+
+export interface LineupCombo {
+  comboKey: string; // userIds ordenados e concatenados — chave estável
+  memberUserIds: string[];
+  memberNames: string[];
+  missingUserId: string | null; // único membro rastreado de fora dessa formação (só quando o time tem MIN_TEAM_MATCH_PLAYERS + 1 gente linkada)
+  missingName: string | null;
+  wins: number;
+  total: number;
+  winratePercent: number;
+}
+
+export interface TeamAgentPick {
+  agent: string;
+  color: string;
+  count: number;
+}
+
+export interface TeamStandoutMatch {
+  matchId: string;
+  map: string;
+  score: string;
+  marginRounds: number;
+  playedAtLabel: string;
+}
+
+export interface TeamDashboardSummary {
+  qualifyingMatchCount: number;
+  wins: number;
+  losses: number;
+  winratePercent: number;
+  currentStreak: { type: "V" | "D" | null; count: number };
+  bestWinStreak: number;
+  mapWinrates: MapWinrate[];
+  lineupCombos: LineupCombo[];
+  acsRanking: MemberStatRow[];
+  assistRanking: MemberStatRow[];
+  mvpRanking: MemberStatRow[];
+  clutchRanking: MemberClutchRow[];
+  firstBloodRanking: MemberStatRow[];
+  mostPickedAgents: TeamAgentPick[];
+  biggestWin: TeamStandoutMatch | null;
+  closestMatch: TeamStandoutMatch | null;
+}
+
 // --- Board de estratégia ---
 
 export type StratItemKind = "agent" | "smoke" | "flash" | "molly" | "spike" | "arrow" | "line";

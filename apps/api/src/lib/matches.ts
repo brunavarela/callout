@@ -1,6 +1,7 @@
-import type { MatchDetail, MatchKill, MatchPlayerRow, MatchV4Data, RoundResult } from "@callout/shared";
+import type { MatchDetail, MatchPlayerRow, MatchV4Data, RoundResult } from "@callout/shared";
 import { prisma } from "./prisma.js";
 import { loadAgentColorsByName } from "./assets.js";
+import { replayMatchStats } from "./matchReplay.js";
 
 const WEEKDAY_LABELS = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
 
@@ -22,50 +23,6 @@ function scoreFor(match: MatchV4Data, teamId: string): { own: number; opponent: 
   const own = match.teams.find((t) => t.team_id === teamId);
   const opponent = match.teams.find((t) => t.team_id !== teamId);
   return { own: own?.rounds.won ?? 0, opponent: opponent?.rounds.won ?? 0 };
-}
-
-// Clutch: o round em que o time do jogador fica reduzido a ele sozinho,
-// com pelo menos um adversário ainda vivo. Simula as mortes do round em
-// ordem cronológica pra achar esse momento; "ganho" se o jogador segue
-// vivo no fim e o round foi ganho pelo time dele.
-function computeMyStats(match: MatchV4Data, selfPuuid: string, selfTeamId: string) {
-  const killsByRound = new Map<number, MatchKill[]>();
-  for (const kill of match.kills) {
-    const arr = killsByRound.get(kill.round) ?? [];
-    arr.push(kill);
-    killsByRound.set(kill.round, arr);
-  }
-
-  let firstBloods = 0;
-  let plants = 0;
-  let clutchesPlayed = 0;
-  let clutchesWon = 0;
-
-  for (const round of match.rounds) {
-    const kills = (killsByRound.get(round.id) ?? []).slice().sort((a, b) => a.time_in_round_in_ms - b.time_in_round_in_ms);
-
-    if (kills.length > 0 && kills[0]!.killer.puuid === selfPuuid) firstBloods++;
-    if (round.plant?.player.puuid === selfPuuid) plants++;
-
-    const selfTeamAlive = new Set(match.players.filter((p) => p.team_id === selfTeamId).map((p) => p.puuid));
-    const enemyTeamAlive = new Set(match.players.filter((p) => p.team_id !== selfTeamId).map((p) => p.puuid));
-    let inClutch = false;
-    let selfAlive = true;
-    for (const kill of kills) {
-      selfTeamAlive.delete(kill.victim.puuid);
-      enemyTeamAlive.delete(kill.victim.puuid);
-      if (kill.victim.puuid === selfPuuid) selfAlive = false;
-      if (!inClutch && selfAlive && selfTeamAlive.size === 1 && selfTeamAlive.has(selfPuuid) && enemyTeamAlive.size >= 1) {
-        inClutch = true;
-      }
-    }
-    if (inClutch) {
-      clutchesPlayed++;
-      if (selfAlive && round.winning_team === selfTeamId) clutchesWon++;
-    }
-  }
-
-  return { firstBloods, plants, clutchesPlayed, clutchesWon };
 }
 
 export async function buildMatchDetail(matchId: string, selfPuuid: string): Promise<MatchDetail | null> {
@@ -99,7 +56,10 @@ export async function buildMatchDetail(matchId: string, selfPuuid: string): Prom
   const own = match.players.filter((p) => p.teamId === selfRow.teamId).map(toRow).sort((a, b) => b.acs - a.acs);
   const opponents = match.players.filter((p) => p.teamId !== selfRow.teamId).map(toRow).sort((a, b) => b.acs - a.acs);
 
-  const extra = computeMyStats(raw, selfPuuid, selfRow.teamId);
+  const replay = replayMatchStats(raw).get(selfPuuid);
+  const extra = replay
+    ? { firstBloods: replay.firstBloods, plants: replay.plants, clutchesPlayed: replay.clutchesPlayed, clutchesWon: replay.clutchesWon }
+    : { firstBloods: 0, plants: 0, clutchesPlayed: 0, clutchesWon: 0 };
 
   return {
     id: match.id,
