@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useNavigate, useOutletContext, useParams } from 'react-router-dom';
 import { Plus, Trash2 } from 'lucide-react';
 import type { Lado, StratItem as StratItemDTO } from '@callout/shared';
@@ -220,7 +220,55 @@ export function Board() {
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const containerRef = useRef<HTMLDivElement>(null);
+  const artRef = useRef<HTMLDivElement>(null);
+  const imgRef = useRef<HTMLImageElement>(null);
   const dragId = useRef<string | null>(null);
+
+  // Retângulo (em px, relativo ao container) onde a arte do mapa é
+  // efetivamente desenhada. Com object-fit:contain a imagem some com
+  // letterbox cuja espessura depende da proporção do container — que muda
+  // de tela pra tela. Se as peças usassem % do container inteiro, a mesma
+  // posição salva cairia em pontos diferentes do mapa pra cada pessoa
+  // (o "empurrado pro lado" que o usuário via). Calculando esse retângulo
+  // e ancorando peças/formas nele, x/y% sempre correspondem ao mesmo ponto
+  // da arte do mapa, independente do tamanho de tela de quem tá vendo.
+  const [artRect, setArtRect] = useState({ left: 0, top: 0, width: 0, height: 0 });
+
+  function recomputeArtRect() {
+    const container = containerRef.current;
+    if (!container) return;
+    const cw = container.clientWidth;
+    const ch = container.clientHeight;
+    const insetX = cw * 0.12;
+    const insetY = ch * 0.07;
+    const boxW = cw - insetX * 2;
+    const boxH = ch - insetY * 2;
+    const img = imgRef.current;
+    if (strategy?.mapDisplayIcon && img && img.naturalWidth && img.naturalHeight) {
+      const imgAR = img.naturalWidth / img.naturalHeight;
+      const boxAR = boxW / boxH;
+      let renderW = boxW;
+      let renderH = boxH;
+      if (imgAR > boxAR) {
+        renderH = boxW / imgAR;
+      } else {
+        renderW = boxH * imgAR;
+      }
+      setArtRect({ left: insetX + (boxW - renderW) / 2, top: insetY + (boxH - renderH) / 2, width: renderW, height: renderH });
+    } else {
+      setArtRect({ left: insetX, top: insetY, width: boxW, height: boxH });
+    }
+  }
+
+  useLayoutEffect(() => {
+    recomputeArtRect();
+    const container = containerRef.current;
+    if (!container) return;
+    const observer = new ResizeObserver(recomputeArtRect);
+    observer.observe(container);
+    return () => observer.disconnect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [strategy?.id, strategy?.mapDisplayIcon]);
 
   // Troca de estratégia (ou primeira carga): reseta o estado local pro que
   // veio do servidor.
@@ -251,8 +299,8 @@ export function Board() {
   }
 
   function onPointerMove(e: React.PointerEvent) {
-    if (!dragId.current || !containerRef.current) return;
-    const rect = containerRef.current.getBoundingClientRect();
+    if (!dragId.current || !artRef.current) return;
+    const rect = artRef.current.getBoundingClientRect();
     const x = Math.max(3, Math.min(97, ((e.clientX - rect.left) / rect.width) * 100));
     const y = Math.max(4, Math.min(96, ((e.clientY - rect.top) / rect.height) * 100));
     const draggedId = dragId.current;
@@ -264,9 +312,9 @@ export function Board() {
   }
 
   function onCanvasPointerDown(e: React.PointerEvent) {
-    if (!containerRef.current) return;
+    if (!artRef.current) return;
     if ((e.target as HTMLElement).closest('[data-piece]')) return;
-    const rect = containerRef.current.getBoundingClientRect();
+    const rect = artRef.current.getBoundingClientRect();
     const x = Math.max(3, Math.min(97, ((e.clientX - rect.left) / rect.width) * 100));
     const y = Math.max(4, Math.min(96, ((e.clientY - rect.top) / rect.height) * 100));
     if (tool === 'agente') {
@@ -414,135 +462,134 @@ export function Board() {
               background: 'radial-gradient(circle, var(--acc10, rgba(239,73,88,.1)) 0%, transparent 70%)',
             }}
           />
-          {strategy.mapDisplayIcon ? (
-            <img
-              src={strategy.mapDisplayIcon}
-              alt={strategy.mapName}
-              style={{ position: 'absolute', top: '7%', bottom: '7%', left: '12%', right: '12%', width: '86%', height: '86%', objectFit: 'contain', pointerEvents: 'none' }}
-            />
-          ) : (
-            <MapSchematic
-              fill="var(--pos08, rgba(24,170,183,.08))"
-              preserveAspectRatio="none"
-              rounded
-              style={{ position: 'absolute', top: '7%', bottom: '7%', left: '12%', right: '12%' }}
-            />
-          )}
-          {!strategy.mapDisplayIcon && boardCallouts.map((c) => (
-            <div
-              key={c.label}
-              style={{
-                position: 'absolute',
-                left: c.x,
-                top: c.y,
-                fontSize: 10,
-                letterSpacing: '.12em',
-                color: c.label === 'HOOKAH' ? 'var(--acc, #EF4958)' : 'var(--pos, #18AAB7)',
-                pointerEvents: 'none',
-              }}
-            >
-              {c.label}
-            </div>
-          ))}
-          {!strategy.mapDisplayIcon && (
-            <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none' }}>
-              {boardArrows.map((a, i) => (
-                <line
-                  key={i}
-                  x1={a.x1}
-                  y1={a.y1}
-                  x2={a.x2}
-                  y2={a.y2}
-                  stroke="var(--acc, #EF4958)"
-                  strokeWidth={2.5}
-                  strokeDasharray="8 6"
-                  strokeLinecap="round"
-                />
-              ))}
-            </svg>
-          )}
-          <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', overflow: 'visible' }}>
-            <defs>
-              {shapes
-                .filter((s) => s.kind === 'arrow')
-                .map((s) => (
-                  <marker key={s.id} id={`arrowhead-${s.id}`} markerWidth={8} markerHeight={8} refX={6} refY={4} orient="auto">
-                    <path d="M0,0 L8,4 L0,8 Z" fill={s.color} />
-                  </marker>
-                ))}
-            </defs>
-            {shapes.map((s) => (
-              <g key={s.id}>
-                <line
-                  x1={`${s.points[0].x}%`}
-                  y1={`${s.points[0].y}%`}
-                  x2={`${s.points[1].x}%`}
-                  y2={`${s.points[1].y}%`}
-                  stroke={s.color}
-                  strokeWidth={2.5}
-                  strokeDasharray={s.kind === 'line' ? '8 6' : undefined}
-                  strokeLinecap="round"
-                  markerEnd={s.kind === 'arrow' ? `url(#arrowhead-${s.id})` : undefined}
-                />
-                <line
-                  data-piece="true"
-                  onPointerDown={eraseShape(s.id)}
-                  x1={`${s.points[0].x}%`}
-                  y1={`${s.points[0].y}%`}
-                  x2={`${s.points[1].x}%`}
-                  y2={`${s.points[1].y}%`}
-                  stroke="transparent"
-                  strokeWidth={16}
-                  style={{ pointerEvents: tool === 'borracha' ? 'stroke' : 'none', cursor: 'pointer' }}
-                />
-              </g>
-            ))}
-            {pendingPoint && <circle cx={`${pendingPoint.x}%`} cy={`${pendingPoint.y}%`} r={5} fill={SHAPE_COLOR} stroke="white" strokeWidth={1.5} />}
-          </svg>
-          {pieces.map((p) => {
-            const isAgent = p.kind === 'agent';
-            const agentName = isAgent ? AGENTS.find((a) => a.id === p.agentId)?.name : undefined;
-            const imageUrl = isAgent ? (agentName ? agentImageUrl(agentName) : null) : (KIND_IMAGE[p.kind] ?? null);
-            return (
+          <div ref={artRef} style={{ position: 'absolute', left: artRect.left, top: artRect.top, width: artRect.width, height: artRect.height }}>
+            {strategy.mapDisplayIcon ? (
+              <img
+                ref={imgRef}
+                src={strategy.mapDisplayIcon}
+                alt={strategy.mapName}
+                onLoad={recomputeArtRect}
+                style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', pointerEvents: 'none' }}
+              />
+            ) : (
+              <MapSchematic fill="var(--pos08, rgba(24,170,183,.08))" preserveAspectRatio="none" rounded style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }} />
+            )}
+            {!strategy.mapDisplayIcon && boardCallouts.map((c) => (
               <div
-                key={p.id}
-                data-piece="true"
-                onPointerDown={startDrag(p.id)}
+                key={c.label}
                 style={{
                   position: 'absolute',
-                  left: `${p.x}%`,
-                  top: `${p.y}%`,
-                  transform: 'translate(-50%,-50%)',
-                  width: isAgent ? 36 : 24,
-                  height: isAgent ? 36 : 24,
-                  borderRadius: isAgent ? 10 : '50%',
-                  overflow: isAgent ? 'hidden' : 'visible',
-                  background: isAgent ? (imageUrl ? '#141415' : p.color) : 'rgba(18,18,19,.6)',
-                  border: isAgent ? '1px solid rgba(255,255,255,.22)' : `2px solid ${p.color}`,
-                  color: isAgent ? '#141415' : p.color,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
+                  left: c.x,
+                  top: c.y,
                   fontSize: 10,
-                  fontWeight: 600,
-                  cursor: 'grab',
-                  userSelect: 'none',
-                  boxShadow: isAgent ? '0 8px 18px rgba(0,0,0,.5)' : 'none',
+                  letterSpacing: '.12em',
+                  color: c.label === 'HOOKAH' ? 'var(--acc, #EF4958)' : 'var(--pos, #18AAB7)',
+                  pointerEvents: 'none',
                 }}
               >
-                {imageUrl ? (
-                  <img
-                    src={imageUrl}
-                    alt=""
-                    draggable={false}
-                    style={{ width: isAgent ? '100%' : '68%', height: isAgent ? '100%' : '68%', objectFit: isAgent ? 'cover' : 'contain' }}
-                  />
-                ) : (
-                  p.label
-                )}
+                {c.label}
               </div>
-            );
-          })}
+            ))}
+            {!strategy.mapDisplayIcon && (
+              <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none' }}>
+                {boardArrows.map((a, i) => (
+                  <line
+                    key={i}
+                    x1={a.x1}
+                    y1={a.y1}
+                    x2={a.x2}
+                    y2={a.y2}
+                    stroke="var(--acc, #EF4958)"
+                    strokeWidth={2.5}
+                    strokeDasharray="8 6"
+                    strokeLinecap="round"
+                  />
+                ))}
+              </svg>
+            )}
+            <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', overflow: 'visible' }}>
+              <defs>
+                {shapes
+                  .filter((s) => s.kind === 'arrow')
+                  .map((s) => (
+                    <marker key={s.id} id={`arrowhead-${s.id}`} markerWidth={8} markerHeight={8} refX={6} refY={4} orient="auto">
+                      <path d="M0,0 L8,4 L0,8 Z" fill={s.color} />
+                    </marker>
+                  ))}
+              </defs>
+              {shapes.map((s) => (
+                <g key={s.id}>
+                  <line
+                    x1={`${s.points[0].x}%`}
+                    y1={`${s.points[0].y}%`}
+                    x2={`${s.points[1].x}%`}
+                    y2={`${s.points[1].y}%`}
+                    stroke={s.color}
+                    strokeWidth={2.5}
+                    strokeDasharray={s.kind === 'line' ? '8 6' : undefined}
+                    strokeLinecap="round"
+                    markerEnd={s.kind === 'arrow' ? `url(#arrowhead-${s.id})` : undefined}
+                  />
+                  <line
+                    data-piece="true"
+                    onPointerDown={eraseShape(s.id)}
+                    x1={`${s.points[0].x}%`}
+                    y1={`${s.points[0].y}%`}
+                    x2={`${s.points[1].x}%`}
+                    y2={`${s.points[1].y}%`}
+                    stroke="transparent"
+                    strokeWidth={16}
+                    style={{ pointerEvents: tool === 'borracha' ? 'stroke' : 'none', cursor: 'pointer' }}
+                  />
+                </g>
+              ))}
+              {pendingPoint && <circle cx={`${pendingPoint.x}%`} cy={`${pendingPoint.y}%`} r={5} fill={SHAPE_COLOR} stroke="white" strokeWidth={1.5} />}
+            </svg>
+            {pieces.map((p) => {
+              const isAgent = p.kind === 'agent';
+              const agentName = isAgent ? AGENTS.find((a) => a.id === p.agentId)?.name : undefined;
+              const imageUrl = isAgent ? (agentName ? agentImageUrl(agentName) : null) : (KIND_IMAGE[p.kind] ?? null);
+              return (
+                <div
+                  key={p.id}
+                  data-piece="true"
+                  onPointerDown={startDrag(p.id)}
+                  style={{
+                    position: 'absolute',
+                    left: `${p.x}%`,
+                    top: `${p.y}%`,
+                    transform: 'translate(-50%,-50%)',
+                    width: isAgent ? 36 : 24,
+                    height: isAgent ? 36 : 24,
+                    borderRadius: isAgent ? 10 : '50%',
+                    overflow: isAgent ? 'hidden' : 'visible',
+                    background: isAgent ? (imageUrl ? '#141415' : p.color) : 'rgba(18,18,19,.6)',
+                    border: isAgent ? '1px solid rgba(255,255,255,.22)' : `2px solid ${p.color}`,
+                    color: isAgent ? '#141415' : p.color,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: 10,
+                    fontWeight: 600,
+                    cursor: 'grab',
+                    userSelect: 'none',
+                    boxShadow: isAgent ? '0 8px 18px rgba(0,0,0,.5)' : 'none',
+                  }}
+                >
+                  {imageUrl ? (
+                    <img
+                      src={imageUrl}
+                      alt=""
+                      draggable={false}
+                      style={{ width: isAgent ? '100%' : '68%', height: isAgent ? '100%' : '68%', objectFit: isAgent ? 'cover' : 'contain' }}
+                    />
+                  ) : (
+                    p.label
+                  )}
+                </div>
+              );
+            })}
+          </div>
         </div>
 
         <button
