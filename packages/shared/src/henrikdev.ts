@@ -45,7 +45,9 @@ export const accountV2ResponseSchema = z.object({
 });
 export type AccountV2Response = z.infer<typeof accountV2ResponseSchema>;
 
-// --- MMR (GET /valorant/v2/by-puuid/mmr/{affinity}/{platform}/{puuid} e -history) ---
+// --- MMR (GET /valorant/v2/by-puuid/mmr/{affinity}/{puuid} — sem plataforma;
+// -history usa /valorant/v2/by-puuid/mmr-history/{affinity}/{platform}/{puuid},
+// essa sim com plataforma — inconsistência da própria API da HenrikDev) ---
 
 const mmrImagesSchema = z.object({
   small: z.string(),

@@ -680,9 +680,11 @@ export function Dashboard() {
                   padding: '5px 11px',
                 }}
               >
-                {/* espaço reservado pro ícone do elo — ainda não temos o
-                    conjunto de ícones por elo/divisão da Riot */}
-                <span style={{ width: 16, height: 16, borderRadius: 4, background: 'var(--avatar-bg)', flex: 'none' }} />
+                {data.rank.iconUrl ? (
+                  <img src={data.rank.iconUrl} alt="" style={{ width: 16, height: 16, flex: 'none', objectFit: 'contain' }} />
+                ) : (
+                  <span style={{ width: 16, height: 16, borderRadius: 4, background: 'var(--avatar-bg)', flex: 'none' }} />
+                )}
                 {data.rank.current} · {data.rank.rr} RR
                 {data.rank.rrDelta7d !== 0 && (
                   <span style={{ color: data.rank.rrDelta7d > 0 ? 'var(--pos, #18AAB7)' : 'var(--text-muted-2)' }}> {fmtDelta(data.rank.rrDelta7d, 0)}</span>

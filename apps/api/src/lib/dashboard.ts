@@ -174,7 +174,7 @@ export async function buildDashboardSummary(
   // o histórico só era buscado dentro do try do getMmr, então uma conta sem
   // rank exposto (região errada, MMR oculto) também ficava sem RR por
   // partida na tabela, mesmo quando o histórico funcionava sozinho.
-  let rank: DashboardSummary["rank"] = { current: "—", rr: 0, rrDelta7d: 0 };
+  let rank: DashboardSummary["rank"] = { current: "—", rr: 0, rrDelta7d: 0, iconUrl: null };
   let rrByMatch = new Map<string, number>();
   try {
     const sevenDaysAgo = new Date(now.getTime() - 7 * 86_400_000);
@@ -188,6 +188,7 @@ export async function buildDashboardSummary(
     const mmr = await getMmr(region, puuid);
     rank.current = mmr.current_data.currenttierpatched;
     rank.rr = mmr.current_data.ranking_in_tier;
+    rank.iconUrl = mmr.current_data.images.small;
   } catch {
     // sem MMR disponível (conta nova, região errada, API fora) — mantém o placeholder
   }

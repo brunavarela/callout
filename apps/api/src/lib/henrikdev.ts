@@ -56,8 +56,12 @@ export async function getMatchDetails(affinity: string, matchId: string): Promis
   return matchDetailsV4ResponseSchema.parse(json).data;
 }
 
+// Sem segmento de plataforma — diferente de mmr-history logo abaixo, essa
+// rota 404 ("Route not found") se mandar /pc/ no meio (testado direto na API
+// em 2026-08-26; a doc do schema em packages/shared ainda cita o formato com
+// plataforma, mas não é o que a API realmente aceita hoje).
 export async function getMmr(affinity: string, puuid: string): Promise<MmrV2Data> {
-  const json = await henrikFetch(`/valorant/v2/by-puuid/mmr/${affinity}/pc/${puuid}`);
+  const json = await henrikFetch(`/valorant/v2/by-puuid/mmr/${affinity}/${puuid}`);
   return mmrV2ResponseSchema.parse(json).data;
 }
 
