@@ -64,6 +64,13 @@ export async function buildTeamDashboard(): Promise<TeamDashboardSummary | null>
   const nameByUserId = new Map(team.members.map((m) => [m.userId, m.user.riotName ?? m.user.discordUsername]));
   const puuids = [...memberByPuuid.keys()];
 
+  // Sem `include: { match: true }` — puxaria o rawJson da partida (~400KB
+  // em média) uma vez por jogador rastreado nela, não uma vez por partida.
+  // Sem recorte de data (histórico é tudo, igual buildTeamMatches), isso é
+  // exatamente o padrão que estourou a memória em produção. Busca os campos
+  // do jogador + só o `modo` do match primeiro, decide quais partidas
+  // qualificam, e só então busca o rawJson dessas partidas — uma vez cada.
+  //
   // Só Competitivo/Sem classificação/Premier — os rankings (ACS, MVP etc.)
   // não podem ser contaminados por Deathmatch (ACS não é comparável, não
   // tem round pra ganhar/perder) ou outros modos fora desse conjunto,
@@ -71,8 +78,16 @@ export async function buildTeamDashboard(): Promise<TeamDashboardSummary | null>
   const rows = (
     await prisma.matchPlayer.findMany({
       where: { puuid: { in: puuids } },
-      include: { match: true },
-      orderBy: { match: { startedAt: "asc" } },
+      select: {
+        matchId: true,
+        puuid: true,
+        teamId: true,
+        won: true,
+        agentName: true,
+        acs: true,
+        assists: true,
+        match: { select: { modo: true } },
+      },
     })
   ).filter((r) => countsTowardStats(r.match.modo));
 
@@ -82,15 +97,25 @@ export async function buildTeamDashboard(): Promise<TeamDashboardSummary | null>
     list.push(r);
     byMatch.set(r.matchId, list);
   }
-  const qualifying = [...byMatch.values()].filter(
+  const qualifyingLists = [...byMatch.values()].filter(
     (list) => list.length >= MIN_TEAM_MATCH_PLAYERS && new Set(list.map((r) => r.teamId)).size === 1,
   );
-  if (qualifying.length === 0) return EMPTY_SUMMARY;
+  if (qualifyingLists.length === 0) return EMPTY_SUMMARY;
+
+  const matches = await prisma.match.findMany({
+    where: { id: { in: qualifyingLists.map((list) => list[0]!.matchId) } },
+    orderBy: { startedAt: "asc" },
+  });
+  const matchById = new Map(matches.map((m) => [m.id, m]));
+  const qualifying = qualifyingLists
+    .map((list) => ({ match: matchById.get(list[0]!.matchId), list }))
+    .filter((x): x is { match: (typeof matches)[number]; list: typeof rows } => x.match !== undefined)
+    .sort((a, b) => a.match.startedAt.getTime() - b.match.startedAt.getTime());
 
   const now = new Date();
-  const wins = qualifying.filter((list) => list[0]!.won).length;
+  const wins = qualifying.filter(({ list }) => list[0]!.won).length;
   const losses = qualifying.length - wins;
-  const { current, bestWinStreak } = computeStreaks(qualifying.map((list) => list[0]!.won));
+  const { current, bestWinStreak } = computeStreaks(qualifying.map(({ list }) => list[0]!.won));
 
   const byMap = new Map<string, { mapId: string | null; wins: number; total: number }>();
   const byCombo = new Map<string, { memberUserIds: string[]; wins: number; total: number }>();
@@ -114,8 +139,7 @@ export async function buildTeamDashboard(): Promise<TeamDashboardSummary | null>
   const missingFor = (comboUserIds: string[]): string | null =>
     trackedMembers.length === MIN_TEAM_MATCH_PLAYERS + 1 ? (trackedUserIds.find((id) => !comboUserIds.includes(id)) ?? null) : null;
 
-  for (const list of qualifying) {
-    const match = list[0]!.match;
+  for (const { match, list } of qualifying) {
     const raw = match.rawJson as unknown as MatchV4Data;
     const map = mapNameFrom(match.rawJson);
     const score = scoreFor(match.rawJson, list[0]!.teamId);
