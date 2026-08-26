@@ -60,11 +60,25 @@ export async function buildTeamOverview(): Promise<TeamOverview | null> {
   // Só Competitivo/Sem classificação/Premier entram nas estatísticas do
   // card do time (ver countsTowardStats) — mais simples excluir o resto
   // de tudo (kda/acs/winrate por membro, partidas juntos) do que só do ACS.
+  //
+  // `select` só o `modo` do match (não `include: { match: true }`) —
+  // essa rota roda em todo login/carga do app, e o rawJson de cada partida
+  // chega a ~400KB; puxar ele aqui pra só ler `modo` é o tipo de coisa que
+  // estourou a memória em produção (ver buildTeamMatches).
   const rows = puuids.length
     ? (
         await prisma.matchPlayer.findMany({
           where: { puuid: { in: puuids }, match: { startedAt: { gte: windowStart } } },
-          include: { match: true },
+          select: {
+            puuid: true,
+            matchId: true,
+            won: true,
+            kills: true,
+            deaths: true,
+            assists: true,
+            acs: true,
+            match: { select: { modo: true } },
+          },
         })
       ).filter((r) => countsTowardStats(r.match.modo))
     : [];
@@ -148,10 +162,28 @@ export async function buildTeamMatches(): Promise<TeamMatchSummary[]> {
   const memberByPuuid = new Map(trackedMembers.map((m) => [m.user.riotPuuid as string, m]));
   const puuids = [...memberByPuuid.keys()];
 
+  // Sem `include: { match: true }` aqui de propósito — isso puxaria o
+  // rawJson da partida (~400KB em média) uma vez POR JOGADOR rastreado
+  // nela, não uma vez por partida. Com histórico completo (sem recorte de
+  // data) e vários jogos em grupo, isso já estourou a memória em produção.
+  // Busca só os campos do jogador primeiro, decide quais partidas
+  // qualificam, e só então busca o rawJson dessas partidas — uma vez cada.
   const rows = await prisma.matchPlayer.findMany({
     where: { puuid: { in: puuids } },
-    include: { match: true },
-    orderBy: { match: { startedAt: "desc" } },
+    select: {
+      matchId: true,
+      puuid: true,
+      teamId: true,
+      won: true,
+      agentName: true,
+      acs: true,
+      kills: true,
+      deaths: true,
+      assists: true,
+      headshots: true,
+      bodyshots: true,
+      legshots: true,
+    },
   });
 
   const byMatch = new Map<string, typeof rows>();
@@ -160,8 +192,15 @@ export async function buildTeamMatches(): Promise<TeamMatchSummary[]> {
     list.push(r);
     byMatch.set(r.matchId, list);
   }
-  const qualifying = [...byMatch.values()].filter((list) => new Set(list.map((r) => r.puuid)).size >= MIN_TEAM_MATCH_PLAYERS);
-  if (qualifying.length === 0) return [];
+  const qualifyingLists = [...byMatch.values()].filter((list) => new Set(list.map((r) => r.puuid)).size >= MIN_TEAM_MATCH_PLAYERS);
+  if (qualifyingLists.length === 0) return [];
+
+  const matches = await prisma.match.findMany({ where: { id: { in: qualifyingLists.map((list) => list[0]!.matchId) } } });
+  const matchById = new Map(matches.map((m) => [m.id, m]));
+  const qualifying = qualifyingLists
+    .map((list) => ({ match: matchById.get(list[0]!.matchId), list }))
+    .filter((x): x is { match: (typeof matches)[number]; list: typeof rows } => x.match !== undefined)
+    .sort((a, b) => b.match.startedAt.getTime() - a.match.startedAt.getTime());
 
   // RR: uma chamada por jogador (não por partida) — reaproveita pra todas
   // as partidas dele, igual buildDashboardSummary faz pro usuário logado.
@@ -180,8 +219,7 @@ export async function buildTeamMatches(): Promise<TeamMatchSummary[]> {
   );
 
   const now = new Date();
-  return qualifying.map((list): TeamMatchSummary => {
-    const match = list[0]!.match;
+  return qualifying.map(({ match, list }): TeamMatchSummary => {
     const score = scoreFor(match.rawJson, list[0]!.teamId);
     const maxAcs = Math.max(...list.map((r) => r.acs));
 
