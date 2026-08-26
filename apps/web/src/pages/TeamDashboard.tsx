@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useNavigate, useOutletContext } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
-import { MIN_TEAM_MATCH_PLAYERS } from '@callout/shared';
+import { MIN_TEAM_MATCH_PLAYERS, type LineupCombo } from '@callout/shared';
 import type { OutletContext } from '../components/AppShell';
 import { LoadingFill } from '../components/Spinner';
 import { cardStyle, WIN, LOSS, rateBarColor, plural, RateBlock, RankingBlock, type RankingRow } from '../components/statsPrimitives';
@@ -18,6 +18,45 @@ function KpiTile({ label, value, sub }: { label: string; value: string; sub: str
   );
 }
 
+function comboLabel(c: Pick<LineupCombo, 'missingName' | 'memberNames'>): string {
+  return c.missingName ? `Sem ${c.missingName}` : c.memberNames.map((n) => n.split(' ')[0]).join(', ');
+}
+
+// Lista neutra — de propósito NÃO ordena por winrate nem chama nenhuma
+// formação de "melhor". "5 de 6" quase sempre significa que alguém ficou de
+// fora; transformar isso num ranking soa como "o time rende mais sem
+// Fulano", o que não é a ideia. Ordenado por quantas vezes cada formação
+// jogou, só descrevendo o que aconteceu.
+function LineupVariations({ combos }: { combos: LineupCombo[] }) {
+  return (
+    <div style={{ ...cardStyle, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 11 }}>
+      <div>
+        <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 15 }}>Variações de time</div>
+        <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 3 }}>Formações de 5 jogadores diferentes nas partidas do time</div>
+      </div>
+      {combos.length === 0 ? (
+        <div style={{ fontSize: 12.5, color: 'var(--text-faint)' }}>Sem dados ainda.</div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {combos.map((c) => (
+            <div key={c.comboKey} style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}>
+                <span style={{ fontSize: 13, color: 'var(--text-3)' }}>{comboLabel(c)}</span>
+                <span style={{ fontSize: 11, color: 'var(--text-faint)', whiteSpace: 'nowrap' }}>{plural(c.total, 'partida')}</span>
+              </div>
+              <div style={{ display: 'flex', gap: 12, fontSize: 12 }}>
+                <span style={{ color: WIN, fontWeight: 600 }}>{c.wins}V</span>
+                <span style={{ color: LOSS, fontWeight: 600 }}>{c.losses}D</span>
+                {c.overtimeCount > 0 && <span style={{ color: 'var(--text-muted)' }}>{plural(c.overtimeCount, 'overtime')}</span>}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function TeamDashboard() {
   const navigate = useNavigate();
   const { team, teamDashboard: data, teamDashboardError: error, teamDashboardLoading: loading, loadTeamDashboard } = useOutletContext<OutletContext>();
@@ -27,9 +66,6 @@ export function TeamDashboard() {
   }, [data, loading, loadTeamDashboard]);
 
   const bestMap = data?.mapWinrates.find((m) => m.total >= 3) ?? null;
-  const bestCombo = data?.lineupCombos.find((c) => c.total >= 3) ?? null;
-  const comboLabel = (missingName: string | null, memberNames: string[]) =>
-    missingName ? `Sem ${missingName}` : memberNames.map((n) => n.split(' ')[0]).join(', ');
 
   const acsRows: RankingRow[] = (data?.acsRanking ?? []).map((r) => ({ key: r.userId, name: r.name, value: String(r.value), caption: `(${plural(r.matchesPlayed, 'partida')})` }));
   const mvpRows: RankingRow[] = (data?.mvpRanking ?? []).map((r) => ({ key: r.userId, name: r.name, value: plural(r.value, 'vez') }));
@@ -94,11 +130,6 @@ export function TeamDashboard() {
               sub={bestMap ? `${bestMap.winratePercent}% em ${plural(bestMap.total, 'partida')}.` : 'Ainda sem amostra suficiente.'}
             />
             <KpiTile
-              label="Melhor combinação"
-              value={bestCombo ? comboLabel(bestCombo.missingName, bestCombo.memberNames) : '—'}
-              sub={bestCombo ? `${bestCombo.winratePercent}% em ${plural(bestCombo.total, 'partida')}.` : 'Ainda sem amostra suficiente.'}
-            />
-            <KpiTile
               label="Sequência atual"
               value={data.currentStreak.type ? plural(data.currentStreak.count, data.currentStreak.type === 'V' ? 'vitória' : 'derrota') : '—'}
               sub={`Melhor sequência: ${plural(data.bestWinStreak, 'vitória')} seguidas.`}
@@ -107,12 +138,7 @@ export function TeamDashboard() {
 
           <div className="grid-responsive-2">
             <RateBlock title="Em quais mapas o time ganha" sub="% de partidas vencidas em cada mapa" rows={data.mapWinrates.map((m) => ({ key: m.map, name: m.map, wins: m.wins, total: m.total }))} colorFor={rateBarColor} />
-            <RateBlock
-              title="Melhor combinação de time"
-              sub="% de vitórias por formação de 5 jogadores"
-              rows={data.lineupCombos.map((c) => ({ key: c.comboKey, name: comboLabel(c.missingName, c.memberNames), wins: c.wins, total: c.total }))}
-              colorFor={rateBarColor}
-            />
+            <LineupVariations combos={data.lineupCombos} />
           </div>
 
           <div className="grid-responsive-2">

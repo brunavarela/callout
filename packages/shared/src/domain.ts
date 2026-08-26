@@ -333,6 +333,8 @@ export interface LineupCombo {
   missingUserId: string | null; // único membro rastreado de fora dessa formação (só quando o time tem MIN_TEAM_MATCH_PLAYERS + 1 gente linkada)
   missingName: string | null;
   wins: number;
+  losses: number;
+  overtimeCount: number;
   total: number;
   winratePercent: number;
 }

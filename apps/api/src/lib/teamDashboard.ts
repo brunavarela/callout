@@ -118,7 +118,7 @@ export async function buildTeamDashboard(): Promise<TeamDashboardSummary | null>
   const { current, bestWinStreak } = computeStreaks(qualifying.map(({ list }) => list[0]!.won));
 
   const byMap = new Map<string, { mapId: string | null; wins: number; total: number }>();
-  const byCombo = new Map<string, { memberUserIds: string[]; wins: number; total: number }>();
+  const byCombo = new Map<string, { memberUserIds: string[]; wins: number; overtime: number; total: number }>();
   const acsAgg = new Map<string, { sum: number; count: number }>();
   const assistAgg = new Map<string, { sum: number; count: number }>();
   const mvpAgg = new Map<string, number>();
@@ -152,9 +152,12 @@ export async function buildTeamDashboard(): Promise<TeamDashboardSummary | null>
 
     const comboUserIds = [...list.map((r) => memberByPuuid.get(r.puuid)!.userId)].sort();
     const comboKey = comboUserIds.join(",");
-    const cEntry = byCombo.get(comboKey) ?? { memberUserIds: comboUserIds, wins: 0, total: 0 };
+    const cEntry = byCombo.get(comboKey) ?? { memberUserIds: comboUserIds, wins: 0, overtime: 0, total: 0 };
     cEntry.total++;
     if (list[0]!.won) cEntry.wins++;
+    // Overtime: rounds além dos 24 de regulação (12 de cada lado) — mesmo
+    // corte que insights.ts usa pro ataque/defesa por overtime.
+    if (raw.rounds.length > 24) cEntry.overtime++;
     byCombo.set(comboKey, cEntry);
 
     const maxAcs = Math.max(...list.map((r) => r.acs));
@@ -208,6 +211,9 @@ export async function buildTeamDashboard(): Promise<TeamDashboardSummary | null>
     .map(([map, s]) => ({ map, mapId: s.mapId, winratePercent: s.total ? round0((s.wins / s.total) * 100) : 0, wins: s.wins, total: s.total }))
     .sort((a, b) => b.winratePercent - a.winratePercent);
 
+  // Ordenado por quantas vezes essa formação jogou, não por winrate —
+  // "variações de time" é sobre o que aconteceu, não um ranking de qual
+  // formação é "melhor" (isso soa mal apontando pra quem ficou de fora).
   const lineupCombos = [...byCombo.entries()]
     .map(([comboKey, s]) => {
       const missingUserId = missingFor(s.memberUserIds);
@@ -218,11 +224,13 @@ export async function buildTeamDashboard(): Promise<TeamDashboardSummary | null>
         missingUserId,
         missingName: missingUserId ? (nameByUserId.get(missingUserId) ?? null) : null,
         wins: s.wins,
+        losses: s.total - s.wins,
+        overtimeCount: s.overtime,
         total: s.total,
         winratePercent: s.total ? round0((s.wins / s.total) * 100) : 0,
       };
     })
-    .sort((a, b) => b.winratePercent - a.winratePercent);
+    .sort((a, b) => b.total - a.total);
 
   const acsRanking = [...acsAgg.entries()]
     .map(([userId, s]) => ({ userId, name: nameByUserId.get(userId) ?? "?", value: round0(s.sum / s.count), matchesPlayed: s.count }))
