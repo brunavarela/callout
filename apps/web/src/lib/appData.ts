@@ -20,19 +20,20 @@ import type {
 } from '@callout/shared';
 import { apiFetch } from './api';
 
-// Querystring comum aos 3 endpoints de /dashboard*: filtro de modo +, quando
-// alguém troca o filtro "ver painel de outro membro", o userId do membro
-// selecionado (ausente = o próprio usuário logado).
-function dashboardQuery(modo: MatchModeFilter, memberId: string | null, extra?: Record<string, string>): string {
+// Querystring comum aos 3 endpoints de /dashboard*: filtro de modo + mapa +,
+// quando alguém troca o filtro "ver painel de outro membro", o userId do
+// membro selecionado (ausente = o próprio usuário logado).
+function dashboardQuery(modo: MatchModeFilter, memberId: string | null, mapId: string | null, extra?: Record<string, string>): string {
   const params = new URLSearchParams(extra);
   if (modo !== 'all') params.set('modo', modo);
   if (memberId) params.set('userId', memberId);
+  if (mapId) params.set('mapId', mapId);
   const qs = params.toString();
   return qs ? `?${qs}` : '';
 }
 
-function rrCacheKey(modo: MatchModeFilter, matchCount: MatchCountFilter, memberId: string | null): string {
-  return `${modo}:${matchCount}:${memberId ?? 'self'}`;
+function rrCacheKey(modo: MatchModeFilter, matchCount: MatchCountFilter, memberId: string | null, mapId: string | null): string {
+  return `${modo}:${matchCount}:${memberId ?? 'self'}:${mapId ?? 'all-maps'}`;
 }
 
 // Estado do dashboard/time vive aqui, não dentro das páginas — assim ele
@@ -59,6 +60,10 @@ export function useAppData(user: SessionUser | null) {
   // Filtro "ver painel de outro membro" — null = o próprio usuário logado.
   const [selectedMemberId, setSelectedMemberIdState] = useState<string | null>(null);
 
+  // Filtro de mapa — null = todos os mapas. É o mapId (MapAsset), não o nome,
+  // pra bater direto com a coluna Match.mapId no filtro do backend.
+  const [mapFilter, setMapFilterState] = useState<string | null>(null);
+
   const wasSyncing = useRef(false);
 
   const loadTeam = useCallback(async () => {
@@ -70,10 +75,10 @@ export function useAppData(user: SessionUser | null) {
     }
   }, []);
 
-  const loadDashboard = useCallback(async (modo: MatchModeFilter, memberId: string | null) => {
+  const loadDashboard = useCallback(async (modo: MatchModeFilter, memberId: string | null, mapId: string | null) => {
     setDashboardLoading(true);
     try {
-      setDashboard(await apiFetch<DashboardSummary>(`/dashboard${dashboardQuery(modo, memberId)}`));
+      setDashboard(await apiFetch<DashboardSummary>(`/dashboard${dashboardQuery(modo, memberId, mapId)}`));
       setDashboardError(null);
     } catch {
       setDashboardError('Falha ao carregar o dashboard.');
@@ -82,9 +87,9 @@ export function useAppData(user: SessionUser | null) {
     }
   }, []);
 
-  const loadSides = useCallback(async (modo: MatchModeFilter, memberId: string | null) => {
+  const loadSides = useCallback(async (modo: MatchModeFilter, memberId: string | null, mapId: string | null) => {
     try {
-      setSides(await apiFetch<SidesBreakdown>(`/dashboard/sides${dashboardQuery(modo, memberId)}`));
+      setSides(await apiFetch<SidesBreakdown>(`/dashboard/sides${dashboardQuery(modo, memberId, mapId)}`));
     } catch {
       // widget secundário — falha aqui não precisa de estado de erro próprio
     }
@@ -93,11 +98,11 @@ export function useAppData(user: SessionUser | null) {
   // RR e os tópicos de análise vêm juntos de /dashboard/rr-history, numa
   // fetch separada de /dashboard — trocar só a janela de partidas (7/20)
   // não deve recarregar o resto da página, só esse card.
-  const loadRrHistory = useCallback(async (modo: MatchModeFilter, matchCount: MatchCountFilter, memberId: string | null) => {
+  const loadRrHistory = useCallback(async (modo: MatchModeFilter, matchCount: MatchCountFilter, memberId: string | null, mapId: string | null) => {
     setRrHistoryLoading(true);
     try {
-      const response = await apiFetch<RrHistoryResponse>(`/dashboard/rr-history${dashboardQuery(modo, memberId, { matches: String(matchCount) })}`);
-      setRrHistoryCache((prev) => ({ ...prev, [rrCacheKey(modo, matchCount, memberId)]: response }));
+      const response = await apiFetch<RrHistoryResponse>(`/dashboard/rr-history${dashboardQuery(modo, memberId, mapId, { matches: String(matchCount) })}`);
+      setRrHistoryCache((prev) => ({ ...prev, [rrCacheKey(modo, matchCount, memberId, mapId)]: response }));
     } catch {
       // idem — o card mostra "sem histórico" se não tiver nada em cache
     } finally {
@@ -113,8 +118,16 @@ export function useAppData(user: SessionUser | null) {
     setMatchCountFilterState(count);
   }, []);
 
+  // Trocar de membro reseta o filtro de mapa — a lista de mapas filtráveis
+  // vem dos mapas que ESSA pessoa jogou (mapWinrates dela), então um mapa
+  // selecionado pode nem existir mais na lista de quem você acabou de trocar.
   const setSelectedMemberId = useCallback((memberId: string | null) => {
     setSelectedMemberIdState(memberId);
+    setMapFilterState(null);
+  }, []);
+
+  const setMapFilter = useCallback((mapId: string | null) => {
+    setMapFilterState(mapId);
   }, []);
 
   const updateTeamMemberNote = useCallback((userId: string, note: string) => {
@@ -260,25 +273,25 @@ export function useAppData(user: SessionUser | null) {
   }, [riotId]);
 
   // Recarrega dashboard/sides na carga inicial e sempre que o filtro de modo
-  // (competitivo/sem classificação) ou o membro selecionado mudar — os dois
-  // dependem deles, mas não da janela de partidas do RR (isso é só o card de
-  // RR, efeito abaixo).
+  // (competitivo/sem classificação), o membro ou o mapa selecionado mudar —
+  // os três dependem deles, mas não da janela de partidas do RR (isso é só
+  // o card de RR, efeito abaixo).
   useEffect(() => {
     if (!riotId) return;
-    loadDashboard(modoFilter, selectedMemberId);
-    loadSides(modoFilter, selectedMemberId);
+    loadDashboard(modoFilter, selectedMemberId, mapFilter);
+    loadSides(modoFilter, selectedMemberId, mapFilter);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [riotId, modoFilter, selectedMemberId]);
+  }, [riotId, modoFilter, selectedMemberId, mapFilter]);
 
-  // RR + tópicos de análise: além do modo e do membro, dependem da janela de
-  // partidas (7/20). Efeito separado do de cima de propósito — trocar só
-  // essa janela não pode disparar o loading do resto da página
+  // RR + tópicos de análise: além do modo, do membro e do mapa, dependem da
+  // janela de partidas (7/20). Efeito separado do de cima de propósito —
+  // trocar só essa janela não pode disparar o loading do resto da página
   // (dashboardLoading).
   useEffect(() => {
     if (!riotId) return;
-    loadRrHistory(modoFilter, matchCountFilter, selectedMemberId);
+    loadRrHistory(modoFilter, matchCountFilter, selectedMemberId, mapFilter);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [riotId, modoFilter, matchCountFilter, selectedMemberId]);
+  }, [riotId, modoFilter, matchCountFilter, selectedMemberId, mapFilter]);
 
   // Poll enquanto a sincronização está rolando.
   useEffect(() => {
@@ -301,10 +314,10 @@ export function useAppData(user: SessionUser | null) {
     }
     if (wasSyncing.current && sync?.state === 'idle') {
       wasSyncing.current = false;
-      loadDashboard(modoFilter, selectedMemberId);
-      loadSides(modoFilter, selectedMemberId);
+      loadDashboard(modoFilter, selectedMemberId, mapFilter);
+      loadSides(modoFilter, selectedMemberId, mapFilter);
       loadTeam();
-      loadRrHistory(modoFilter, matchCountFilter, selectedMemberId);
+      loadRrHistory(modoFilter, matchCountFilter, selectedMemberId, mapFilter);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sync?.state]);
@@ -317,9 +330,12 @@ export function useAppData(user: SessionUser | null) {
     }
   }, []);
 
-  const reloadDashboard = useCallback(() => loadDashboard(modoFilter, selectedMemberId), [loadDashboard, modoFilter, selectedMemberId]);
+  const reloadDashboard = useCallback(
+    () => loadDashboard(modoFilter, selectedMemberId, mapFilter),
+    [loadDashboard, modoFilter, selectedMemberId, mapFilter],
+  );
 
-  const rrCached = rrHistoryCache[rrCacheKey(modoFilter, matchCountFilter, selectedMemberId)];
+  const rrCached = rrHistoryCache[rrCacheKey(modoFilter, matchCountFilter, selectedMemberId, mapFilter)];
 
   return {
     sync,
@@ -343,6 +359,8 @@ export function useAppData(user: SessionUser | null) {
     setMatchCountFilter,
     selectedMemberId,
     setSelectedMemberId,
+    mapFilter,
+    setMapFilter,
     sides,
     rrHistory: rrCached?.points ?? [],
     formInsights: rrCached?.formInsights ?? null,

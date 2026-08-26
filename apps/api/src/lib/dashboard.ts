@@ -79,12 +79,20 @@ export async function buildDashboardSummary(
   puuid: string,
   region: string,
   modoFilter?: "Competitive" | "Unrated",
+  mapIdFilter?: string,
 ): Promise<DashboardSummary> {
+  // Busca só filtrada por modo — de propósito não filtra por mapa aqui.
+  // `mapWinrates` (mais abaixo) precisa do conjunto completo de mapas mesmo
+  // com um mapa selecionado no filtro (é o card que mostra o panorama de
+  // todos os mapas, não muda com o filtro); tudo o mais que usa `rows`
+  // aplica o filtro de mapa em cima desse resultado, sem bater no banco de
+  // novo.
   const rows = await prisma.matchPlayer.findMany({
     where: { puuid, ...(modoFilter ? { match: { modo: modoFilter } } : {}) },
     include: { match: true },
     orderBy: { match: { startedAt: "desc" } },
   });
+  const filteredRows = mapIdFilter ? rows.filter((r) => r.match.mapId === mapIdFilter) : rows;
 
   const now = new Date();
   const windowStart = new Date(now.getTime() - 30 * 86_400_000);
@@ -92,11 +100,14 @@ export async function buildDashboardSummary(
 
   // Só Competitivo/Sem classificação/Premier entram nas médias/KPIs (ver
   // countsTowardStats) — continuam aparecendo em recentMatches/
-  // last14Results (que usam `rows`, não `statRows`), só não contam pra
-  // nenhum número agregado.
+  // last14Results (que usam `filteredRows`, não `statRows`), só não contam
+  // pra nenhum número agregado.
   const statRows = rows.filter((r) => countsTowardStats(r.match.modo));
-  const current = statRows.filter((r) => r.match.startedAt >= windowStart);
-  const previous = statRows.filter((r) => r.match.startedAt >= prevWindowStart && r.match.startedAt < windowStart);
+  const mapStatRows = mapIdFilter ? statRows.filter((r) => r.match.mapId === mapIdFilter) : statRows;
+  const current = mapStatRows.filter((r) => r.match.startedAt >= windowStart);
+  const previous = mapStatRows.filter((r) => r.match.startedAt >= prevWindowStart && r.match.startedAt < windowStart);
+  // Sem o filtro de mapa em cima — só pro card "em quais mapas você ganha".
+  const allMapsCurrent = statRows.filter((r) => r.match.startedAt >= windowStart);
 
   const c = aggregate(current);
   const p = aggregate(previous);
@@ -139,24 +150,27 @@ export async function buildDashboardSummary(
     },
   };
 
-  const byMap = new Map<string, { wins: number; total: number }>();
-  const byAgent = new Map<string, { wins: number; total: number }>();
-  for (const r of current) {
+  const byMap = new Map<string, { wins: number; total: number; mapId: string | null }>();
+  for (const r of allMapsCurrent) {
     const map = mapNameFrom(r.match.rawJson);
-    const mEntry = byMap.get(map) ?? { wins: 0, total: 0 };
+    const mEntry = byMap.get(map) ?? { wins: 0, total: 0, mapId: null };
     mEntry.total++;
     if (r.won) mEntry.wins++;
+    mEntry.mapId ??= r.match.mapId;
     byMap.set(map, mEntry);
+  }
 
+  const mapWinrates = [...byMap.entries()]
+    .map(([map, s]) => ({ map, mapId: s.mapId, winratePercent: Math.round((s.wins / s.total) * 100), wins: s.wins, total: s.total }))
+    .sort((a, b) => b.winratePercent - a.winratePercent);
+
+  const byAgent = new Map<string, { wins: number; total: number }>();
+  for (const r of current) {
     const aEntry = byAgent.get(r.agentName) ?? { wins: 0, total: 0 };
     aEntry.total++;
     if (r.won) aEntry.wins++;
     byAgent.set(r.agentName, aEntry);
   }
-
-  const mapWinrates = [...byMap.entries()]
-    .map(([map, s]) => ({ map, winratePercent: Math.round((s.wins / s.total) * 100), wins: s.wins, total: s.total }))
-    .sort((a, b) => b.winratePercent - a.winratePercent);
 
   const agentColors = await loadAgentColorsByName();
   const agentWinrates = [...byAgent.entries()]
@@ -193,17 +207,17 @@ export async function buildDashboardSummary(
     // sem MMR disponível (conta nova, região errada, API fora) — mantém o placeholder
   }
 
-  const last14Results = rows
+  const last14Results = filteredRows
     .slice(0, 14)
     .reverse()
     .map((r) => matchResult(r.won, rrByMatch.get(r.match.id)));
 
-  const recentRows = rows.slice(0, 7);
+  const recentRows = filteredRows.slice(0, 7);
   // MVP = maior ACS do seu próprio time na partida (não dos 10 jogadores —
   // isso deixaria de fora quem foi o melhor do time mas perdeu de alguém do
-  // time adversário). `rows` só traz as linhas do próprio usuário (filtro
-  // `where: { puuid }`), então precisa de uma query separada pegando todo
-  // mundo dessas partidas pra comparar.
+  // time adversário). `rows`/`filteredRows` só trazem as linhas do próprio
+  // usuário (filtro `where: { puuid }`), então precisa de uma query separada
+  // pegando todo mundo dessas partidas pra comparar.
   const maxAcsByMatchTeam = new Map<string, number>();
   if (recentRows.length > 0) {
     const allPlayers = await prisma.matchPlayer.findMany({

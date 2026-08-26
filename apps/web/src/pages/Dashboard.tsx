@@ -305,6 +305,26 @@ function MemberFilterSelect({
   );
 }
 
+// Filtro de mapa — as opções vêm de mapWinrates (os mapas que a pessoa
+// selecionada realmente jogou), não do catálogo geral de mapas: não faz
+// sentido oferecer um mapa sem nenhum dado pra filtrar. Só entram mapas com
+// mapId resolvido (ver comentário do campo em domain.ts) — sem ele não dá
+// pra montar o filtro no backend.
+function MapFilterSelect({ mapWinrates, mapFilter, setMapFilter }: { mapWinrates: MapWinrate[]; mapFilter: string | null; setMapFilter: (id: string | null) => void }) {
+  const options = mapWinrates.filter((m): m is MapWinrate & { mapId: string } => m.mapId !== null);
+  if (options.length === 0) return null;
+
+  return (
+    <Select
+      value={mapFilter ?? 'all'}
+      onChange={(v) => setMapFilter(v === 'all' ? null : v)}
+      options={[{ value: 'all', label: 'Todos os mapas' }, ...options.map((m) => ({ value: m.mapId, label: m.map }))]}
+      title="Filtrar o painel por mapa"
+      style={{ width: 'auto', height: 40, padding: '0 14px', borderRadius: 9, fontSize: 12.5, fontWeight: 600 }}
+    />
+  );
+}
+
 function DashboardContent({
   data,
   modoFilter,
@@ -646,6 +666,8 @@ export function Dashboard() {
     setMatchCountFilter,
     selectedMemberId,
     setSelectedMemberId,
+    mapFilter,
+    setMapFilter,
     sides,
     rrHistory,
     rrHistoryLoading,
@@ -700,6 +722,7 @@ export function Dashboard() {
         </div>
         <div className="dashboard-header-actions">
           <MemberFilterSelect team={team} selectedMemberId={selectedMemberId} setSelectedMemberId={setSelectedMemberId} />
+          <MapFilterSelect mapWinrates={data?.mapWinrates ?? []} mapFilter={mapFilter} setMapFilter={setMapFilter} />
           <ModoFilterButtons modoFilter={modoFilter} setModoFilter={setModoFilter} />
           <div className="dashboard-action-buttons">
             <button className="btn-secondary" style={{ minHeight: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 17px' }} onClick={() => navigate('/board')}>

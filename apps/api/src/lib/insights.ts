@@ -69,9 +69,11 @@ export async function buildRrAndInsights(
   puuid: string,
   matchCount: MatchCountFilter,
   modoFilter?: "Competitive" | "Unrated",
+  mapIdFilter?: string,
 ): Promise<RrHistoryResponse> {
+  const matchWhere = { ...(modoFilter ? { modo: modoFilter } : {}), ...(mapIdFilter ? { mapId: mapIdFilter } : {}) };
   const rows = await prisma.matchPlayer.findMany({
-    where: { puuid, ...(modoFilter ? { match: { modo: modoFilter } } : {}) },
+    where: { puuid, ...(Object.keys(matchWhere).length > 0 ? { match: matchWhere } : {}) },
     include: { match: true },
     orderBy: { match: { startedAt: "desc" } },
     take: matchCount,
@@ -154,10 +156,13 @@ function computeMatchSides(match: MatchV4Data, teamId: string): { attack: [numbe
   return result;
 }
 
-export async function buildSidesBreakdown(puuid: string, modoFilter?: "Competitive" | "Unrated"): Promise<SidesBreakdown> {
+export async function buildSidesBreakdown(puuid: string, modoFilter?: "Competitive" | "Unrated", mapIdFilter?: string): Promise<SidesBreakdown> {
   const windowStart = new Date(Date.now() - 30 * 86_400_000);
   const rows = await prisma.matchPlayer.findMany({
-    where: { puuid, match: { startedAt: { gte: windowStart }, ...(modoFilter ? { modo: modoFilter } : {}) } },
+    where: {
+      puuid,
+      match: { startedAt: { gte: windowStart }, ...(modoFilter ? { modo: modoFilter } : {}), ...(mapIdFilter ? { mapId: mapIdFilter } : {}) },
+    },
     include: { match: true },
   });
 

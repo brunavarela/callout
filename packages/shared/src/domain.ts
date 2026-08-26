@@ -132,6 +132,7 @@ export interface DashboardKpis {
 
 export interface MapWinrate {
   map: string;
+  mapId: string | null; // pro filtro de mapa do painel — null se essa partida nunca casou com um MapAsset
   winratePercent: number;
   wins: number;
   total: number;

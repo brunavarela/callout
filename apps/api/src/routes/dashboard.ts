@@ -36,21 +36,29 @@ function parseMatchCount(raw: unknown): MatchCountFilter {
   return raw === "7" ? 7 : 20;
 }
 
+// String vazia/ausente vira `undefined` — sem filtro de mapa. Não valida
+// contra o catálogo de mapas: um mapId inválido só resulta numa query sem
+// resultado nenhum, sem risco de segurança (é o mesmo puuid do target, já
+// resolvido e autorizado por resolveTarget).
+function parseMapIdFilter(raw: unknown): string | undefined {
+  return typeof raw === "string" && raw.length > 0 ? raw : undefined;
+}
+
 export async function dashboardRoutes(app: FastifyInstance) {
   app.get("/dashboard", { preHandler: requireAuth }, async (request, reply) => {
     const target = await resolveTarget(request, reply);
     if (!target) return;
-    const { modo } = request.query as { modo?: string };
-    return buildDashboardSummary(target.id, target.riotPuuid!, target.riotRegion!, parseModoFilter(modo));
+    const { modo, mapId } = request.query as { modo?: string; mapId?: string };
+    return buildDashboardSummary(target.id, target.riotPuuid!, target.riotRegion!, parseModoFilter(modo), parseMapIdFilter(mapId));
   });
 
   app.get("/dashboard/rr-history", { preHandler: requireAuth }, async (request, reply) => {
     const target = await resolveTarget(request, reply);
     if (!target) return;
-    const { modo, matches } = request.query as { modo?: string; matches?: string };
+    const { modo, matches, mapId } = request.query as { modo?: string; matches?: string; mapId?: string };
 
     try {
-      return await buildRrAndInsights(target.riotRegion!, target.riotPuuid!, parseMatchCount(matches), parseModoFilter(modo));
+      return await buildRrAndInsights(target.riotRegion!, target.riotPuuid!, parseMatchCount(matches), parseModoFilter(modo), parseMapIdFilter(mapId));
     } catch (err) {
       request.log.error(err, "falha ao buscar histórico de RR");
       return reply.code(502).send({ error: "Falha ao buscar o histórico de RR na HenrikDev." });
@@ -60,7 +68,7 @@ export async function dashboardRoutes(app: FastifyInstance) {
   app.get("/dashboard/sides", { preHandler: requireAuth }, async (request, reply) => {
     const target = await resolveTarget(request, reply);
     if (!target) return;
-    const { modo } = request.query as { modo?: string };
-    return buildSidesBreakdown(target.riotPuuid!, parseModoFilter(modo));
+    const { modo, mapId } = request.query as { modo?: string; mapId?: string };
+    return buildSidesBreakdown(target.riotPuuid!, parseModoFilter(modo), parseMapIdFilter(mapId));
   });
 }
