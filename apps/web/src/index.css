@@ -188,19 +188,76 @@ button {
   border-color: var(--acc, #ef4958);
 }
 
-/* <select class="input-field"> — mesma caixa do input, mas sem a setinha
-   nativa do SO (cinza clara, quadrada, destoava do resto). Troca por um
-   chevron desenhado e força o popup de opções a respeitar o tema escuro. */
-select.input-field {
-  appearance: none;
-  -webkit-appearance: none;
-  -moz-appearance: none;
-  color-scheme: dark;
+/* <Select> (components/Select.tsx) — o popup de opções de um <select> nativo
+   é sempre desenhado pelo SO/navegador (quadrado, cinza, sem seguir o tema),
+   não dá pra estilizar entre navegadores. Por isso todo select do site usa
+   esse componente: o "trigger" reaproveita a caixa do .input-field (por
+   isso essas classes não mexem em padding/tamanho, só no que muda por ser
+   um <button> em vez de <select>), e o popup abaixo é HTML nosso. */
+.select-trigger {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   cursor: pointer;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6' fill='none'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%239A9DA1' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 14px center;
-  background-size: 10px 6px;
+}
+.select-trigger-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: left;
+}
+.select-chevron {
+  flex: none;
+  color: var(--text-faint);
+  transition: transform 0.15s ease;
+}
+.select-trigger[data-open='true'] .select-chevron {
+  transform: rotate(180deg);
+}
+
+.select-panel {
+  position: absolute;
+  z-index: 50;
+  top: calc(100% + 6px);
+  left: 0;
+  min-width: 100%;
+  width: max-content;
+  max-width: min(360px, 90vw);
+  max-height: 280px;
+  overflow-y: auto;
+  background: var(--surface);
+  border: 1px solid var(--surface-border);
+  border-radius: var(--radius-md);
+  padding: 6px;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.5);
+}
+.select-panel.align-right {
+  left: auto;
+  right: 0;
+}
+
+.select-option {
+  display: block;
+  width: 100%;
+  padding: 9px 11px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-2);
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.select-option:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+.select-option.is-selected {
+  color: var(--acc, #ef4958);
+  background: var(--acc10, rgba(239, 73, 88, 0.1));
 }
 
 .nav-item:hover {

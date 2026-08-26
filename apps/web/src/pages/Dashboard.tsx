@@ -3,6 +3,7 @@ import type { AgentWinrate, DashboardSummary, MapWinrate, MatchCountFilter, Matc
 import type { OutletContext } from '../components/AppShell';
 import { LoadingFill, SnakeSpinner } from '../components/Spinner';
 import { MatchRow } from '../components/MatchRow';
+import { Select } from '../components/Select';
 import { useSession } from '../lib/session';
 
 const cardStyle: React.CSSProperties = { borderRadius: 'var(--radius-lg)', background: 'var(--surface)', border: '1px solid var(--surface-border)' };
@@ -294,20 +295,13 @@ function MemberFilterSelect({
   if (options.length === 0) return null;
 
   return (
-    <select
-      className="input-field"
+    <Select
       value={selectedMemberId ?? 'self'}
-      onChange={(e) => setSelectedMemberId(e.target.value === 'self' ? null : e.target.value)}
+      onChange={(v) => setSelectedMemberId(v === 'self' ? null : v)}
+      options={[{ value: 'self', label: 'Você' }, ...options.map((m) => ({ value: m.userId, label: m.name }))]}
       title="Ver painel de outro membro do time"
-      style={{ width: 'auto', height: 40, padding: '0 30px 0 14px', borderRadius: 9, fontSize: 12.5, fontWeight: 600, flex: 'none' }}
-    >
-      <option value="self">Você</option>
-      {options.map((m) => (
-        <option key={m.userId} value={m.userId}>
-          {m.name}
-        </option>
-      ))}
-    </select>
+      style={{ width: 'auto', height: 40, padding: '0 14px', borderRadius: 9, fontSize: 12.5, fontWeight: 600 }}
+    />
   );
 }
 

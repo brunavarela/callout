@@ -5,6 +5,7 @@ import { PLACEHOLDER_AGENTS, type AgentAsset, type Lado, type Spot as SpotDTO } 
 import type { OutletContext } from '../components/AppShell';
 import { LoadingFill } from '../components/Spinner';
 import { ConfirmModal } from '../components/ConfirmModal';
+import { Select } from '../components/Select';
 import { compressImageToDataUrl } from '../lib/imageCompress';
 
 const cardStyle: React.CSSProperties = { borderRadius: 'var(--radius-lg)', background: 'var(--surface)', border: '1px solid var(--surface-border)' };
@@ -175,30 +176,18 @@ function CreateSpotModal({
           <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 16 }}>Nenhum mapa cadastrado ainda.</div>
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
-            <select
-              className="input-field"
+            <Select
               value={form.mapId}
-              onChange={(e) => setForm((f) => ({ ...f, mapId: e.target.value }))}
-              style={{ padding: '10px 13px', fontSize: 13, paddingRight: 34 }}
-            >
-              {maps.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.name}
-                </option>
-              ))}
-            </select>
-            <select
-              className="input-field"
+              onChange={(v) => setForm((f) => ({ ...f, mapId: v }))}
+              options={maps.map((m) => ({ value: m.id, label: m.name }))}
+              style={{ padding: '10px 13px', fontSize: 13 }}
+            />
+            <Select
               value={form.agentId}
-              onChange={(e) => setForm((f) => ({ ...f, agentId: e.target.value }))}
-              style={{ padding: '10px 13px', fontSize: 13, paddingRight: 34 }}
-            >
-              {agents.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.name}
-                </option>
-              ))}
-            </select>
+              onChange={(v) => setForm((f) => ({ ...f, agentId: v }))}
+              options={agents.map((a) => ({ value: a.id, label: a.name }))}
+              style={{ padding: '10px 13px', fontSize: 13 }}
+            />
           </div>
         )}
 
@@ -413,9 +402,9 @@ export function Spots() {
     });
   }, [spots, query, filterMap, filterAgent, filterSide]);
 
-  // .input-field cuida de fundo/borda/cor/seta — só o tamanho compacto do
-  // filtro (menor que o padrão do modal) fica por conta do inline.
-  const selectStyle: React.CSSProperties = { width: 'auto', padding: '9px 30px 9px 12px', fontSize: 12.5 };
+  // .input-field cuida de fundo/borda/cor — só o tamanho compacto do filtro
+  // (menor que o padrão do modal) fica por conta do inline.
+  const selectStyle: React.CSSProperties = { width: 'auto', padding: '9px 12px', fontSize: 12.5 };
 
   return (
     <div style={{ padding: 26, display: 'flex', flexDirection: 'column', gap: 18 }}>
@@ -446,25 +435,28 @@ export function Spots() {
       </div>
 
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-        <select className="input-field" value={filterMap} onChange={(e) => setFilterMap(e.target.value)} style={selectStyle}>
-          {mapFilterOptions.map((m) => (
-            <option key={m} value={m}>
-              {m === 'Todos' ? 'Todos os mapas' : m}
-            </option>
-          ))}
-        </select>
-        <select className="input-field" value={filterAgent} onChange={(e) => setFilterAgent(e.target.value)} style={selectStyle}>
-          {agentFilterOptions.map((a) => (
-            <option key={a} value={a}>
-              {a === 'Todos' ? 'Todos os agentes' : a}
-            </option>
-          ))}
-        </select>
-        <select className="input-field" value={filterSide} onChange={(e) => setFilterSide(e.target.value as 'Todos' | Lado)} style={selectStyle}>
-          <option value="Todos">Ataque e defesa</option>
-          <option value="ATK">Só ataque</option>
-          <option value="DEF">Só defesa</option>
-        </select>
+        <Select
+          value={filterMap}
+          onChange={setFilterMap}
+          options={mapFilterOptions.map((m) => ({ value: m, label: m === 'Todos' ? 'Todos os mapas' : m }))}
+          style={selectStyle}
+        />
+        <Select
+          value={filterAgent}
+          onChange={setFilterAgent}
+          options={agentFilterOptions.map((a) => ({ value: a, label: a === 'Todos' ? 'Todos os agentes' : a }))}
+          style={selectStyle}
+        />
+        <Select
+          value={filterSide}
+          onChange={(v) => setFilterSide(v as 'Todos' | Lado)}
+          options={[
+            { value: 'Todos', label: 'Ataque e defesa' },
+            { value: 'ATK', label: 'Só ataque' },
+            { value: 'DEF', label: 'Só defesa' },
+          ]}
+          style={selectStyle}
+        />
       </div>
 
       {spotsError && !spots && (

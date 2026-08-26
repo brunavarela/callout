@@ -9,6 +9,7 @@ import type { OutletContext } from '../components/AppShell';
 import { agentImageUrl } from '../lib/agentImages';
 import { ConfirmModal } from '../components/ConfirmModal';
 import { LoadingFill } from '../components/Spinner';
+import { Select } from '../components/Select';
 
 const TOOLS = [
   { id: 'agente', icon: 'AG', title: 'Agente' },
@@ -118,18 +119,12 @@ function CreateStrategyModal({
         {maps.length === 0 ? (
           <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 16 }}>Nenhum mapa cadastrado ainda.</div>
         ) : (
-          <select
-            className="input-field"
+          <Select
             value={mapName}
-            onChange={(e) => setMapName(e.target.value)}
-            style={{ width: '100%', padding: '10px 13px', fontSize: 13, marginBottom: 12, paddingRight: 34 }}
-          >
-            {maps.map((m) => (
-              <option key={m.id} value={m.nome}>
-                {m.nome}
-              </option>
-            ))}
-          </select>
+            onChange={setMapName}
+            options={maps.map((m) => ({ value: m.nome, label: m.nome }))}
+            style={{ width: '100%', padding: '10px 13px', fontSize: 13, marginBottom: 12 }}
+          />
         )}
 
         <input

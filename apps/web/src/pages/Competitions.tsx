@@ -4,6 +4,7 @@ import { resolverLado, type CategoriaCompeticao, type Competicao, type Confronto
 import { apiFetch } from '../lib/api';
 import { useSession } from '../lib/session';
 import { LoadingFill } from '../components/Spinner';
+import { Select } from '../components/Select';
 
 const cardStyle: React.CSSProperties = { borderRadius: 'var(--radius-lg)', background: 'var(--surface)', border: '1px solid var(--surface-border)' };
 const WIN = 'var(--pos, #18AAB7)';
@@ -210,11 +211,16 @@ function EdicaoConfronto({
       {decidido ? (
         <div style={{ fontSize: 11, color: 'var(--text-faint)', padding: '2px 1px' }}>Encerrada automaticamente — placar decisivo.</div>
       ) : (
-        <select value={status} onChange={(e) => setStatus(e.target.value as Confronto['status'])} className="input-field" style={{ fontSize: 11, padding: '6px 8px' }}>
-          <option value="agendada">Agendada</option>
-          <option value="ao_vivo">Ao vivo</option>
-          <option value="encerrada">Encerrada</option>
-        </select>
+        <Select
+          value={status}
+          onChange={(v) => setStatus(v as Confronto['status'])}
+          options={[
+            { value: 'agendada', label: 'Agendada' },
+            { value: 'ao_vivo', label: 'Ao vivo' },
+            { value: 'encerrada', label: 'Encerrada' },
+          ]}
+          style={{ fontSize: 11, padding: '6px 8px' }}
+        />
       )}
       <div style={{ display: 'flex', gap: 6 }}>
         <button onClick={onCancelar} disabled={salvando} className="btn-secondary" style={{ flex: 1, padding: '5px 8px', fontSize: 11, justifyContent: 'center' }}>
