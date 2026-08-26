@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useOutletContext, useParams } from 'react-router-dom';
-import { Trash2 } from 'lucide-react';
+import { Plus, Trash2 } from 'lucide-react';
 import type { Lado, StratItem as StratItemDTO } from '@callout/shared';
 import { PLACEHOLDER_AGENTS } from '@callout/shared';
 import { MapSchematic } from '../components/MapSchematic';
@@ -545,6 +545,31 @@ export function Board() {
           })}
         </div>
 
+        <button
+          onClick={() => setShowCreateModal(true)}
+          style={{
+            position: 'absolute',
+            right: 18,
+            top: 18,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 7,
+            background: 'var(--acc, #EF4958)',
+            color: '#141415',
+            border: 'none',
+            borderRadius: 12,
+            padding: '9px 16px',
+            fontSize: 12.5,
+            fontWeight: 600,
+            letterSpacing: '.01em',
+            fontFamily: 'Inter,sans-serif',
+            cursor: 'pointer',
+            boxShadow: '0 8px 18px rgba(0,0,0,.35)',
+          }}
+        >
+          <Plus size={15} strokeWidth={2.25} />
+          Nova estratégia
+        </button>
         <div style={{ position: 'absolute', left: 18, top: 18, display: 'flex', gap: 5, background: 'rgba(18,18,19,.92)', border: '1px solid var(--input-border)', borderRadius: 12, padding: 6 }}>
           {TOOLS.map((t) => {
             const active = tool === t.id;
@@ -639,13 +664,6 @@ export function Board() {
         />
         <div style={{ padding: '16px 20px 8px', display: 'flex', alignItems: 'center' }}>
           <span style={{ fontSize: 10.5, letterSpacing: '.14em', color: 'var(--text-dim)' }}>ESTRATÉGIAS DO TIME · {strategies.length}</span>
-          <button
-            onClick={() => setShowCreateModal(true)}
-            title="Nova estratégia"
-            style={{ marginLeft: 'auto', background: 'none', border: 'none', color: 'var(--acc, #EF4958)', fontSize: 16, lineHeight: 1, cursor: 'pointer' }}
-          >
-            +
-          </button>
         </div>
         <div style={{ overflow: 'auto', padding: '0 12px' }}>
           {strategies.map((s) => {
