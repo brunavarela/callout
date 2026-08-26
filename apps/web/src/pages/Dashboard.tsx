@@ -665,11 +665,14 @@ export function Dashboard() {
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <h1 style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 700, fontSize: 34, letterSpacing: '-.025em', margin: 0 }}>
-              De volta, {firstName(user)}
+              {isSelf ? `E aí, ${firstName(user)}` : `Espiando ${subject}`}
             </h1>
             {data && data.rank.current !== '—' && (
               <span
                 style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 7,
                   fontSize: 12,
                   color: 'var(--text-muted)',
                   border: '1px solid var(--surface-border)',
@@ -677,6 +680,9 @@ export function Dashboard() {
                   padding: '5px 11px',
                 }}
               >
+                {/* espaço reservado pro ícone do elo — ainda não temos o
+                    conjunto de ícones por elo/divisão da Riot */}
+                <span style={{ width: 16, height: 16, borderRadius: 4, background: 'var(--avatar-bg)', flex: 'none' }} />
                 {data.rank.current} · {data.rank.rr} RR
                 {data.rank.rrDelta7d !== 0 && (
                   <span style={{ color: data.rank.rrDelta7d > 0 ? 'var(--pos, #18AAB7)' : 'var(--text-muted-2)' }}> {fmtDelta(data.rank.rrDelta7d, 0)}</span>
