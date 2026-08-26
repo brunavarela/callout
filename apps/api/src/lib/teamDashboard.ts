@@ -119,6 +119,9 @@ export async function buildTeamDashboard(): Promise<TeamDashboardSummary | null>
 
   const byMap = new Map<string, { mapId: string | null; wins: number; total: number }>();
   const byCombo = new Map<string, { memberUserIds: string[]; wins: number; overtime: number; total: number }>();
+  // Agente mais jogado por cada membro DENTRO de cada formação específica
+  // (não o agente favorito dele no geral) — comboKey -> userId -> agente -> contagem.
+  const comboAgentCounts = new Map<string, Map<string, Map<string, number>>>();
   const acsAgg = new Map<string, { sum: number; count: number }>();
   const assistAgg = new Map<string, { sum: number; count: number }>();
   const mvpAgg = new Map<string, number>();
@@ -130,14 +133,6 @@ export async function buildTeamDashboard(): Promise<TeamDashboardSummary | null>
   let biggestWinMargin = -Infinity;
   let closestMatch: TeamStandoutMatch | null = null;
   let closestMatchMargin = Infinity;
-
-  // Trocar "só pra mim" (matches.ts) por "o time inteiro nessa partida" —
-  // MIN_TEAM_MATCH_PLAYERS+1 é o único caso em que "quem ficou de fora"
-  // faz sentido (time de 6, jogo de 5); com outro tamanho de time fica
-  // ambíguo demais pra valer a pena mostrar.
-  const trackedUserIds = trackedMembers.map((m) => m.userId);
-  const missingFor = (comboUserIds: string[]): string | null =>
-    trackedMembers.length === MIN_TEAM_MATCH_PLAYERS + 1 ? (trackedUserIds.find((id) => !comboUserIds.includes(id)) ?? null) : null;
 
   for (const { match, list } of qualifying) {
     const raw = match.rawJson as unknown as MatchV4Data;
@@ -159,6 +154,15 @@ export async function buildTeamDashboard(): Promise<TeamDashboardSummary | null>
     // corte que insights.ts usa pro ataque/defesa por overtime.
     if (raw.rounds.length > 24) cEntry.overtime++;
     byCombo.set(comboKey, cEntry);
+
+    const memberAgentCounts = comboAgentCounts.get(comboKey) ?? new Map<string, Map<string, number>>();
+    for (const r of list) {
+      const userId = memberByPuuid.get(r.puuid)!.userId;
+      const agentCounts = memberAgentCounts.get(userId) ?? new Map<string, number>();
+      agentCounts.set(r.agentName, (agentCounts.get(r.agentName) ?? 0) + 1);
+      memberAgentCounts.set(userId, agentCounts);
+    }
+    comboAgentCounts.set(comboKey, memberAgentCounts);
 
     const maxAcs = Math.max(...list.map((r) => r.acs));
     const replay = replayMatchStats(raw);
@@ -216,13 +220,14 @@ export async function buildTeamDashboard(): Promise<TeamDashboardSummary | null>
   // formação é "melhor" (isso soa mal apontando pra quem ficou de fora).
   const lineupCombos = [...byCombo.entries()]
     .map(([comboKey, s]) => {
-      const missingUserId = missingFor(s.memberUserIds);
+      const memberAgentCounts = comboAgentCounts.get(comboKey);
       return {
         comboKey,
-        memberUserIds: s.memberUserIds,
-        memberNames: s.memberUserIds.map((id) => nameByUserId.get(id) ?? "?"),
-        missingUserId,
-        missingName: missingUserId ? (nameByUserId.get(missingUserId) ?? null) : null,
+        members: s.memberUserIds.map((userId) => {
+          const agentCounts = memberAgentCounts?.get(userId);
+          const topAgent = agentCounts ? [...agentCounts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] : undefined;
+          return { userId, name: nameByUserId.get(userId) ?? "?", agent: topAgent ?? "?" };
+        }),
         wins: s.wins,
         losses: s.total - s.wins,
         overtimeCount: s.overtime,

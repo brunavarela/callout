@@ -326,12 +326,15 @@ export interface MemberClutchRow {
   clutchesPlayed: number;
 }
 
+export interface LineupComboMember {
+  userId: string;
+  name: string;
+  agent: string; // agente mais jogado por esse jogador NESSA formação específica, não o favorito dele no geral
+}
+
 export interface LineupCombo {
   comboKey: string; // userIds ordenados e concatenados — chave estável
-  memberUserIds: string[];
-  memberNames: string[];
-  missingUserId: string | null; // único membro rastreado de fora dessa formação (só quando o time tem MIN_TEAM_MATCH_PLAYERS + 1 gente linkada)
-  missingName: string | null;
+  members: LineupComboMember[];
   wins: number;
   losses: number;
   overtimeCount: number;

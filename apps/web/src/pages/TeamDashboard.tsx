@@ -5,6 +5,7 @@ import { MIN_TEAM_MATCH_PLAYERS, type LineupCombo } from '@callout/shared';
 import type { OutletContext } from '../components/AppShell';
 import { LoadingFill } from '../components/Spinner';
 import { cardStyle, WIN, LOSS, rateBarColor, plural, RateBlock, RankingBlock, type RankingRow } from '../components/statsPrimitives';
+import { agentImageUrl } from '../lib/agentImages';
 
 function KpiTile({ label, value, sub }: { label: string; value: string; sub: string }) {
   return (
@@ -18,37 +19,66 @@ function KpiTile({ label, value, sub }: { label: string; value: string; sub: str
   );
 }
 
-function comboLabel(c: Pick<LineupCombo, 'missingName' | 'memberNames'>): string {
-  return c.missingName ? `Sem ${c.missingName}` : c.memberNames.map((n) => n.split(' ')[0]).join(', ');
-}
-
-// Lista neutra — de propósito NÃO ordena por winrate nem chama nenhuma
-// formação de "melhor". "5 de 6" quase sempre significa que alguém ficou de
-// fora; transformar isso num ranking soa como "o time rende mais sem
-// Fulano", o que não é a ideia. Ordenado por quantas vezes cada formação
-// jogou, só descrevendo o que aconteceu.
+// Ícone do agente mais jogado por cada membro NESSA formação, não o nome —
+// passar o mouse mostra quem é. Composição, não "quem falta", e sem
+// ordenar por winrate: "variações de time" é sobre o que aconteceu, não um
+// ranking de qual formação é "melhor" (isso soaria como "o time rende mais
+// sem Fulano"). Ordenado por quantas vezes cada formação jogou.
 function LineupVariations({ combos }: { combos: LineupCombo[] }) {
   return (
     <div style={{ ...cardStyle, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 11 }}>
       <div>
         <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 15 }}>Variações de time</div>
-        <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 3 }}>Formações de 5 jogadores diferentes nas partidas do time</div>
+        <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 3 }}>Composições de 5 jogadores diferentes nas partidas do time</div>
       </div>
       {combos.length === 0 ? (
         <div style={{ fontSize: 12.5, color: 'var(--text-faint)' }}>Sem dados ainda.</div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 34px 34px 50px 50px', gap: 8, padding: '0 0 6px', fontSize: 9.5, letterSpacing: '.08em', color: 'var(--text-faint)' }}>
+            <span>COMPOSIÇÃO</span>
+            <span style={{ textAlign: 'right' }}>V</span>
+            <span style={{ textAlign: 'right' }}>D</span>
+            <span style={{ textAlign: 'right' }}>OT</span>
+            <span style={{ textAlign: 'right' }}>TAXA</span>
+          </div>
           {combos.map((c) => (
-            <div key={c.comboKey} style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}>
-                <span style={{ fontSize: 13, color: 'var(--text-3)' }}>{comboLabel(c)}</span>
-                <span style={{ fontSize: 11, color: 'var(--text-faint)', whiteSpace: 'nowrap' }}>{plural(c.total, 'partida')}</span>
+            <div
+              key={c.comboKey}
+              style={{ display: 'grid', gridTemplateColumns: '1fr 34px 34px 50px 50px', gap: 8, alignItems: 'center', padding: '9px 0', borderTop: '1px solid var(--divider)' }}
+            >
+              <div style={{ display: 'flex', gap: 4 }}>
+                {c.members.map((m) => {
+                  const imageUrl = agentImageUrl(m.agent);
+                  return (
+                    <div
+                      key={m.userId}
+                      title={m.name}
+                      style={{
+                        width: 26,
+                        height: 26,
+                        borderRadius: 7,
+                        overflow: 'hidden',
+                        flex: 'none',
+                        background: imageUrl ? '#141415' : 'var(--avatar-bg)',
+                        border: '1px solid var(--surface-border)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: 8,
+                        fontWeight: 700,
+                        color: 'var(--text-muted)',
+                      }}
+                    >
+                      {imageUrl ? <img src={imageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : m.name.slice(0, 2).toUpperCase()}
+                    </div>
+                  );
+                })}
               </div>
-              <div style={{ display: 'flex', gap: 12, fontSize: 12 }}>
-                <span style={{ color: WIN, fontWeight: 600 }}>{c.wins}V</span>
-                <span style={{ color: LOSS, fontWeight: 600 }}>{c.losses}D</span>
-                {c.overtimeCount > 0 && <span style={{ color: 'var(--text-muted)' }}>{plural(c.overtimeCount, 'overtime')}</span>}
-              </div>
+              <span style={{ fontSize: 12.5, fontWeight: 600, color: WIN, textAlign: 'right' }}>{c.wins}</span>
+              <span style={{ fontSize: 12.5, fontWeight: 600, color: LOSS, textAlign: 'right' }}>{c.losses}</span>
+              <span style={{ fontSize: 12.5, color: 'var(--text-muted)', textAlign: 'right' }}>{c.overtimeCount || '—'}</span>
+              <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--text-3)', textAlign: 'right' }}>{c.winratePercent}%</span>
             </div>
           ))}
         </div>
