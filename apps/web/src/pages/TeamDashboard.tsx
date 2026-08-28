@@ -7,6 +7,13 @@ import { LoadingFill } from '../components/Spinner';
 import { cardStyle, WIN, LOSS, rateBarColor, plural, RateBlock, RankingBlock, type RankingRow } from '../components/statsPrimitives';
 import { agentImageUrl } from '../lib/agentImages';
 
+// Altura fixa dos 4 cards médios (Variações de time, Destaques do time, Em
+// quais mapas o time ganha, Melhores agentes do time) — pra ficarem todos
+// do mesmo tamanho independente de quanto conteúdo cada um tem. O que não
+// couber rola dentro do próprio card (título/cabeçalho de coluna continuam
+// fixos, só a lista rola).
+const MEDIUM_CARD_HEIGHT = 320;
+
 function AgentAvatar({ agent, size, title }: { agent: string; size: number; title?: string }) {
   const imageUrl = agentImageUrl(agent);
   return (
@@ -81,7 +88,7 @@ function AgentComboKpiTile({ compo }: { compo: BestAgentComposition | null }) {
 // sem Fulano"). Ordenado por quantas vezes cada formação jogou.
 function LineupVariations({ combos }: { combos: LineupCombo[] }) {
   return (
-    <div style={{ ...cardStyle, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 11 }}>
+    <div style={{ ...cardStyle, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 11, height: MEDIUM_CARD_HEIGHT }}>
       <div>
         <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 15 }}>Variações de time - Jogadores</div>
         <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 3 }}>Formações de 5 jogadores diferentes nas partidas do time</div>
@@ -89,7 +96,7 @@ function LineupVariations({ combos }: { combos: LineupCombo[] }) {
       {combos.length === 0 ? (
         <div style={{ fontSize: 12.5, color: 'var(--text-faint)' }}>Sem dados ainda.</div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 34px 34px 50px 50px', gap: 8, padding: '0 0 6px', fontSize: 9.5, letterSpacing: '.08em', color: 'var(--text-faint)' }}>
             <span>COMPOSIÇÃO</span>
             <span style={{ textAlign: 'right' }}>V</span>
@@ -97,22 +104,24 @@ function LineupVariations({ combos }: { combos: LineupCombo[] }) {
             <span style={{ textAlign: 'right' }}>OT</span>
             <span style={{ textAlign: 'right' }}>TAXA</span>
           </div>
-          {combos.map((c) => (
-            <div
-              key={c.comboKey}
-              style={{ display: 'grid', gridTemplateColumns: '1fr 34px 34px 50px 50px', gap: 8, alignItems: 'center', padding: '9px 0', borderTop: '1px solid var(--divider)' }}
-            >
-              <div style={{ display: 'flex', gap: 4 }}>
-                {c.members.map((m) => (
-                  <AgentAvatar key={m.userId} agent={m.agent} size={26} title={m.name} />
-                ))}
+          <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
+            {combos.map((c) => (
+              <div
+                key={c.comboKey}
+                style={{ display: 'grid', gridTemplateColumns: '1fr 34px 34px 50px 50px', gap: 8, alignItems: 'center', padding: '9px 0', borderTop: '1px solid var(--divider)' }}
+              >
+                <div style={{ display: 'flex', gap: 4 }}>
+                  {c.members.map((m) => (
+                    <AgentAvatar key={m.userId} agent={m.agent} size={26} title={m.name} />
+                  ))}
+                </div>
+                <span style={{ fontSize: 12.5, fontWeight: 600, color: WIN, textAlign: 'right' }}>{c.wins}</span>
+                <span style={{ fontSize: 12.5, fontWeight: 600, color: LOSS, textAlign: 'right' }}>{c.losses}</span>
+                <span style={{ fontSize: 12.5, color: 'var(--text-muted)', textAlign: 'right' }}>{c.overtimeCount || '—'}</span>
+                <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--text-3)', textAlign: 'right' }}>{c.winratePercent}%</span>
               </div>
-              <span style={{ fontSize: 12.5, fontWeight: 600, color: WIN, textAlign: 'right' }}>{c.wins}</span>
-              <span style={{ fontSize: 12.5, fontWeight: 600, color: LOSS, textAlign: 'right' }}>{c.losses}</span>
-              <span style={{ fontSize: 12.5, color: 'var(--text-muted)', textAlign: 'right' }}>{c.overtimeCount || '—'}</span>
-              <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--text-3)', textAlign: 'right' }}>{c.winratePercent}%</span>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       )}
     </div>
@@ -124,7 +133,7 @@ function LineupVariations({ combos }: { combos: LineupCombo[] }) {
 // mais pickado, não quem rendeu mais quando jogado.
 function BestAgentsTable({ agents }: { agents: TeamAgentPerformance[] }) {
   return (
-    <div style={{ ...cardStyle, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 11 }}>
+    <div style={{ ...cardStyle, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 11, height: MEDIUM_CARD_HEIGHT }}>
       <div>
         <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 15 }}>Melhores agentes do time</div>
         <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 3 }}>Kills, assistências e first bloods são média por partida com o agente</div>
@@ -132,7 +141,7 @@ function BestAgentsTable({ agents }: { agents: TeamAgentPerformance[] }) {
       {agents.length === 0 ? (
         <div style={{ fontSize: 12.5, color: 'var(--text-faint)' }}>Sem dados ainda.</div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 46px 52px 36px 58px', gap: 8, padding: '0 0 6px', fontSize: 9.5, letterSpacing: '.08em', color: 'var(--text-faint)' }}>
             <span>AGENTE</span>
             <span style={{ textAlign: 'right' }}>KILLS</span>
@@ -140,21 +149,23 @@ function BestAgentsTable({ agents }: { agents: TeamAgentPerformance[] }) {
             <span style={{ textAlign: 'right' }}>FB</span>
             <span style={{ textAlign: 'right' }}>IMPACTO</span>
           </div>
-          {agents.map((a) => (
-            <div
-              key={a.agent}
-              style={{ display: 'grid', gridTemplateColumns: '1fr 46px 52px 36px 58px', gap: 8, alignItems: 'center', padding: '8px 0', borderTop: '1px solid var(--divider)' }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
-                <AgentAvatar agent={a.agent} size={24} />
-                <span style={{ fontSize: 13, color: 'var(--text-3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.agent}</span>
+          <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
+            {agents.map((a) => (
+              <div
+                key={a.agent}
+                style={{ display: 'grid', gridTemplateColumns: '1fr 46px 52px 36px 58px', gap: 8, alignItems: 'center', padding: '8px 0', borderTop: '1px solid var(--divider)' }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+                  <AgentAvatar agent={a.agent} size={24} />
+                  <span style={{ fontSize: 13, color: 'var(--text-3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.agent}</span>
+                </div>
+                <span style={{ fontSize: 12.5, color: 'var(--text-2)', textAlign: 'right' }}>{a.kills}</span>
+                <span style={{ fontSize: 12.5, color: 'var(--text-2)', textAlign: 'right' }}>{a.assists}</span>
+                <span style={{ fontSize: 12.5, color: 'var(--text-2)', textAlign: 'right' }}>{a.firstBloods}</span>
+                <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--text-3)', textAlign: 'right' }}>{a.impact}</span>
               </div>
-              <span style={{ fontSize: 12.5, color: 'var(--text-2)', textAlign: 'right' }}>{a.kills}</span>
-              <span style={{ fontSize: 12.5, color: 'var(--text-2)', textAlign: 'right' }}>{a.assists}</span>
-              <span style={{ fontSize: 12.5, color: 'var(--text-2)', textAlign: 'right' }}>{a.firstBloods}</span>
-              <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--text-3)', textAlign: 'right' }}>{a.impact}</span>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       )}
     </div>
@@ -163,12 +174,12 @@ function BestAgentsTable({ agents }: { agents: TeamAgentPerformance[] }) {
 
 function DestaquesDoTime({ insights }: { insights: string[] }) {
   return (
-    <div style={{ ...cardStyle, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 11 }}>
+    <div style={{ ...cardStyle, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 11, height: MEDIUM_CARD_HEIGHT }}>
       <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 15 }}>Destaques do time</div>
       {insights.length === 0 ? (
         <div style={{ fontSize: 12.5, color: 'var(--text-faint)' }}>Sem destaques ainda.</div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flex: 1, minHeight: 0, overflowY: 'auto' }}>
           {insights.map((text, i) => (
             <div key={i} style={{ display: 'flex', gap: 8, fontSize: 12.5, color: 'var(--text-dim)', lineHeight: 1.4 }}>
               <span style={{ color: 'var(--text-faint)' }}>•</span>
@@ -267,7 +278,13 @@ export function TeamDashboard() {
           <div className="grid-responsive-2">
             <LineupVariations combos={data.lineupCombos} />
             <DestaquesDoTime insights={insights} />
-            <RateBlock title="Em quais mapas o time ganha" sub="% de partidas vencidas em cada mapa" rows={data.mapWinrates.map((m) => ({ key: m.map, name: m.map, wins: m.wins, total: m.total }))} colorFor={rateBarColor} />
+            <RateBlock
+              title="Em quais mapas o time ganha"
+              sub="% de partidas vencidas em cada mapa"
+              rows={data.mapWinrates.map((m) => ({ key: m.map, name: m.map, wins: m.wins, total: m.total }))}
+              colorFor={rateBarColor}
+              maxHeight={MEDIUM_CARD_HEIGHT}
+            />
             <BestAgentsTable agents={data.bestAgents} />
           </div>
 

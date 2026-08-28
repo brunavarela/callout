@@ -43,14 +43,19 @@ export function RateBlock({
   sub,
   rows,
   colorFor,
+  maxHeight,
 }: {
   title: string;
   sub: string;
   rows: Array<{ key: string; name: string; wins: number; total: number; dot?: string }>;
   colorFor: (wins: number, total: number) => string;
+  // Opcional — quando passado, o card vira altura fixa e só a lista de
+  // linhas rola por dentro (título/legenda continuam sempre visíveis). Sem
+  // isso, o card cresce com o conteúdo (comportamento de sempre).
+  maxHeight?: number;
 }) {
   return (
-    <div style={{ ...cardStyle, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 11 }}>
+    <div style={{ ...cardStyle, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 11, ...(maxHeight ? { height: maxHeight } : {}) }}>
       <div>
         <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 15 }}>{title}</div>
         <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 3 }}>{sub}</div>
@@ -58,7 +63,7 @@ export function RateBlock({
       {rows.length === 0 ? (
         <div style={{ fontSize: 12.5, color: 'var(--text-faint)' }}>Sem dados ainda.</div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 9, ...(maxHeight ? { flex: 1, minHeight: 0, overflowY: 'auto' } : {}) }}>
           {rows.map((r) => (
             <div key={r.key} style={{ display: 'grid', gridTemplateColumns: '1fr 40px', gap: 10, alignItems: 'center' }}>
               <div>
