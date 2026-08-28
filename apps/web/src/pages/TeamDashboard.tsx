@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useOutletContext } from 'react-router-dom';
-import { ArrowLeft, ChevronRight, History } from 'lucide-react';
+import { ArrowLeft, ChevronRight, History, TrendingDown, TrendingUp } from 'lucide-react';
 import { MIN_TEAM_MATCH_PLAYERS, type BestAgentComposition, type LineupCombo, type LineupComboMatch, type TeamAgentPerformance } from '@callout/shared';
 import type { OutletContext } from '../components/AppShell';
 import { LoadingFill } from '../components/Spinner';
@@ -62,6 +62,11 @@ function PlayerInitials({ name, size }: { name: string; size: number }) {
       {name.slice(0, 2).toUpperCase()}
     </div>
   );
+}
+
+function ResultIcon({ isWin }: { isWin: boolean }) {
+  const Icon = isWin ? TrendingUp : TrendingDown;
+  return <Icon size={13} strokeWidth={2.5} style={{ flex: 'none', color: isWin ? WIN : LOSS }} />;
 }
 
 function KpiTile({ label, value, sub }: { label: string; value: string; sub: string }) {
@@ -410,7 +415,10 @@ export function TeamDashboard() {
             <div style={{ ...cardStyle, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 14 }}>
               <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 15 }}>Destaques de placar</div>
               <div>
-                <div style={{ fontSize: 11, letterSpacing: '.08em', color: 'var(--text-faint)' }}>MAIOR GOLEADA</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <ResultIcon isWin />
+                  <span style={{ fontSize: 11, letterSpacing: '.08em', color: 'var(--text-faint)' }}>MAIOR PLACAR APLICADO</span>
+                </div>
                 {data.biggestWin ? (
                   <>
                     <div style={{ fontSize: 15, fontWeight: 600, color: WIN, marginTop: 3 }}>{data.biggestWin.score}</div>
@@ -423,7 +431,10 @@ export function TeamDashboard() {
                 )}
               </div>
               <div style={{ borderTop: '1px solid var(--divider)', paddingTop: 12 }}>
-                <div style={{ fontSize: 11, letterSpacing: '.08em', color: 'var(--text-faint)' }}>PARTIDA MAIS APERTADA</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <ResultIcon isWin={(data.closestMatch?.marginRounds ?? 0) >= 0} />
+                  <span style={{ fontSize: 11, letterSpacing: '.08em', color: 'var(--text-faint)' }}>PARTIDA MAIS APERTADA</span>
+                </div>
                 {data.closestMatch ? (
                   <>
                     <div style={{ fontSize: 15, fontWeight: 600, color: data.closestMatch.marginRounds >= 0 ? WIN : LOSS, marginTop: 3 }}>{data.closestMatch.score}</div>
@@ -433,6 +444,22 @@ export function TeamDashboard() {
                   </>
                 ) : (
                   <div style={{ fontSize: 12.5, color: 'var(--text-faint)', marginTop: 3 }}>Sem dados ainda.</div>
+                )}
+              </div>
+              <div style={{ borderTop: '1px solid var(--divider)', paddingTop: 12 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <ResultIcon isWin={false} />
+                  <span style={{ fontSize: 11, letterSpacing: '.08em', color: 'var(--text-faint)' }}>MAIOR PLACAR SOFRIDO</span>
+                </div>
+                {data.worstLoss ? (
+                  <>
+                    <div style={{ fontSize: 15, fontWeight: 600, color: LOSS, marginTop: 3 }}>{data.worstLoss.score}</div>
+                    <div style={{ fontSize: 12, color: 'var(--text-dim)' }}>
+                      {data.worstLoss.map} · {data.worstLoss.playedAtLabel}
+                    </div>
+                  </>
+                ) : (
+                  <div style={{ fontSize: 12.5, color: 'var(--text-faint)', marginTop: 3 }}>Sem derrotas ainda.</div>
                 )}
               </div>
             </div>

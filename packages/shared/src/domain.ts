@@ -415,6 +415,7 @@ export interface TeamDashboardSummary {
   firstDeathRanking: MemberStatRow[];
   mostPickedAgents: TeamAgentPick[];
   biggestWin: TeamStandoutMatch | null;
+  worstLoss: TeamStandoutMatch | null;
   closestMatch: TeamStandoutMatch | null;
 }
 

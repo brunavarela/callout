@@ -5,6 +5,7 @@ import type { TeamMatchParticipant, TeamMatchSummary } from '@callout/shared';
 import { MIN_TEAM_MATCH_PLAYERS } from '@callout/shared';
 import type { OutletContext } from '../components/AppShell';
 import { LoadingFill } from '../components/Spinner';
+import { agentImageUrl } from '../lib/agentImages';
 
 const cardStyle: React.CSSProperties = { borderRadius: 'var(--radius-lg)', background: 'var(--surface)', border: '1px solid var(--surface-border)' };
 const WIN = 'var(--pos, #18AAB7)';
@@ -16,6 +17,8 @@ const DRAW = 'var(--text-muted, #9A9DA1)';
 // borda direita (o nome do jogador é a única coluna flexível).
 const PARTICIPANT_COLUMNS = '28px minmax(140px, 1fr) 110px 90px 90px 70px';
 
+const RESULT_LABEL: Record<TeamMatchParticipant['result'], string> = { V: 'VITÓRIA', D: 'DERROTA', E: 'EMPATE' };
+
 function resultColor(result: TeamMatchParticipant['result']): string {
   return result === 'V' ? WIN : result === 'D' ? LOSS : DRAW;
 }
@@ -25,6 +28,32 @@ function fmtRr(n: number): string {
   if (n > 0) return `+${abs}`;
   if (n < 0) return `−${abs}`;
   return String(abs);
+}
+
+function AgentAvatar({ agent, size }: { agent: string; size: number }) {
+  const imageUrl = agentImageUrl(agent);
+  return (
+    <div
+      title={agent}
+      style={{
+        width: size,
+        height: size,
+        borderRadius: 7,
+        overflow: 'hidden',
+        flex: 'none',
+        background: imageUrl ? '#141415' : 'var(--avatar-bg)',
+        border: '1px solid var(--surface-border)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        fontSize: 7,
+        fontWeight: 700,
+        color: 'var(--text-muted)',
+      }}
+    >
+      {imageUrl ? <img src={imageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : agent.slice(0, 2).toUpperCase()}
+    </div>
+  );
 }
 
 function ParticipantHeader() {
@@ -43,7 +72,7 @@ function ParticipantHeader() {
 function ParticipantRow({ p }: { p: TeamMatchParticipant }) {
   return (
     <div style={{ display: 'grid', gridTemplateColumns: PARTICIPANT_COLUMNS, gap: 20, alignItems: 'center', padding: '9px 0', borderTop: '1px solid var(--divider)', fontSize: 12.5 }}>
-      <span style={{ fontSize: 10.5, fontWeight: 700, textAlign: 'center', color: resultColor(p.result) }}>{p.result}</span>
+      <AgentAvatar agent={p.agent} size={26} />
       <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
         {p.name} <span style={{ color: 'var(--text-faint)' }}>· {p.agent}</span>
         {p.mvp && (
@@ -71,9 +100,14 @@ function ParticipantRow({ p }: { p: TeamMatchParticipant }) {
 // pra mostrar os números de cada um, recolhe de novo no segundo clique.
 function TeamMatchCard({ match }: { match: TeamMatchSummary }) {
   const [expanded, setExpanded] = useState(false);
+  // Todo mundo rastreado nessa partida é do mesmo lado (é assim que a
+  // partida qualifica pro histórico do time), então o resultado do
+  // primeiro participante já vale pra partida inteira.
+  const result = match.participants[0]?.result ?? 'E';
+  const color = resultColor(result);
 
   return (
-    <div style={{ ...cardStyle, overflow: 'hidden' }}>
+    <div style={{ ...cardStyle, border: `1px solid color-mix(in srgb, ${color} 50%, var(--surface-border))`, overflow: 'hidden' }}>
       <button
         onClick={() => setExpanded((v) => !v)}
         style={{
@@ -91,6 +125,7 @@ function TeamMatchCard({ match }: { match: TeamMatchSummary }) {
         }}
       >
         <ChevronRight size={15} strokeWidth={2} style={{ flex: 'none', color: 'var(--text-faint)', transform: expanded ? 'rotate(90deg)' : 'none', transition: 'transform .15s ease' }} />
+        <span style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '.04em', color }}>{RESULT_LABEL[result]}</span>
         <span style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 15 }}>{match.map}</span>
         <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>Placar {match.score}</span>
         <span style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--text-dim)', flex: 'none' }}>{match.playedAtLabel}</span>

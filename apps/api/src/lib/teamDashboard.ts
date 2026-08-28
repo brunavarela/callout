@@ -29,6 +29,7 @@ const EMPTY_SUMMARY: TeamDashboardSummary = {
   firstDeathRanking: [],
   mostPickedAgents: [],
   biggestWin: null,
+  worstLoss: null,
   closestMatch: null,
 };
 
@@ -174,6 +175,8 @@ export async function buildTeamDashboard(): Promise<TeamDashboardSummary | null>
 
   let biggestWin: TeamStandoutMatch | null = null;
   let biggestWinMargin = -Infinity;
+  let worstLoss: TeamStandoutMatch | null = null;
+  let worstLossMargin = Infinity; // mais negativo = derrota mais dura
   let closestMatch: TeamStandoutMatch | null = null;
   let closestMatchMargin = Infinity;
 
@@ -284,6 +287,10 @@ export async function buildTeamDashboard(): Promise<TeamDashboardSummary | null>
     if (won && margin > biggestWinMargin) {
       biggestWinMargin = margin;
       biggestWin = standout;
+    }
+    if (!won && margin < worstLossMargin) {
+      worstLossMargin = margin;
+      worstLoss = standout;
     }
     if (Math.abs(margin) < closestMatchMargin) {
       closestMatchMargin = Math.abs(margin);
@@ -420,6 +427,7 @@ export async function buildTeamDashboard(): Promise<TeamDashboardSummary | null>
     firstDeathRanking,
     mostPickedAgents,
     biggestWin,
+    worstLoss,
     closestMatch,
   };
 }
