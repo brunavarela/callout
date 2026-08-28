@@ -74,10 +74,10 @@
   --text: #17171a;
   --text-2: #2d2d30;
   --text-3: #47484b;
-  --text-muted: #6c6f73;
-  --text-muted-2: #7d8084;
-  --text-dim: #8e9195;
-  --text-faint: #a9acaf;
+  --text-muted: #5a5d61;
+  --text-muted-2: #686b6f;
+  --text-dim: #797c80;
+  --text-faint: #94979b;
   --track: #dcdcd9;
   --bar-dim: #c6c6c3;
 
@@ -487,7 +487,7 @@ button {
   /* Sem overflow:hidden aqui de propósito — o brilho decorativo do topo
      tem seu próprio wrapper clipado (ver AppShell.tsx), pra deixar a
      tooltip dos ícones (sidebar recolhida) escapar sem ser cortada. */
-  border-right: 1px solid #202023;
+  border-right: 1px solid var(--surface-border);
 }
 .app-sidebar-header,
 .app-sidebar-promo {
@@ -610,7 +610,7 @@ button {
     flex-direction: row;
     align-items: center;
     border-right: none;
-    border-top: 1px solid #202023;
+    border-top: 1px solid var(--surface-border);
     z-index: 40;
   }
   .app-sidebar-header,
