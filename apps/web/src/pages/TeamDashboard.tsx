@@ -5,7 +5,7 @@ import { MIN_TEAM_MATCH_PLAYERS, type BestAgentComposition, type LineupCombo, ty
 import type { OutletContext } from '../components/AppShell';
 import { LoadingFill } from '../components/Spinner';
 import { cardStyle, WIN, LOSS, DRAW, rateBarColor, plural, RateBlock, RankingBlock, type RankingRow } from '../components/statsPrimitives';
-import { agentImageUrl } from '../lib/agentImages';
+import { AgentAvatar } from '../components/AgentAvatar';
 
 // Altura fixa dos 4 cards médios (Variações de time, Destaques do time, Em
 // quais mapas o time ganha, Melhores agentes do time) — pra ficarem todos
@@ -13,32 +13,6 @@ import { agentImageUrl } from '../lib/agentImages';
 // couber rola dentro do próprio card (título/cabeçalho de coluna continuam
 // fixos, só a lista rola).
 const MEDIUM_CARD_HEIGHT = 320;
-
-function AgentAvatar({ agent, size, title }: { agent: string; size: number; title?: string }) {
-  const imageUrl = agentImageUrl(agent);
-  return (
-    <div
-      title={title ?? agent}
-      style={{
-        width: size,
-        height: size,
-        borderRadius: size >= 30 ? 9 : 7,
-        overflow: 'hidden',
-        flex: 'none',
-        background: imageUrl ? '#141415' : 'var(--avatar-bg)',
-        border: '1px solid var(--surface-border)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        fontSize: size >= 30 ? 9 : 7,
-        fontWeight: 700,
-        color: 'var(--text-muted)',
-      }}
-    >
-      {imageUrl ? <img src={imageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : agent.slice(0, 2).toUpperCase()}
-    </div>
-  );
-}
 
 function PlayerInitials({ name, size }: { name: string; size: number }) {
   return (

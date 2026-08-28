@@ -5,7 +5,7 @@ import type { TeamMatchParticipant, TeamMatchSummary } from '@callout/shared';
 import { MIN_TEAM_MATCH_PLAYERS } from '@callout/shared';
 import type { OutletContext } from '../components/AppShell';
 import { LoadingFill } from '../components/Spinner';
-import { agentImageUrl } from '../lib/agentImages';
+import { AgentAvatar } from '../components/AgentAvatar';
 
 const cardStyle: React.CSSProperties = { borderRadius: 'var(--radius-lg)', background: 'var(--surface)', border: '1px solid var(--surface-border)' };
 const WIN = 'var(--pos, #18AAB7)';
@@ -28,32 +28,6 @@ function fmtRr(n: number): string {
   if (n > 0) return `+${abs}`;
   if (n < 0) return `−${abs}`;
   return String(abs);
-}
-
-function AgentAvatar({ agent, size }: { agent: string; size: number }) {
-  const imageUrl = agentImageUrl(agent);
-  return (
-    <div
-      title={agent}
-      style={{
-        width: size,
-        height: size,
-        borderRadius: 7,
-        overflow: 'hidden',
-        flex: 'none',
-        background: imageUrl ? '#141415' : 'var(--avatar-bg)',
-        border: '1px solid var(--surface-border)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        fontSize: 7,
-        fontWeight: 700,
-        color: 'var(--text-muted)',
-      }}
-    >
-      {imageUrl ? <img src={imageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : agent.slice(0, 2).toUpperCase()}
-    </div>
-  );
 }
 
 function ParticipantHeader() {

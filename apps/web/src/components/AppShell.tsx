@@ -184,18 +184,21 @@ export function AppShell() {
   return (
     <div className="app-shell-grid" style={{ '--sidebar-w': collapsed ? '76px' : '232px' } as React.CSSProperties}>
       <aside className={`app-sidebar${collapsed ? ' app-sidebar-collapsed' : ''}`}>
-        <div
-          style={{
-            position: 'absolute',
-            top: -140,
-            left: -90,
-            width: 340,
-            height: 340,
-            borderRadius: '50%',
-            background: 'radial-gradient(circle, var(--acc18, rgba(239,73,88,.18)) 0%, transparent 70%)',
-            pointerEvents: 'none',
-          }}
-        />
+        {/* Clipada só nesse wrapper (não na aside inteira) — a aside precisa
+            de overflow visível pra tooltip dos ícones (recolhida) escapar. */}
+        <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none' }}>
+          <div
+            style={{
+              position: 'absolute',
+              top: -140,
+              left: -90,
+              width: 340,
+              height: 340,
+              borderRadius: '50%',
+              background: 'radial-gradient(circle, var(--acc18, rgba(239,73,88,.18)) 0%, transparent 70%)',
+            }}
+          />
+        </div>
         <div className="app-sidebar-header" style={{ position: 'relative', padding: '24px 16px 16px' }}>
           <div className="sidebar-fade sidebar-fade--col" style={{ minWidth: 0 }}>
             <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 700, fontSize: 22, letterSpacing: '-.02em', whiteSpace: 'nowrap' }}>
@@ -236,10 +239,11 @@ export function AppShell() {
                 key={item.label}
                 to={item.to}
                 className="nav-item"
-                title={collapsed ? item.label : undefined}
+                aria-label={collapsed ? item.label : undefined}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
+                  justifyContent: collapsed ? 'center' : 'flex-start',
                   gap: collapsed ? 0 : 11,
                   padding: '11px 12px',
                   borderRadius: 'var(--radius-md)',
@@ -258,6 +262,7 @@ export function AppShell() {
                 <span className="sidebar-fade sidebar-fade--col" style={{ minWidth: 0 }}>
                   <span style={{ whiteSpace: 'nowrap' }}>{item.label}</span>
                 </span>
+                {collapsed && <span className="nav-item-tooltip">{item.label}</span>}
               </NavLink>
             );
           })}
