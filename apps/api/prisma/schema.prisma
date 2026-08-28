@@ -113,6 +113,14 @@ model MatchPlayer {
   legshots       Int
   damageDealt    Int
   damageReceived Int
+  // Delta de RR (last_change do mmr-history) só é gravado pro dono da conta
+  // que disparou o sync — a HenrikDev só devolve RR pra quem você pede, não
+  // pros outros jogadores da partida. Nulo até o dono daquela conta
+  // sincronizar (ou pra partidas de modo sem RR, tipo Unrated/Deathmatch).
+  // Gravado no momento do sync porque o endpoint mmr-history só cobre as
+  // ~20 partidas ranqueadas mais recentes — depois disso o dado some da API
+  // pra sempre, então precisa capturar cedo.
+  rr             Int?
 
   @@unique([matchId, puuid])
   @@index([puuid])

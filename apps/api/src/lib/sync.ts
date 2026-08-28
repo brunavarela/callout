@@ -1,7 +1,7 @@
 import { ZodError } from "zod";
 import type { MatchV4Data, SyncStatus } from "@callout/shared";
 import { prisma } from "./prisma.js";
-import { getMatchlist, HenrikDevError } from "./henrikdev.js";
+import { getMatchlist, getMmrHistory, HenrikDevError } from "./henrikdev.js";
 import { ensureMapAsset } from "./strategy.js";
 import { countsTowardStats } from "./match-result.js";
 
@@ -58,6 +58,20 @@ export async function syncUserMatches(userId: string, puuid: string, region: str
     let done = matches.length - newMatches.length;
     progressByUser.set(userId, { state: "syncing", progress: { done, total: matches.length } });
 
+    // O endpoint mmr-history só cobre as ~20 partidas ranqueadas mais
+    // recentes da conta — depois disso o RR some da API pra sempre. Por
+    // isso capturamos aqui, no momento do sync (quando a partida ainda tá
+    // bem dentro da janela), em vez de buscar sob demanda depois.
+    const rrByMatchId = new Map<string, number>();
+    if (newMatches.length > 0) {
+      try {
+        const history = await getMmrHistory(region, puuid);
+        for (const h of history) rrByMatchId.set(h.match_id, h.last_change);
+      } catch {
+        // sem histórico de RR agora — as partidas novas ficam com rr null
+      }
+    }
+
     // Paralelo, mas com teto — Promise.all sem limite chegou a abrir uma
     // query por partida nova de uma vez (findFirst/create de ensureMapAsset
     // + o create da partida, cada uma pegando uma conexão), estourando o
@@ -70,7 +84,7 @@ export async function syncUserMatches(userId: string, puuid: string, region: str
     async function worker() {
       while (cursor < newMatches.length) {
         const match = newMatches[cursor++]!;
-        await persistMatch(match);
+        await persistMatch(match, puuid, rrByMatchId.get(match.metadata.match_id) ?? null);
         done++;
         progressByUser.set(userId, { state: "syncing", progress: { done, total: matches.length } });
       }
@@ -91,7 +105,7 @@ export async function syncUserMatches(userId: string, puuid: string, region: str
   }
 }
 
-async function persistMatch(match: MatchV4Data) {
+async function persistMatch(match: MatchV4Data, selfPuuid: string, selfRr: number | null) {
   const roundCount = match.rounds.length;
   const modo = match.metadata.queue.name ?? match.metadata.queue.id;
   // Deathmatch (e Team Deathmatch) vem com `rounds` de 1 item cobrindo a
@@ -132,6 +146,7 @@ async function persistMatch(match: MatchV4Data) {
             legshots: p.stats.legshots,
             damageDealt: p.stats.damage.dealt,
             damageReceived: p.stats.damage.received,
+            rr: p.puuid === selfPuuid ? selfRr : null,
           };
         }),
       },

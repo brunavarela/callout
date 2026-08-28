@@ -2,7 +2,7 @@ import type { User } from "@prisma/client";
 import type { TeamMatchSummary, TeamOverview } from "@callout/shared";
 import { MIN_TEAM_MATCH_PLAYERS } from "@callout/shared";
 import { prisma } from "./prisma.js";
-import { getMmr, getMmrHistory } from "./henrikdev.js";
+import { getMmr } from "./henrikdev.js";
 import { loadAgentsByUuid } from "./assets.js";
 import { mapNameFrom, scoreFor, hasAce, formatPlayedAt } from "./dashboard.js";
 import { matchResult, countsTowardStats } from "./match-result.js";
@@ -183,6 +183,7 @@ export async function buildTeamMatches(): Promise<TeamMatchSummary[]> {
       headshots: true,
       bodyshots: true,
       legshots: true,
+      rr: true,
     },
   });
 
@@ -202,22 +203,6 @@ export async function buildTeamMatches(): Promise<TeamMatchSummary[]> {
     .filter((x): x is { match: (typeof matches)[number]; list: typeof rows } => x.match !== undefined)
     .sort((a, b) => b.match.startedAt.getTime() - a.match.startedAt.getTime());
 
-  // RR: uma chamada por jogador (não por partida) — reaproveita pra todas
-  // as partidas dele, igual buildDashboardSummary faz pro usuário logado.
-  const rrByPuuidMatch = new Map<string, Map<string, number>>();
-  await Promise.all(
-    trackedMembers.map(async (m) => {
-      const puuid = m.user.riotPuuid!;
-      if (!m.user.riotRegion) return;
-      try {
-        const history = await getMmrHistory(m.user.riotRegion, puuid);
-        rrByPuuidMatch.set(puuid, new Map(history.map((h) => [h.match_id, h.last_change])));
-      } catch {
-        // sem histórico pra esse jogador — RR fica null nas partidas dele
-      }
-    }),
-  );
-
   const now = new Date();
   return qualifying.map(({ match, list }): TeamMatchSummary => {
     const score = scoreFor(match.rawJson, list[0]!.teamId);
@@ -230,7 +215,7 @@ export async function buildTeamMatches(): Promise<TeamMatchSummary[]> {
       playedAtLabel: formatPlayedAt(match.startedAt, now),
       participants: list.map((r) => {
         const member = memberByPuuid.get(r.puuid)!;
-        const rr = rrByPuuidMatch.get(r.puuid)?.get(r.matchId) ?? null;
+        const rr = r.rr;
         const shotsTotal = r.headshots + r.bodyshots + r.legshots;
         return {
           userId: member.userId,

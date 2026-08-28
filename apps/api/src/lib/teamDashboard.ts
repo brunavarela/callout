@@ -2,7 +2,6 @@ import type { BestAgentComposition, LineupComboMatch, MatchV4Data, TeamAgentPerf
 import { MIN_TEAM_MATCH_PLAYERS } from "@callout/shared";
 import { prisma } from "./prisma.js";
 import { loadAgentColorsByName } from "./assets.js";
-import { getMmrHistory } from "./henrikdev.js";
 import { mapNameFrom, scoreFor, formatPlayedAt } from "./dashboard.js";
 import { countsTowardStats, matchResult } from "./match-result.js";
 import { replayMatchStats } from "./matchReplay.js";
@@ -93,6 +92,7 @@ export async function buildTeamDashboard(): Promise<TeamDashboardSummary | null>
         acs: true,
         kills: true,
         assists: true,
+        rr: true,
         match: { select: { modo: true } },
       },
     })
@@ -123,25 +123,6 @@ export async function buildTeamDashboard(): Promise<TeamDashboardSummary | null>
   const wins = qualifying.filter(({ list }) => list[0]!.won).length;
   const losses = qualifying.length - wins;
   const { current, bestWinStreak } = computeStreaks(qualifying.map(({ list }) => list[0]!.won));
-
-  // Só pra "Variações de time - Jogadores" (vitória/derrota/empate por
-  // formação) — a Riot não expõe empate em `won` (vem `false`, igual
-  // derrota); o único jeito de identificar é pelo RR ganho na partida (ver
-  // matchResult em match-result.ts). Uma chamada por jogador (não por
-  // partida), igual buildTeamMatches já faz.
-  const rrByPuuidMatch = new Map<string, Map<string, number>>();
-  await Promise.all(
-    trackedMembers.map(async (m) => {
-      const puuid = m.user.riotPuuid!;
-      if (!m.user.riotRegion) return;
-      try {
-        const history = await getMmrHistory(m.user.riotRegion, puuid);
-        rrByPuuidMatch.set(puuid, new Map(history.map((h) => [h.match_id, h.last_change])));
-      } catch {
-        // sem histórico pra esse jogador — matchResult cai pro won cru (nunca vira empate)
-      }
-    }),
-  );
 
   const byMap = new Map<string, { mapId: string | null; wins: number; total: number }>();
   const byCombo = new Map<
@@ -201,8 +182,9 @@ export async function buildTeamDashboard(): Promise<TeamDashboardSummary | null>
     // V/D pra mostrar "4 (2OT)" ao lado de cada um, não uma coluna à parte.
     const wentToOvertime = raw.rounds.length > 24;
     // V/D/E pelo RR, não pelo `won` cru — a Riot não tem flag de empate
-    // (vem `false`, igual derrota); ver comentário no fetch de rrByPuuidMatch.
-    const rrDelta = rrByPuuidMatch.get(list[0]!.puuid)?.get(match.id) ?? null;
+    // (vem `false`, igual derrota); RR vem gravado desde o sync (ver
+    // comentário em MatchPlayer.rr no schema).
+    const rrDelta = list[0]!.rr;
     const comboResult = matchResult(won, rrDelta);
     if (comboResult === "V") {
       cEntry.wins++;
