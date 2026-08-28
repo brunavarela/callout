@@ -53,45 +53,47 @@ function MatchDetailPanel({ detail }: { detail: MatchDetail }) {
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: SCORE_COLUMNS, gap: 8, padding: '4px 0 6px', fontSize: 9.5, letterSpacing: '.08em', color: 'var(--text-faint)' }}>
-        <span>JOGADOR · AGENTE</span>
-        <span />
-        <span style={{ textAlign: 'right' }}>ACS</span>
-        <span style={{ textAlign: 'right' }}>K</span>
-        <span style={{ textAlign: 'right' }}>D</span>
-        <span style={{ textAlign: 'right' }}>A</span>
-        <span style={{ textAlign: 'right' }}>HS%</span>
-      </div>
-      {detail.players.map((p) => (
-        <div
-          key={p.puuid}
-          style={{
-            display: 'grid',
-            gridTemplateColumns: SCORE_COLUMNS,
-            gap: 8,
-            alignItems: 'center',
-            padding: '8px 0',
-            borderTop: '1px solid var(--divider)',
-            fontSize: 12.5,
-            background: p.isSelf ? 'color-mix(in srgb, var(--acc, #EF4958) 9%, transparent)' : 'transparent',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0, overflow: 'hidden' }}>
-            <span style={{ width: 3, height: 14, borderRadius: 2, background: p.side === 'own' ? 'var(--acc, #EF4958)' : 'var(--text-faint)', flex: 'none' }} />
-            <AgentAvatar agent={p.agent} size={22} />
-            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: p.side === 'own' ? 'var(--text)' : 'var(--text-muted)', fontWeight: p.isSelf ? 600 : 400 }}>
-              {p.name}
-              <span style={{ marginLeft: 5, fontSize: 10, color: 'var(--text-faint)' }}>{p.tag}</span>
-            </span>
-          </div>
+      <div className="scroll-x-mobile">
+        <div style={{ display: 'grid', gridTemplateColumns: SCORE_COLUMNS, gap: 8, padding: '4px 0 6px', fontSize: 9.5, letterSpacing: '.08em', color: 'var(--text-faint)' }}>
+          <span>JOGADOR · AGENTE</span>
           <span />
-          <div style={{ textAlign: 'right' }}>{p.acs}</div>
-          <div style={{ textAlign: 'right', color: 'var(--text-muted)' }}>{p.kills}</div>
-          <div style={{ textAlign: 'right', color: 'var(--text-muted)' }}>{p.deaths}</div>
-          <div style={{ textAlign: 'right', color: 'var(--text-muted)' }}>{p.assists}</div>
-          <div style={{ textAlign: 'right', color: 'var(--text-muted)' }}>{p.hsPercent}%</div>
+          <span style={{ textAlign: 'right' }}>ACS</span>
+          <span style={{ textAlign: 'right' }}>K</span>
+          <span style={{ textAlign: 'right' }}>D</span>
+          <span style={{ textAlign: 'right' }}>A</span>
+          <span style={{ textAlign: 'right' }}>HS%</span>
         </div>
-      ))}
+        {detail.players.map((p) => (
+          <div
+            key={p.puuid}
+            style={{
+              display: 'grid',
+              gridTemplateColumns: SCORE_COLUMNS,
+              gap: 8,
+              alignItems: 'center',
+              padding: '8px 0',
+              borderTop: '1px solid var(--divider)',
+              fontSize: 12.5,
+              background: p.isSelf ? 'color-mix(in srgb, var(--acc, #EF4958) 9%, transparent)' : 'transparent',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0, overflow: 'hidden' }}>
+              <span style={{ width: 3, height: 14, borderRadius: 2, background: p.side === 'own' ? 'var(--acc, #EF4958)' : 'var(--text-faint)', flex: 'none' }} />
+              <AgentAvatar agent={p.agent} size={22} />
+              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: p.side === 'own' ? 'var(--text)' : 'var(--text-muted)', fontWeight: p.isSelf ? 600 : 400 }}>
+                {p.name}
+                <span style={{ marginLeft: 5, fontSize: 10, color: 'var(--text-faint)' }}>{p.tag}</span>
+              </span>
+            </div>
+            <span />
+            <div style={{ textAlign: 'right' }}>{p.acs}</div>
+            <div style={{ textAlign: 'right', color: 'var(--text-muted)' }}>{p.kills}</div>
+            <div style={{ textAlign: 'right', color: 'var(--text-muted)' }}>{p.deaths}</div>
+            <div style={{ textAlign: 'right', color: 'var(--text-muted)' }}>{p.assists}</div>
+            <div style={{ textAlign: 'right', color: 'var(--text-muted)' }}>{p.hsPercent}%</div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

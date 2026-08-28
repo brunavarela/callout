@@ -113,7 +113,7 @@ function TeamMatchCard({ match }: { match: TeamMatchSummary }) {
         }}
       >
         <div style={{ overflow: 'hidden', minHeight: 0 }}>
-          <div style={{ padding: '0 18px 14px', borderTop: '1px solid var(--divider)' }}>
+          <div className="scroll-x-mobile" style={{ padding: '0 18px 14px', borderTop: '1px solid var(--divider)' }}>
             <ParticipantHeader />
             {match.participants.map((p) => (
               <ParticipantRow key={p.userId} p={p} />

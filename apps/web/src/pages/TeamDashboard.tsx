@@ -194,7 +194,7 @@ function LineupVariations({ combos }: { combos: LineupCombo[] }) {
       {combos.length === 0 ? (
         <div style={{ fontSize: 12.5, color: 'var(--text-faint)' }}>Sem dados ainda.</div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+        <div className="scroll-x-mobile" style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
           <div style={{ display: 'grid', gridTemplateColumns: LINEUP_COLUMNS, gap: 8, padding: '0 0 6px', fontSize: 9.5, letterSpacing: '.08em', color: 'var(--text-faint)' }}>
             <span />
             <span>COMPOSIÇÃO</span>
@@ -228,7 +228,7 @@ function BestAgentsTable({ agents }: { agents: TeamAgentPerformance[] }) {
       {agents.length === 0 ? (
         <div style={{ fontSize: 12.5, color: 'var(--text-faint)' }}>Sem dados ainda.</div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+        <div className="scroll-x-mobile" style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 46px 52px 36px 58px 56px', gap: 8, padding: '0 0 6px', fontSize: 9.5, letterSpacing: '.08em', color: 'var(--text-faint)' }}>
             <span>AGENTE</span>
             <span style={{ textAlign: 'right' }}>KILLS</span>
