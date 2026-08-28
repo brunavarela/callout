@@ -1,4 +1,4 @@
-import type { BestAgentComposition, MatchV4Data, TeamAgentPerformance, TeamAgentPick, TeamDashboardSummary, TeamStandoutMatch } from "@callout/shared";
+import type { BestAgentComposition, LineupComboMatch, MatchV4Data, TeamAgentPerformance, TeamAgentPick, TeamDashboardSummary, TeamStandoutMatch } from "@callout/shared";
 import { MIN_TEAM_MATCH_PLAYERS } from "@callout/shared";
 import { prisma } from "./prisma.js";
 import { loadAgentColorsByName } from "./assets.js";
@@ -145,7 +145,16 @@ export async function buildTeamDashboard(): Promise<TeamDashboardSummary | null>
   const byMap = new Map<string, { mapId: string | null; wins: number; total: number }>();
   const byCombo = new Map<
     string,
-    { memberUserIds: string[]; wins: number; losses: number; draws: number; overtimeWins: number; overtimeLosses: number; total: number }
+    {
+      memberUserIds: string[];
+      wins: number;
+      losses: number;
+      draws: number;
+      overtimeWins: number;
+      overtimeLosses: number;
+      total: number;
+      matches: LineupComboMatch[];
+    }
   >();
   // Agente mais jogado por cada membro DENTRO de cada formação específica
   // (não o agente favorito dele no geral) — comboKey -> userId -> agente -> contagem.
@@ -182,7 +191,7 @@ export async function buildTeamDashboard(): Promise<TeamDashboardSummary | null>
 
     const comboUserIds = [...list.map((r) => memberByPuuid.get(r.puuid)!.userId)].sort();
     const comboKey = comboUserIds.join(",");
-    const cEntry = byCombo.get(comboKey) ?? { memberUserIds: comboUserIds, wins: 0, losses: 0, draws: 0, overtimeWins: 0, overtimeLosses: 0, total: 0 };
+    const cEntry = byCombo.get(comboKey) ?? { memberUserIds: comboUserIds, wins: 0, losses: 0, draws: 0, overtimeWins: 0, overtimeLosses: 0, total: 0, matches: [] };
     cEntry.total++;
     // Overtime: rounds além dos 24 de regulação (12 de cada lado) — mesmo
     // corte que insights.ts usa pro ataque/defesa por overtime. Separado por
@@ -201,6 +210,14 @@ export async function buildTeamDashboard(): Promise<TeamDashboardSummary | null>
     } else {
       cEntry.draws++;
     }
+    cEntry.matches.push({
+      matchId: match.id,
+      result: comboResult,
+      score: `${score.own}—${score.opponent}`,
+      map,
+      playedAtLabel: formatPlayedAt(match.startedAt, now),
+      agents: list.map((r) => ({ userId: memberByPuuid.get(r.puuid)!.userId, name: nameByUserId.get(memberByPuuid.get(r.puuid)!.userId) ?? "?", agent: r.agentName })),
+    });
     byCombo.set(comboKey, cEntry);
 
     const agentCompoKey = [...list.map((r) => r.agentName)].sort().join(",");
@@ -298,6 +315,7 @@ export async function buildTeamDashboard(): Promise<TeamDashboardSummary | null>
         overtimeLosses: s.overtimeLosses,
         total: s.total,
         winratePercent: s.total ? round0((s.wins / s.total) * 100) : 0,
+        matches: [...s.matches].reverse(), // mais recente primeiro (empilhado em ordem cronológica no loop acima)
       };
     })
     .sort((a, b) => b.total - a.total);

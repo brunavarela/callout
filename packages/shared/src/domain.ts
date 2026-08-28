@@ -332,6 +332,17 @@ export interface LineupComboMember {
   agent: string; // agente mais jogado por esse jogador NESSA formação específica, não o favorito dele no geral
 }
 
+// Uma partida específica de uma formação — pro card de "Variações de
+// time" expandir e listar quais partidas geraram aqueles números.
+export interface LineupComboMatch {
+  matchId: string;
+  result: "V" | "D" | "E";
+  score: string;
+  map: string;
+  playedAtLabel: string;
+  agents: Array<{ userId: string; name: string; agent: string }>; // agente jogado por cada um NESSA partida (pode variar partida a partida, diferente do LineupComboMember.agent que é o mais frequente)
+}
+
 export interface LineupCombo {
   comboKey: string; // userIds ordenados e concatenados — chave estável
   members: LineupComboMember[];
@@ -342,6 +353,7 @@ export interface LineupCombo {
   overtimeLosses: number; // idem, ao lado de D
   total: number;
   winratePercent: number;
+  matches: LineupComboMatch[]; // mais recente primeiro
 }
 
 export interface TeamAgentPick {

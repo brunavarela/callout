@@ -1,10 +1,10 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useOutletContext } from 'react-router-dom';
-import { ArrowLeft, History } from 'lucide-react';
-import { MIN_TEAM_MATCH_PLAYERS, type BestAgentComposition, type LineupCombo, type TeamAgentPerformance } from '@callout/shared';
+import { ArrowLeft, ChevronRight, History } from 'lucide-react';
+import { MIN_TEAM_MATCH_PLAYERS, type BestAgentComposition, type LineupCombo, type LineupComboMatch, type TeamAgentPerformance } from '@callout/shared';
 import type { OutletContext } from '../components/AppShell';
 import { LoadingFill } from '../components/Spinner';
-import { cardStyle, WIN, LOSS, rateBarColor, plural, RateBlock, RankingBlock, type RankingRow } from '../components/statsPrimitives';
+import { cardStyle, WIN, LOSS, DRAW, rateBarColor, plural, RateBlock, RankingBlock, type RankingRow } from '../components/statsPrimitives';
 import { agentImageUrl } from '../lib/agentImages';
 
 // Altura fixa dos 4 cards médios (Variações de time, Destaques do time, Em
@@ -110,7 +110,88 @@ function AgentComboKpiTile({ compo }: { compo: BestAgentComposition | null }) {
 // time" é sobre o que aconteceu, não um ranking de qual formação é
 // "melhor" (isso soaria como "o time rende mais sem Fulano"). Ordenado por
 // quantas vezes cada formação jogou.
-const LINEUP_COLUMNS = '1fr 74px 74px 56px 50px 66px';
+const LINEUP_COLUMNS = '16px 1fr 74px 74px 56px 50px 66px';
+
+function comboResultColor(result: LineupComboMatch['result']): string {
+  return result === 'V' ? WIN : result === 'D' ? LOSS : DRAW;
+}
+
+// Linha de uma partida específica dentro de uma formação expandida — sem
+// legenda, só V/D/E, mapa, placar e os agentes daquela partida (que podem
+// variar partida a partida, diferente do agente "mais jogado" da linha
+// principal).
+function ComboMatchRow({ m }: { m: LineupComboMatch }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 0 7px 24px', borderTop: '1px solid var(--divider)' }}>
+      <span style={{ width: 14, flex: 'none', fontSize: 10.5, fontWeight: 700, textAlign: 'center', color: comboResultColor(m.result) }}>{m.result}</span>
+      <span style={{ fontSize: 12, color: 'var(--text-3)', whiteSpace: 'nowrap' }}>{m.map}</span>
+      <span style={{ fontSize: 12, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{m.score}</span>
+      <div style={{ display: 'flex', gap: 3, marginLeft: 'auto', flex: 'none' }}>
+        {m.agents.map((a) => (
+          <AgentAvatar key={a.userId} agent={a.agent} size={20} title={a.name} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// Linha principal de uma formação — clicável, expande pra listar as
+// partidas específicas dessa formação (ComboMatchRow acima).
+function ComboRow({ combo }: { combo: LineupCombo }) {
+  const [expanded, setExpanded] = useState(false);
+  const otRate = combo.total ? Math.round(((combo.overtimeWins + combo.overtimeLosses) / combo.total) * 100) : 0;
+
+  return (
+    <div style={{ borderTop: '1px solid var(--divider)' }}>
+      <button
+        onClick={() => setExpanded((v) => !v)}
+        style={{
+          width: '100%',
+          display: 'grid',
+          gridTemplateColumns: LINEUP_COLUMNS,
+          gap: 8,
+          alignItems: 'center',
+          padding: '9px 0',
+          background: 'none',
+          border: 'none',
+          cursor: 'pointer',
+          textAlign: 'left',
+          font: 'inherit',
+          color: 'inherit',
+        }}
+      >
+        <ChevronRight size={13} strokeWidth={2} style={{ flex: 'none', color: 'var(--text-faint)', transform: expanded ? 'rotate(90deg)' : 'none', transition: 'transform .15s ease' }} />
+        <div style={{ display: 'flex', gap: 4 }}>
+          {combo.members.map((m) => (
+            <PlayerInitials key={m.userId} name={m.name} size={26} />
+          ))}
+        </div>
+        <span style={{ fontSize: 12.5, fontWeight: 600, color: WIN, textAlign: 'right', whiteSpace: 'nowrap' }}>
+          {combo.wins}
+          {combo.overtimeWins > 0 && (
+            <span style={{ fontWeight: 400, color: 'var(--text-faint)' }}>
+              {' ('}
+              <span style={{ fontWeight: 700, color: WIN }}>{combo.overtimeWins}</span>OT)
+            </span>
+          )}
+        </span>
+        <span style={{ fontSize: 12.5, fontWeight: 600, color: LOSS, textAlign: 'right', whiteSpace: 'nowrap' }}>
+          {combo.losses}
+          {combo.overtimeLosses > 0 && (
+            <span style={{ fontWeight: 400, color: 'var(--text-faint)' }}>
+              {' ('}
+              <span style={{ fontWeight: 700, color: LOSS }}>{combo.overtimeLosses}</span>OT)
+            </span>
+          )}
+        </span>
+        <span style={{ fontSize: 12.5, color: 'var(--text-muted)', textAlign: 'right' }}>{combo.draws}</span>
+        <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--text-3)', textAlign: 'right' }}>{combo.winratePercent}%</span>
+        <span style={{ fontSize: 12.5, color: 'var(--text-muted)', textAlign: 'right' }}>{otRate}%</span>
+      </button>
+      {expanded && combo.matches.map((m) => <ComboMatchRow key={m.matchId} m={m} />)}
+    </div>
+  );
+}
 
 function LineupVariations({ combos }: { combos: LineupCombo[] }) {
   return (
@@ -127,6 +208,7 @@ function LineupVariations({ combos }: { combos: LineupCombo[] }) {
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
           <div style={{ display: 'grid', gridTemplateColumns: LINEUP_COLUMNS, gap: 8, padding: '0 0 6px', fontSize: 9.5, letterSpacing: '.08em', color: 'var(--text-faint)' }}>
+            <span />
             <span>COMPOSIÇÃO</span>
             <span style={{ textAlign: 'right' }}>VITÓRIAS</span>
             <span style={{ textAlign: 'right' }}>DERROTAS</span>
@@ -135,39 +217,9 @@ function LineupVariations({ combos }: { combos: LineupCombo[] }) {
             <span style={{ textAlign: 'right' }}>TAXA OT</span>
           </div>
           <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
-            {combos.map((c) => {
-              const otRate = c.total ? Math.round(((c.overtimeWins + c.overtimeLosses) / c.total) * 100) : 0;
-              return (
-                <div key={c.comboKey} style={{ display: 'grid', gridTemplateColumns: LINEUP_COLUMNS, gap: 8, alignItems: 'center', padding: '9px 0', borderTop: '1px solid var(--divider)' }}>
-                  <div style={{ display: 'flex', gap: 4 }}>
-                    {c.members.map((m) => (
-                      <PlayerInitials key={m.userId} name={m.name} size={26} />
-                    ))}
-                  </div>
-                  <span style={{ fontSize: 12.5, fontWeight: 600, color: WIN, textAlign: 'right', whiteSpace: 'nowrap' }}>
-                    {c.wins}
-                    {c.overtimeWins > 0 && (
-                      <span style={{ fontWeight: 400, color: 'var(--text-faint)' }}>
-                        {' ('}
-                        <span style={{ fontWeight: 700, color: WIN }}>{c.overtimeWins}</span>OT)
-                      </span>
-                    )}
-                  </span>
-                  <span style={{ fontSize: 12.5, fontWeight: 600, color: LOSS, textAlign: 'right', whiteSpace: 'nowrap' }}>
-                    {c.losses}
-                    {c.overtimeLosses > 0 && (
-                      <span style={{ fontWeight: 400, color: 'var(--text-faint)' }}>
-                        {' ('}
-                        <span style={{ fontWeight: 700, color: LOSS }}>{c.overtimeLosses}</span>OT)
-                      </span>
-                    )}
-                  </span>
-                  <span style={{ fontSize: 12.5, color: 'var(--text-muted)', textAlign: 'right' }}>{c.draws}</span>
-                  <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--text-3)', textAlign: 'right' }}>{c.winratePercent}%</span>
-                  <span style={{ fontSize: 12.5, color: 'var(--text-muted)', textAlign: 'right' }}>{otRate}%</span>
-                </div>
-              );
-            })}
+            {combos.map((c) => (
+              <ComboRow key={c.comboKey} combo={c} />
+            ))}
           </div>
         </div>
       )}
