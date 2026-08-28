@@ -343,7 +343,13 @@ export async function buildTeamDashboard(): Promise<TeamDashboardSummary | null>
     .sort((a, b) => b.value - a.value);
 
   const clutchRanking = [...clutchAgg.entries()]
-    .map(([userId, s]) => ({ userId, name: nameByUserId.get(userId) ?? "?", clutchesWon: s.won, clutchesPlayed: s.played }))
+    .map(([userId, s]) => ({
+      userId,
+      name: nameByUserId.get(userId) ?? "?",
+      clutchesWon: s.won,
+      clutchesPlayed: s.played,
+      matchesPlayed: acsAgg.get(userId)?.count ?? 0,
+    }))
     .sort((a, b) => b.clutchesWon - a.clutchesWon || b.clutchesPlayed - a.clutchesPlayed);
 
   const firstBloodRanking = [...firstBloodAgg.entries()]

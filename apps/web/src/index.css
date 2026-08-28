@@ -496,6 +496,20 @@ button {
   opacity: 0;
 }
 
+.sidebar-brand-mark {
+  position: absolute;
+  top: 24px;
+  left: 16px;
+  color: var(--text);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.16s ease;
+}
+.app-sidebar-collapsed .sidebar-brand-mark {
+  opacity: 1;
+  transition-delay: 0.1s;
+}
+
 /* Setinha flutuante ancorada exatamente na borda direita da sidebar —
    posicionada em relação ao grid (não à aside, que tem overflow:hidden),
    meio do eixo Y, ponta direita da sidebar no eixo X. `left` acompanha

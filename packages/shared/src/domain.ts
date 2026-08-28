@@ -324,6 +324,7 @@ export interface MemberClutchRow {
   name: string;
   clutchesWon: number;
   clutchesPlayed: number;
+  matchesPlayed: number;
 }
 
 export interface LineupComboMember {

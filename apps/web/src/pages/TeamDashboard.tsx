@@ -312,11 +312,36 @@ export function TeamDashboard() {
   const bestMap = data?.mapWinrates[0] ?? null;
 
   const acsRows: RankingRow[] = (data?.acsRanking ?? []).map((r) => ({ key: r.userId, name: r.name, value: String(r.value), caption: `(${plural(r.matchesPlayed, 'partida')})` }));
-  const mvpRows: RankingRow[] = (data?.mvpRanking ?? []).map((r) => ({ key: r.userId, name: r.name, value: plural(r.value, 'vez') }));
-  const assistRows: RankingRow[] = (data?.assistRanking ?? []).map((r) => ({ key: r.userId, name: r.name, value: String(r.value) }));
-  const clutchRows: RankingRow[] = (data?.clutchRanking ?? []).map((r) => ({ key: r.userId, name: r.name, value: `${r.clutchesWon} de ${r.clutchesPlayed}` }));
-  const firstBloodRows: RankingRow[] = (data?.firstBloodRanking ?? []).map((r) => ({ key: r.userId, name: r.name, value: String(r.value) }));
-  const firstDeathRows: RankingRow[] = (data?.firstDeathRanking ?? []).map((r) => ({ key: r.userId, name: r.name, value: String(r.value) }));
+  const mvpRows: RankingRow[] = (data?.mvpRanking ?? []).map((r) => ({
+    key: r.userId,
+    name: r.name,
+    value: `${r.value} ${r.value === 1 ? 'vez' : 'vezes'}`,
+    caption: `(${plural(r.matchesPlayed, 'partida')})`,
+  }));
+  const assistRows: RankingRow[] = (data?.assistRanking ?? []).map((r) => ({
+    key: r.userId,
+    name: r.name,
+    value: String(r.value),
+    caption: `(${plural(r.matchesPlayed, 'partida')})`,
+  }));
+  const clutchRows: RankingRow[] = (data?.clutchRanking ?? []).map((r) => ({
+    key: r.userId,
+    name: r.name,
+    value: `${r.clutchesWon} de ${r.clutchesPlayed}`,
+    caption: `(${plural(r.matchesPlayed, 'partida')})`,
+  }));
+  const firstBloodRows: RankingRow[] = (data?.firstBloodRanking ?? []).map((r) => ({
+    key: r.userId,
+    name: r.name,
+    value: String(r.value),
+    caption: `(${plural(r.matchesPlayed, 'partida')})`,
+  }));
+  const firstDeathRows: RankingRow[] = (data?.firstDeathRanking ?? []).map((r) => ({
+    key: r.userId,
+    name: r.name,
+    value: String(r.value),
+    caption: `(${plural(r.matchesPlayed, 'partida')})`,
+  }));
   const agentRows: RankingRow[] = (data?.mostPickedAgents ?? []).map((a) => ({ key: a.agent, name: a.agent, value: plural(a.count, 'pick'), dot: a.color }));
 
   const insights: string[] = [];
