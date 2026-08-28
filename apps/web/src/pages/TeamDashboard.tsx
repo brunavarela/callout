@@ -193,7 +193,16 @@ function ComboRow({ combo }: { combo: LineupCombo }) {
         <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--text-3)', textAlign: 'right' }}>{combo.winratePercent}%</span>
         <span style={{ fontSize: 12.5, color: 'var(--text-muted)', textAlign: 'right' }}>{otRate}%</span>
       </button>
-      {expanded && combo.matches.map((m) => <ComboMatchRow key={m.matchId} m={m} />)}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateRows: expanded ? '1fr' : '0fr',
+          opacity: expanded ? 1 : 0,
+          transition: 'grid-template-rows .28s ease, opacity .22s ease',
+        }}
+      >
+        <div style={{ overflow: 'hidden', minHeight: 0 }}>{combo.matches.map((m) => <ComboMatchRow key={m.matchId} m={m} />)}</div>
+      </div>
     </div>
   );
 }
