@@ -10,6 +10,7 @@
   --control-bg: #17171a; /* busca do header, botão de ícone, busca do Spots — mais clara que input-bg */
   --avatar-bg: #2a2a2d;
   --card-hover-bg: rgba(255, 255, 255, 0.035);
+  --nav-hover-bg: rgba(255, 255, 255, 0.07);
   --scrollbar-thumb: #2a2a2c;
 
   /* cores — texto */
@@ -69,6 +70,7 @@
   --control-bg: #eeeeec;
   --avatar-bg: #dcdcd9;
   --card-hover-bg: rgba(0, 0, 0, 0.035);
+  --nav-hover-bg: rgba(0, 0, 0, 0.055);
   --scrollbar-thumb: #c6c6c2;
 
   --text: #17171a;
@@ -293,7 +295,7 @@ button {
 }
 
 .nav-item:hover {
-  background: var(--card-hover-bg);
+  background: var(--nav-hover-bg);
 }
 
 .table-row:hover,

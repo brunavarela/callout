@@ -204,7 +204,7 @@ export function AppShell() {
             <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 700, fontSize: 22, letterSpacing: '-.02em', whiteSpace: 'nowrap' }}>
               callout<span style={{ color: 'var(--acc, #EF4958)' }}>.</span>
             </div>
-            <div style={{ fontSize: 10, letterSpacing: '.12em', color: 'var(--text-faint)', marginTop: 3, whiteSpace: 'nowrap' }}>
+            <div style={{ fontSize: 10, letterSpacing: '.12em', color: 'var(--text-muted)', marginTop: 3, whiteSpace: 'nowrap' }}>
               {team ? `${team.name.toUpperCase()} · ${team.memberCount} MEMBRO${team.memberCount === 1 ? '' : 'S'}` : '…'}
             </div>
           </div>
@@ -249,7 +249,11 @@ export function AppShell() {
                   borderRadius: 'var(--radius-md)',
                   fontSize: 14,
                   fontWeight: active ? 600 : 400,
-                  background: active ? 'var(--acc18, rgba(239,73,88,.16))' : 'transparent',
+                  // Só fixa o background quando ativo — deixando undefined no
+                  // resto, a regra .nav-item:hover do CSS consegue aplicar
+                  // (inline sempre vence a cascata, então um "transparent"
+                  // fixo aqui mascarava o hover por completo).
+                  background: active ? 'var(--acc18, rgba(239,73,88,.16))' : undefined,
                   color: active ? 'var(--text)' : 'var(--text-muted)',
                 }}
               >
