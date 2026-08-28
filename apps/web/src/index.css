@@ -130,7 +130,7 @@ button {
   gap: var(--space-12);
   padding: 17px 22px;
   background: var(--acc, #ef4958);
-  color: #141415;
+  color: var(--acc-text, #141415);
   border: none;
   border-radius: var(--radius-md);
   font-weight: 600;
@@ -139,7 +139,7 @@ button {
 
 .btn-primary:hover {
   filter: brightness(1.1);
-  color: #141415;
+  color: var(--acc-text, #141415);
 }
 
 .btn-secondary {

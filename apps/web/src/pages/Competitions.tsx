@@ -425,7 +425,7 @@ function FiltroCategorias({ filtro, setFiltro }: { filtro: CategoriaCompeticao; 
             fontWeight: 600,
             whiteSpace: 'nowrap',
             background: filtro === f.key ? 'var(--acc, #EF4958)' : 'transparent',
-            color: filtro === f.key ? '#141415' : 'var(--text-muted)',
+            color: filtro === f.key ? 'var(--acc-text, #141415)' : 'var(--text-muted)',
           }}
         >
           {f.label}

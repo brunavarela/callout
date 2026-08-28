@@ -597,7 +597,7 @@ export function Board() {
             alignItems: 'center',
             gap: 7,
             background: 'var(--acc, #EF4958)',
-            color: '#141415',
+            color: 'var(--acc-text, #141415)',
             border: 'none',
             borderRadius: 12,
             padding: '9px 16px',
@@ -630,7 +630,7 @@ export function Board() {
                   border: 'none',
                   borderRadius: 8,
                   background: active ? 'var(--acc, #EF4958)' : 'transparent',
-                  color: active ? '#141415' : 'var(--text-muted)',
+                  color: active ? 'var(--acc-text, #141415)' : 'var(--text-muted)',
                   fontSize: 11,
                   fontWeight: 600,
                 }}

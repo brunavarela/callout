@@ -24,6 +24,21 @@ function rgba(hex: string, a: number): string {
   return `rgba(${r},${g},${b},${a})`;
 }
 
+// Preto ou branco, o que der mais contraste em cima da cor de destaque —
+// luminância relativa (WCAG). Cobre os presets escuros da paleta (roxo e
+// azul-marinho, ex.: #421662/#192573) sem precisar fixar em hex específico:
+// qualquer cor escura que entrar na paleta no futuro já cai certo sozinha.
+function contrastTextColor(hex: string): string {
+  const [r, g, b] = hexRgb(hex).map((c) => {
+    const s = c / 255;
+    return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
+  });
+  const luminance = 0.2126 * r! + 0.7152 * g! + 0.0722 * b!;
+  const contrastWithWhite = 1.05 / (luminance + 0.05);
+  const contrastWithBlack = (luminance + 0.05) / 0.05;
+  return contrastWithWhite > contrastWithBlack ? '#ffffff' : '#141415';
+}
+
 interface ThemeContextValue {
   theme: ThemePreferences;
   setTheme: (next: ThemePreferences) => Promise<void>;
@@ -39,6 +54,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     const glow = theme.glow / 100;
     const vars: Record<string, string> = {
       '--acc': theme.accentColor,
+      '--acc-text': contrastTextColor(theme.accentColor),
       '--accSoft': rgba(theme.accentColor, 0.75),
       '--acc10': rgba(theme.accentColor, 0.1 * glow + 0.03),
       '--acc18': rgba(theme.accentColor, 0.26 * glow),

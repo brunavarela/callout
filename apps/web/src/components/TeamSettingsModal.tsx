@@ -126,7 +126,7 @@ export function TeamSettingsModal({
                     fontWeight: 600,
                     opacity: disabled && !active ? 0.4 : 1,
                     background: active ? 'var(--acc, #EF4958)' : 'var(--input-bg)',
-                    color: active ? '#141415' : 'var(--text-muted)',
+                    color: active ? 'var(--acc-text, #141415)' : 'var(--text-muted)',
                   }}
                 >
                   {f.label}

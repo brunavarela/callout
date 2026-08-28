@@ -168,7 +168,7 @@ function ModoFilterButtons({ modoFilter, setModoFilter }: { modoFilter: MatchMod
             fontWeight: 600,
             whiteSpace: 'nowrap',
             background: modoFilter === m.key ? 'var(--acc, #EF4958)' : 'transparent',
-            color: modoFilter === m.key ? '#141415' : 'var(--text-muted)',
+            color: modoFilter === m.key ? 'var(--acc-text, #141415)' : 'var(--text-muted)',
           }}
         >
           {m.label}
@@ -196,7 +196,7 @@ function MatchCountButtons({ matchCountFilter, setMatchCountFilter }: { matchCou
             fontSize: 11.5,
             whiteSpace: 'nowrap',
             background: matchCountFilter === c.key ? 'var(--acc, #EF4958)' : 'transparent',
-            color: matchCountFilter === c.key ? '#141415' : 'var(--text-muted)',
+            color: matchCountFilter === c.key ? 'var(--acc-text, #141415)' : 'var(--text-muted)',
           }}
         >
           {c.label}
