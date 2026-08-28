@@ -10,6 +10,7 @@
   --control-bg: #17171a; /* busca do header, botão de ícone, busca do Spots — mais clara que input-bg */
   --avatar-bg: #2a2a2d;
   --card-hover-bg: rgba(255, 255, 255, 0.035);
+  --scrollbar-thumb: #2a2a2c;
 
   /* cores — texto */
   --text: #fcfcfc;
@@ -50,6 +51,37 @@
   --radius-pill: 99px;
 
   color-scheme: dark;
+}
+
+/* Tema claro — cinza fosco puxado pro branco, não branco puro (nem no
+   fundo nem nos cards), pra não ficar um clarão sem textura. Mesma
+   estrutura de tokens do escuro, só invertendo a relação de luminância;
+   cor de destaque/negativa (--acc etc., ver theme.tsx) não muda com o
+   modo — é escolha independente do usuário. */
+:root[data-theme='light'] {
+  --bg: #ececeb;
+  --surface: #f5f5f3;
+  --surface-sunken: #e6e6e4;
+  --surface-border: #d9d9d6;
+  --divider: #e1e1de;
+  --input-bg: #f0f0ee;
+  --input-border: #d2d2cf;
+  --control-bg: #eeeeec;
+  --avatar-bg: #dcdcd9;
+  --card-hover-bg: rgba(0, 0, 0, 0.035);
+  --scrollbar-thumb: #c6c6c2;
+
+  --text: #17171a;
+  --text-2: #2d2d30;
+  --text-3: #47484b;
+  --text-muted: #6c6f73;
+  --text-muted-2: #7d8084;
+  --text-dim: #8e9195;
+  --text-faint: #a9acaf;
+  --track: #dcdcd9;
+  --bar-dim: #c6c6c3;
+
+  color-scheme: light;
 }
 
 * {
@@ -104,7 +136,7 @@ button {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #2a2a2c;
+  background: var(--scrollbar-thumb);
   border-radius: 99px;
   border: 3px solid var(--bg);
 }
@@ -253,7 +285,7 @@ button {
   white-space: nowrap;
 }
 .select-option:hover {
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--card-hover-bg);
 }
 .select-option.is-selected {
   color: var(--acc, #ef4958);
@@ -261,7 +293,7 @@ button {
 }
 
 .nav-item:hover {
-  background: rgba(255, 255, 255, 0.045);
+  background: var(--card-hover-bg);
 }
 
 .table-row:hover,
@@ -270,7 +302,7 @@ button {
 }
 
 .strat-item:hover {
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--card-hover-bg);
 }
 
 .card-hover-acc:hover {

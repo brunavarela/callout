@@ -1,15 +1,16 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LogOut } from 'lucide-react';
+import { LogOut, Moon, Sun } from 'lucide-react';
 import { THEME_PALETTE, useTheme } from '../lib/theme';
 import { useSession } from '../lib/session';
 
-function Switch({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
+function Switch({ checked, onChange, disabled }: { checked: boolean; onChange: (v: boolean) => void; disabled?: boolean }) {
   return (
     <button
       type="button"
       role="switch"
       aria-checked={checked}
+      disabled={disabled}
       onClick={() => onChange(!checked)}
       style={{
         width: 38,
@@ -21,7 +22,8 @@ function Switch({ checked, onChange }: { checked: boolean; onChange: (v: boolean
         justifyContent: checked ? 'flex-end' : 'flex-start',
         alignItems: 'center',
         background: checked ? 'var(--acc, #EF4958)' : 'var(--track)',
-        cursor: 'pointer',
+        cursor: disabled ? 'not-allowed' : 'pointer',
+        opacity: disabled ? 0.6 : 1,
         flex: 'none',
       }}
     >
@@ -43,7 +45,7 @@ function Swatch({ color, active, disabled, onClick }: { color: string; active: b
         borderRadius: '50%',
         background: color,
         border: active ? '2px solid var(--text)' : '2px solid transparent',
-        outline: active ? 'none' : '1px solid rgba(255,255,255,.15)',
+        outline: active ? 'none' : '1px solid var(--surface-border)',
         opacity: disabled ? 0.25 : 1,
         cursor: disabled ? 'not-allowed' : 'pointer',
       }}
@@ -141,10 +143,13 @@ export function ThemeSettings({ onClose, className }: { onClose: () => void; cla
         />
       </div>
 
-      <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--text-muted)', cursor: 'pointer' }}>
-        <input type="checkbox" checked={theme.tintedCards} disabled={saving} onChange={(e) => update({ tintedCards: e.target.checked })} />
-        Cards tintados
-      </label>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--text-muted)' }}>
+          {theme.mode === 'light' ? <Sun size={15} strokeWidth={1.75} /> : <Moon size={15} strokeWidth={1.75} />}
+          Tema claro
+        </span>
+        <Switch checked={theme.mode === 'light'} disabled={saving} onChange={(v) => update({ mode: v ? 'light' : 'dark' })} />
+      </div>
 
       {user?.isAdmin && (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>

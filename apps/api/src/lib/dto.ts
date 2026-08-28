@@ -1,5 +1,5 @@
 import type { User } from "@prisma/client";
-import type { SessionUser } from "@callout/shared";
+import type { SessionUser, ThemeMode } from "@callout/shared";
 
 export function toSessionUser(user: User): SessionUser {
   return {
@@ -14,7 +14,7 @@ export function toSessionUser(user: User): SessionUser {
       accentColor: user.themeAccent,
       negativeColor: user.themeNegative,
       glow: user.themeGlow,
-      tintedCards: user.themeTintedCards,
+      mode: user.themeMode as ThemeMode,
     },
     isAdmin: user.isAdmin,
   };

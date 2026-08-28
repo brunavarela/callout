@@ -1,15 +1,15 @@
-import { createContext, useContext, useMemo, type CSSProperties, type ReactNode } from 'react';
-import { THEME_PALETTE, type ThemePreferences } from '@callout/shared';
+import { createContext, useContext, useEffect, useMemo, type CSSProperties, type ReactNode } from 'react';
+import { THEME_MODES, THEME_PALETTE, type ThemePreferences } from '@callout/shared';
 import { useSession } from './session';
 import { apiFetch } from './api';
 
-export { THEME_PALETTE };
+export { THEME_MODES, THEME_PALETTE };
 
 const DEFAULT_THEME: ThemePreferences = {
   accentColor: '#EF4958',
   negativeColor: '#EF4958',
   glow: 70,
-  tintedCards: true,
+  mode: 'dark',
 };
 
 function hexRgb(hex: string): [number, number, number] {
@@ -65,13 +65,19 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       '--pos': theme.accentColor,
       '--pos08': rgba(theme.accentColor, 0.08),
       '--neg': theme.negativeColor,
-      '--kpi-bg': theme.tintedCards
-        ? `radial-gradient(120% 130% at 100% 0%, ${rgba(theme.accentColor, 0.26 * glow)} 0%, var(--surface) 62%)`
-        : 'var(--surface)',
-      '--kpi-border': theme.tintedCards ? rgba(theme.accentColor, 0.22) : 'var(--surface-border)',
+      '--kpi-bg': `radial-gradient(120% 130% at 100% 0%, ${rgba(theme.accentColor, 0.26 * glow)} 0%, var(--surface) 62%)`,
+      '--kpi-border': rgba(theme.accentColor, 0.22),
     };
     return vars as CSSProperties;
   }, [theme]);
+
+  // Atributo em <html> (não só nesse wrapper) — a paleta clara/escura mora
+  // em regras `:root[data-theme=...]` no CSS global, então precisa estar no
+  // elemento raiz de verdade pra `html,body{background:var(--bg)}` também
+  // pegar a cor certa, não só o conteúdo dentro do provider.
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme.mode;
+  }, [theme.mode]);
 
   async function setTheme(next: ThemePreferences) {
     await apiFetch('/me/theme', { method: 'PATCH', body: JSON.stringify(next) });

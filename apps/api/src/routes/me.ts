@@ -1,6 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
-import { THEME_PALETTE } from "@callout/shared";
+import { THEME_MODES, THEME_PALETTE } from "@callout/shared";
 import { requireAuth } from "../lib/session.js";
 import { toSessionUser } from "../lib/dto.js";
 import { prisma } from "../lib/prisma.js";
@@ -12,7 +12,7 @@ const themeBodySchema = z.object({
   accentColor: z.enum(THEME_PALETTE),
   negativeColor: z.enum(THEME_PALETTE),
   glow: z.number().int().min(0).max(100),
-  tintedCards: z.boolean(),
+  mode: z.enum(THEME_MODES),
 });
 
 export async function meRoutes(app: FastifyInstance) {
@@ -28,7 +28,7 @@ export async function meRoutes(app: FastifyInstance) {
         themeAccent: parsed.data.accentColor,
         themeNegative: parsed.data.negativeColor,
         themeGlow: parsed.data.glow,
-        themeTintedCards: parsed.data.tintedCards,
+        themeMode: parsed.data.mode,
       },
     });
 

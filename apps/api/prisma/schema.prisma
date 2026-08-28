@@ -27,10 +27,10 @@ model User {
   // ação também colore valores positivos (vitória etc); cor negativa é
   // independente disso, só pra derrotas/valores negativos — se fossem a
   // mesma, não daria pra diferenciar vitória de derrota na tela.
-  themeAccent      String  @default("#EF4958")
-  themeNegative    String  @default("#EF4958")
-  themeGlow        Int     @default(70) // 0-100
-  themeTintedCards Boolean @default(true)
+  themeAccent   String @default("#EF4958")
+  themeNegative String @default("#EF4958")
+  themeGlow     Int    @default(70) // 0-100
+  themeMode     String @default("dark") // "dark" | "light" — ver ThemeMode em @callout/shared
 
   // Só quem tem isso true vê o switch de Administrador e pode editar
   // placar de competição. Setado direto no banco, não tem UI pra virar

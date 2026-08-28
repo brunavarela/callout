@@ -56,11 +56,14 @@ export interface AgentAsset {
 // causou o bug de "cor nova no seletor mas o back rejeita".
 export const THEME_PALETTE = ["#EF4958", "#18AAB7", "#192573", "#421662", "#2FB170", "#F2994A"] as const;
 
+export const THEME_MODES = ["dark", "light"] as const;
+export type ThemeMode = (typeof THEME_MODES)[number];
+
 export interface ThemePreferences {
   accentColor: string; // cor principal — também colore valores positivos (vitória, deltas positivos)
   negativeColor: string; // só derrotas/valores negativos
   glow: number; // 0-100
-  tintedCards: boolean;
+  mode: ThemeMode;
 }
 
 // --- Sessão ---
