@@ -40,6 +40,30 @@ function AgentAvatar({ agent, size, title }: { agent: string; size: number; titl
   );
 }
 
+function PlayerInitials({ name, size }: { name: string; size: number }) {
+  return (
+    <div
+      title={name}
+      style={{
+        width: size,
+        height: size,
+        borderRadius: 7,
+        flex: 'none',
+        background: 'var(--avatar-bg)',
+        border: '1px solid var(--surface-border)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        fontSize: 9,
+        fontWeight: 700,
+        color: 'var(--text-muted)',
+      }}
+    >
+      {name.slice(0, 2).toUpperCase()}
+    </div>
+  );
+}
+
 function KpiTile({ label, value, sub }: { label: string; value: string; sub: string }) {
   return (
     <div style={{ ...cardStyle, padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -81,11 +105,11 @@ function AgentComboKpiTile({ compo }: { compo: BestAgentComposition | null }) {
   );
 }
 
-// Ícone do agente mais jogado por cada membro NESSA formação, não o nome —
-// passar o mouse mostra quem é. Composição, não "quem falta", e sem
-// ordenar por winrate: "variações de time" é sobre o que aconteceu, não um
-// ranking de qual formação é "melhor" (isso soaria como "o time rende mais
-// sem Fulano"). Ordenado por quantas vezes cada formação jogou.
+// Iniciais de cada jogador da formação (hover mostra o nome completo) —
+// quem são, não "quem falta", e sem ordenar por winrate: "variações de
+// time" é sobre o que aconteceu, não um ranking de qual formação é
+// "melhor" (isso soaria como "o time rende mais sem Fulano"). Ordenado por
+// quantas vezes cada formação jogou.
 function LineupVariations({ combos }: { combos: LineupCombo[] }) {
   return (
     <div style={{ ...cardStyle, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 11, height: MEDIUM_CARD_HEIGHT }}>
@@ -112,7 +136,7 @@ function LineupVariations({ combos }: { combos: LineupCombo[] }) {
               >
                 <div style={{ display: 'flex', gap: 4 }}>
                   {c.members.map((m) => (
-                    <AgentAvatar key={m.userId} agent={m.agent} size={26} title={m.name} />
+                    <PlayerInitials key={m.userId} name={m.name} size={26} />
                   ))}
                 </div>
                 <span style={{ fontSize: 12.5, fontWeight: 600, color: WIN, textAlign: 'right' }}>{c.wins}</span>
@@ -142,18 +166,19 @@ function BestAgentsTable({ agents }: { agents: TeamAgentPerformance[] }) {
         <div style={{ fontSize: 12.5, color: 'var(--text-faint)' }}>Sem dados ainda.</div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 46px 52px 36px 58px', gap: 8, padding: '0 0 6px', fontSize: 9.5, letterSpacing: '.08em', color: 'var(--text-faint)' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 46px 52px 36px 58px 56px', gap: 8, padding: '0 0 6px', fontSize: 9.5, letterSpacing: '.08em', color: 'var(--text-faint)' }}>
             <span>AGENTE</span>
             <span style={{ textAlign: 'right' }}>KILLS</span>
             <span style={{ textAlign: 'right' }}>ASSIST</span>
             <span style={{ textAlign: 'right' }}>FB</span>
             <span style={{ textAlign: 'right' }}>IMPACTO</span>
+            <span style={{ textAlign: 'right' }}>PARTIDAS</span>
           </div>
           <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
             {agents.map((a) => (
               <div
                 key={a.agent}
-                style={{ display: 'grid', gridTemplateColumns: '1fr 46px 52px 36px 58px', gap: 8, alignItems: 'center', padding: '8px 0', borderTop: '1px solid var(--divider)' }}
+                style={{ display: 'grid', gridTemplateColumns: '1fr 46px 52px 36px 58px 56px', gap: 8, alignItems: 'center', padding: '8px 0', borderTop: '1px solid var(--divider)' }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
                   <AgentAvatar agent={a.agent} size={24} />
@@ -163,6 +188,7 @@ function BestAgentsTable({ agents }: { agents: TeamAgentPerformance[] }) {
                 <span style={{ fontSize: 12.5, color: 'var(--text-2)', textAlign: 'right' }}>{a.assists}</span>
                 <span style={{ fontSize: 12.5, color: 'var(--text-2)', textAlign: 'right' }}>{a.firstBloods}</span>
                 <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--text-3)', textAlign: 'right' }}>{a.impact}</span>
+                <span style={{ fontSize: 12.5, color: 'var(--text-muted)', textAlign: 'right' }}>{a.picks}</span>
               </div>
             ))}
           </div>
@@ -277,7 +303,7 @@ export function TeamDashboard() {
           {/* 4 cards médios, 2 colunas x 2 linhas */}
           <div className="grid-responsive-2">
             <LineupVariations combos={data.lineupCombos} />
-            <DestaquesDoTime insights={insights} />
+            <BestAgentsTable agents={data.bestAgents} />
             <RateBlock
               title="Em quais mapas o time ganha"
               sub="% de partidas vencidas em cada mapa"
@@ -285,7 +311,7 @@ export function TeamDashboard() {
               colorFor={rateBarColor}
               maxHeight={MEDIUM_CARD_HEIGHT}
             />
-            <BestAgentsTable agents={data.bestAgents} />
+            <DestaquesDoTime insights={insights} />
           </div>
 
           {/* 8 cards pequenos, 4 colunas x 2 linhas */}
