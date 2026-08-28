@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Navigate, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Swords, Users, PenTool, MapPin, Trophy, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { LayoutDashboard, Swords, Users, PenTool, MapPin, Trophy, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useSession } from '../lib/session';
 import { useAppData, type AppData } from '../lib/appData';
 import { ThemeSettings } from './ThemeSettings';
@@ -196,10 +196,7 @@ export function AppShell() {
             pointerEvents: 'none',
           }}
         />
-        <div
-          className="app-sidebar-header"
-          style={{ position: 'relative', padding: '24px 16px 16px', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}
-        >
+        <div className="app-sidebar-header" style={{ position: 'relative', padding: '24px 16px 16px' }}>
           <div className="sidebar-fade sidebar-fade--col" style={{ minWidth: 0 }}>
             <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 700, fontSize: 22, letterSpacing: '-.02em', whiteSpace: 'nowrap' }}>
               callout<span style={{ color: 'var(--acc, #EF4958)' }}>.</span>
@@ -208,14 +205,6 @@ export function AppShell() {
               {team ? `${team.name.toUpperCase()} · ${team.memberCount} MEMBRO${team.memberCount === 1 ? '' : 'S'}` : '…'}
             </div>
           </div>
-          <button
-            className="sidebar-toggle-btn"
-            onClick={toggleCollapsed}
-            title={collapsed ? 'Expandir menu' : 'Recolher menu'}
-            style={{ marginTop: 2 }}
-          >
-            {collapsed ? <PanelLeftOpen size={16} strokeWidth={1.75} /> : <PanelLeftClose size={16} strokeWidth={1.75} />}
-          </button>
         </div>
 
         <nav className="app-sidebar-nav" style={{ position: 'relative', padding: '10px 12px', gap: 4 }}>
@@ -264,21 +253,30 @@ export function AppShell() {
                 border: '1px solid var(--acc25, rgba(239,73,88,.25))',
               }}
             >
-              <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 15, whiteSpace: 'nowrap' }}>Já revisou a semana?</div>
+              <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 15, whiteSpace: 'nowrap' }}>Já revisou o painel do time?</div>
               <div style={{ fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.5, marginTop: 6 }}>
-                Dá uma olhada nas estratégias salvas do time antes do próximo jogo.
+                Dá uma olhada nas estatísticas da equipe e o impacto que você causa.
               </div>
               <button
                 className="btn-primary"
                 style={{ width: '100%', marginTop: 14, padding: 9, fontSize: 13, justifyContent: 'center' }}
-                onClick={() => navigate('/board')}
+                onClick={() => navigate('/time/painel')}
               >
-                Abrir estratégia
+                Painel do time
               </button>
             </div>
           </div>
         </div>
       </aside>
+
+      <button
+        className="sidebar-edge-toggle"
+        onClick={toggleCollapsed}
+        title={collapsed ? 'Expandir menu' : 'Recolher menu'}
+        style={{ left: 'var(--sidebar-w)' }}
+      >
+        {collapsed ? <ChevronRight size={13} strokeWidth={2} /> : <ChevronLeft size={13} strokeWidth={2} />}
+      </button>
 
       <main className="app-main" style={{ minWidth: 0, height: '100%', display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
         <header className="app-header" style={{ padding: '16px 26px', borderBottom: '1px solid var(--divider)' }}>

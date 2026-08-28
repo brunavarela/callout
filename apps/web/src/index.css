@@ -436,6 +436,7 @@ button {
   grid-template-columns: var(--sidebar-w, 232px) 1fr;
   height: 100vh;
   overflow: hidden;
+  position: relative;
   transition: grid-template-columns 0.24s ease;
 }
 @media (max-width: 900px) {
@@ -495,26 +496,33 @@ button {
   opacity: 0;
 }
 
-.sidebar-toggle-btn {
+/* Setinha flutuante ancorada exatamente na borda direita da sidebar —
+   posicionada em relação ao grid (não à aside, que tem overflow:hidden),
+   meio do eixo Y, ponta direita da sidebar no eixo X. `left` acompanha
+   --sidebar-w com a mesma transição do grid, então desliza junto. */
+.sidebar-edge-toggle {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 30px;
-  height: 30px;
-  border-radius: var(--radius-md);
-  background: transparent;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--surface);
   border: 1px solid var(--surface-border);
   color: var(--text-faint);
   cursor: pointer;
-  flex: none;
-  transition: background 0.15s ease, color 0.15s ease;
+  z-index: 30;
+  transition: left 0.24s ease, background 0.15s ease, color 0.15s ease;
 }
-.sidebar-toggle-btn:hover {
-  background: rgba(255, 255, 255, 0.045);
+.sidebar-edge-toggle:hover {
+  background: var(--card-hover-bg, rgba(255, 255, 255, 0.045));
   color: var(--text-muted);
 }
 @media (max-width: 900px) {
-  .sidebar-toggle-btn {
+  .sidebar-edge-toggle {
     display: none;
   }
 }
