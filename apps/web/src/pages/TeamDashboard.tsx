@@ -140,16 +140,27 @@ function LineupVariations({ combos }: { combos: LineupCombo[] }) {
                 </div>
                 <span style={{ fontSize: 12.5, fontWeight: 600, color: WIN, textAlign: 'right', whiteSpace: 'nowrap' }}>
                   {c.wins}
-                  {c.overtimeWins > 0 && <span style={{ fontWeight: 400, color: 'var(--text-faint)' }}> ({c.overtimeWins}OT)</span>}
+                  {c.overtimeWins > 0 && (
+                    <span style={{ fontWeight: 400, color: 'var(--text-faint)' }}>
+                      {' ('}
+                      <span style={{ fontWeight: 700, color: WIN }}>{c.overtimeWins}</span>OT)
+                    </span>
+                  )}
                 </span>
                 <span style={{ fontSize: 12.5, fontWeight: 600, color: LOSS, textAlign: 'right', whiteSpace: 'nowrap' }}>
                   {c.losses}
-                  {c.overtimeLosses > 0 && <span style={{ fontWeight: 400, color: 'var(--text-faint)' }}> ({c.overtimeLosses}OT)</span>}
+                  {c.overtimeLosses > 0 && (
+                    <span style={{ fontWeight: 400, color: 'var(--text-faint)' }}>
+                      {' ('}
+                      <span style={{ fontWeight: 700, color: LOSS }}>{c.overtimeLosses}</span>OT)
+                    </span>
+                  )}
                 </span>
                 <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--text-3)', textAlign: 'right' }}>{c.winratePercent}%</span>
               </div>
             ))}
           </div>
+          <div style={{ fontSize: 10.5, color: 'var(--text-faint)', paddingTop: 8 }}>OT = overtime</div>
         </div>
       )}
     </div>
