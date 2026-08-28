@@ -130,14 +130,23 @@ function TeamMatchCard({ match }: { match: TeamMatchSummary }) {
         <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>Placar {match.score}</span>
         <span style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--text-dim)', flex: 'none' }}>{match.playedAtLabel}</span>
       </button>
-      {expanded && (
-        <div style={{ padding: '0 18px 14px', borderTop: '1px solid var(--divider)' }}>
-          <ParticipantHeader />
-          {match.participants.map((p) => (
-            <ParticipantRow key={p.userId} p={p} />
-          ))}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateRows: expanded ? '1fr' : '0fr',
+          opacity: expanded ? 1 : 0,
+          transition: 'grid-template-rows .28s ease, opacity .22s ease',
+        }}
+      >
+        <div style={{ overflow: 'hidden', minHeight: 0 }}>
+          <div style={{ padding: '0 18px 14px', borderTop: '1px solid var(--divider)' }}>
+            <ParticipantHeader />
+            {match.participants.map((p) => (
+              <ParticipantRow key={p.userId} p={p} />
+            ))}
+          </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }

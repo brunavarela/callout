@@ -428,12 +428,15 @@ button {
   }
 }
 
-/* Shell do app: sidebar fixa de 232px vira barra de navegação inferior. */
+/* Shell do app: sidebar fixa de 232px (recolhível pra 72px) vira barra de
+   navegação inferior no mobile. --sidebar-w controlado via inline style
+   pelo AppShell, grid-template-columns anima liso entre os dois estados. */
 .app-shell-grid {
   display: grid;
-  grid-template-columns: 232px 1fr;
+  grid-template-columns: var(--sidebar-w, 232px) 1fr;
   height: 100vh;
   overflow: hidden;
+  transition: grid-template-columns 0.24s ease;
 }
 @media (max-width: 900px) {
   .app-shell-grid {
@@ -458,6 +461,62 @@ button {
 .app-sidebar-nav {
   display: flex;
   flex-direction: column;
+}
+.nav-item {
+  transition: background 0.15s ease, gap 0.2s ease, padding 0.2s ease;
+}
+
+/* Conteúdo que só faz sentido com a sidebar aberta (nome do time, rótulos
+   dos itens, card de promo) some com um fade/collapse suave em vez de
+   sumir de repente — grid-template-rows/columns 0fr anima altura/largura
+   "auto" sem precisar medir nada em JS. */
+.sidebar-fade {
+  display: grid;
+  transition: grid-template-rows 0.22s ease, grid-template-columns 0.22s ease, opacity 0.16s ease;
+  opacity: 1;
+}
+.sidebar-fade > * {
+  overflow: hidden;
+  min-height: 0;
+  min-width: 0;
+}
+.sidebar-fade--row {
+  grid-template-rows: 1fr;
+}
+.sidebar-fade--col {
+  grid-template-columns: 1fr;
+}
+.app-sidebar-collapsed .sidebar-fade--row {
+  grid-template-rows: 0fr;
+  opacity: 0;
+}
+.app-sidebar-collapsed .sidebar-fade--col {
+  grid-template-columns: 0fr;
+  opacity: 0;
+}
+
+.sidebar-toggle-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-md);
+  background: transparent;
+  border: 1px solid var(--surface-border);
+  color: var(--text-faint);
+  cursor: pointer;
+  flex: none;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.sidebar-toggle-btn:hover {
+  background: rgba(255, 255, 255, 0.045);
+  color: var(--text-muted);
+}
+@media (max-width: 900px) {
+  .sidebar-toggle-btn {
+    display: none;
+  }
 }
 @media (max-width: 900px) {
   .app-sidebar {
@@ -490,6 +549,14 @@ button {
     font-size: 9.5px !important;
     text-align: center;
     white-space: nowrap;
+  }
+  /* Barra inferior no mobile ignora o estado de recolher/expandir da
+     sidebar de desktop — sempre mostra ícone + rótulo normalmente. */
+  .app-sidebar-collapsed .sidebar-fade--row,
+  .app-sidebar-collapsed .sidebar-fade--col {
+    grid-template-rows: 1fr;
+    grid-template-columns: 1fr;
+    opacity: 1;
   }
 }
 

@@ -1,13 +1,13 @@
 import { useMemo, useState } from 'react';
 import { Navigate, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Swords, Users, PenTool, MapPin, Trophy } from 'lucide-react';
+import { LayoutDashboard, Swords, Users, PenTool, MapPin, Trophy, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { useSession } from '../lib/session';
 import { useAppData, type AppData } from '../lib/appData';
 import { ThemeSettings } from './ThemeSettings';
 
 const BASE_NAV_ITEMS = [
   { to: '/', label: 'Painel', icon: LayoutDashboard, match: (p: string) => p === '/' },
-  { to: '/time', label: 'Time', icon: Users, match: (p: string) => p === '/time' },
+  { to: '/time', label: 'Time', icon: Users, match: (p: string) => p.startsWith('/time') },
   { to: '/board', label: 'Estratégia', icon: PenTool, match: (p: string) => p.startsWith('/board') },
   { to: '/spots', label: 'Spots', icon: MapPin, match: (p: string) => p === '/spots' },
   { to: '/competicoes', label: 'Competições', icon: Trophy, match: (p: string) => p.startsWith('/competicoes') },
@@ -142,6 +142,8 @@ function SearchBar({ appData }: { appData: AppData }) {
   );
 }
 
+const SIDEBAR_COLLAPSED_KEY = 'callout:sidebar-collapsed';
+
 export function AppShell() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -149,6 +151,25 @@ export function AppShell() {
   const appData = useAppData(user);
   const { team } = appData;
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(() => {
+    try {
+      return localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === '1';
+    } catch {
+      return false;
+    }
+  });
+
+  function toggleCollapsed() {
+    setCollapsed((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem(SIDEBAR_COLLAPSED_KEY, next ? '1' : '0');
+      } catch {
+        // sem localStorage (modo privado etc.) — só não persiste, sidebar continua funcionando
+      }
+      return next;
+    });
+  }
 
   if (loading) return null;
   if (!user) return <Navigate to="/login" replace />;
@@ -161,8 +182,8 @@ export function AppShell() {
   ];
 
   return (
-    <div className="app-shell-grid">
-      <aside className="app-sidebar">
+    <div className="app-shell-grid" style={{ '--sidebar-w': collapsed ? '76px' : '232px' } as React.CSSProperties}>
+      <aside className={`app-sidebar${collapsed ? ' app-sidebar-collapsed' : ''}`}>
         <div
           style={{
             position: 'absolute',
@@ -175,13 +196,26 @@ export function AppShell() {
             pointerEvents: 'none',
           }}
         />
-        <div className="app-sidebar-header" style={{ position: 'relative', padding: '24px 22px 16px' }}>
-          <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 700, fontSize: 22, letterSpacing: '-.02em' }}>
-            callout<span style={{ color: 'var(--acc, #EF4958)' }}>.</span>
+        <div
+          className="app-sidebar-header"
+          style={{ position: 'relative', padding: '24px 16px 16px', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}
+        >
+          <div className="sidebar-fade sidebar-fade--col" style={{ minWidth: 0 }}>
+            <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 700, fontSize: 22, letterSpacing: '-.02em', whiteSpace: 'nowrap' }}>
+              callout<span style={{ color: 'var(--acc, #EF4958)' }}>.</span>
+            </div>
+            <div style={{ fontSize: 10, letterSpacing: '.12em', color: 'var(--text-faint)', marginTop: 3, whiteSpace: 'nowrap' }}>
+              {team ? `${team.name.toUpperCase()} · ${team.memberCount} MEMBRO${team.memberCount === 1 ? '' : 'S'}` : '…'}
+            </div>
           </div>
-          <div style={{ fontSize: 10, letterSpacing: '.12em', color: 'var(--text-faint)', marginTop: 3 }}>
-            {team ? `${team.name.toUpperCase()} · ${team.memberCount} MEMBRO${team.memberCount === 1 ? '' : 'S'}` : '…'}
-          </div>
+          <button
+            className="sidebar-toggle-btn"
+            onClick={toggleCollapsed}
+            title={collapsed ? 'Expandir menu' : 'Recolher menu'}
+            style={{ marginTop: 2 }}
+          >
+            {collapsed ? <PanelLeftOpen size={16} strokeWidth={1.75} /> : <PanelLeftClose size={16} strokeWidth={1.75} />}
+          </button>
         </div>
 
         <nav className="app-sidebar-nav" style={{ position: 'relative', padding: '10px 12px', gap: 4 }}>
@@ -193,10 +227,11 @@ export function AppShell() {
                 key={item.label}
                 to={item.to}
                 className="nav-item"
+                title={collapsed ? item.label : undefined}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: 11,
+                  gap: collapsed ? 0 : 11,
                   padding: '11px 12px',
                   borderRadius: 'var(--radius-md)',
                   fontSize: 14,
@@ -211,32 +246,36 @@ export function AppShell() {
                   color={active ? 'var(--acc, #EF4958)' : 'var(--text-faint)'}
                   style={{ flex: 'none' }}
                 />
-                {item.label}
+                <span className="sidebar-fade sidebar-fade--col" style={{ minWidth: 0 }}>
+                  <span style={{ whiteSpace: 'nowrap' }}>{item.label}</span>
+                </span>
               </NavLink>
             );
           })}
         </nav>
 
-        <div className="app-sidebar-promo" style={{ position: 'relative', marginTop: 'auto', padding: 14 }}>
-          <div
-            style={{
-              borderRadius: 14,
-              padding: 18,
-              background: 'linear-gradient(160deg, var(--acc22, rgba(239,73,88,.22)) 0%, rgba(21,21,23,.4) 70%)',
-              border: '1px solid var(--acc25, rgba(239,73,88,.25))',
-            }}
-          >
-            <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 15 }}>Já revisou a semana?</div>
-            <div style={{ fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.5, marginTop: 6 }}>
-              Dá uma olhada nas estratégias salvas do time antes do próximo jogo.
-            </div>
-            <button
-              className="btn-primary"
-              style={{ width: '100%', marginTop: 14, padding: 9, fontSize: 13, justifyContent: 'center' }}
-              onClick={() => navigate('/board')}
+        <div className="app-sidebar-promo sidebar-fade sidebar-fade--row" style={{ position: 'relative', marginTop: 'auto' }}>
+          <div style={{ padding: 14 }}>
+            <div
+              style={{
+                borderRadius: 14,
+                padding: 18,
+                background: 'linear-gradient(160deg, var(--acc22, rgba(239,73,88,.22)) 0%, rgba(21,21,23,.4) 70%)',
+                border: '1px solid var(--acc25, rgba(239,73,88,.25))',
+              }}
             >
-              Abrir estratégia
-            </button>
+              <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 15, whiteSpace: 'nowrap' }}>Já revisou a semana?</div>
+              <div style={{ fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.5, marginTop: 6 }}>
+                Dá uma olhada nas estratégias salvas do time antes do próximo jogo.
+              </div>
+              <button
+                className="btn-primary"
+                style={{ width: '100%', marginTop: 14, padding: 9, fontSize: 13, justifyContent: 'center' }}
+                onClick={() => navigate('/board')}
+              >
+                Abrir estratégia
+              </button>
+            </div>
           </div>
         </div>
       </aside>
