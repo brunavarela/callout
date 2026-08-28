@@ -1,4 +1,4 @@
-import type { MatchV4Data, TeamAgentPick, TeamDashboardSummary, TeamStandoutMatch } from "@callout/shared";
+import type { BestAgentComposition, MatchV4Data, TeamAgentPerformance, TeamAgentPick, TeamDashboardSummary, TeamStandoutMatch } from "@callout/shared";
 import { MIN_TEAM_MATCH_PLAYERS } from "@callout/shared";
 import { prisma } from "./prisma.js";
 import { loadAgentColorsByName } from "./assets.js";
@@ -7,6 +7,7 @@ import { countsTowardStats } from "./match-result.js";
 import { replayMatchStats } from "./matchReplay.js";
 
 const round0 = (n: number) => Math.round(n);
+const round1 = (n: number) => Math.round(n * 10) / 10;
 
 const EMPTY_SUMMARY: TeamDashboardSummary = {
   qualifyingMatchCount: 0,
@@ -17,11 +18,14 @@ const EMPTY_SUMMARY: TeamDashboardSummary = {
   bestWinStreak: 0,
   mapWinrates: [],
   lineupCombos: [],
+  bestAgentComposition: null,
+  bestAgents: [],
   acsRanking: [],
   assistRanking: [],
   mvpRanking: [],
   clutchRanking: [],
   firstBloodRanking: [],
+  firstDeathRanking: [],
   mostPickedAgents: [],
   biggestWin: null,
   closestMatch: null,
@@ -51,8 +55,8 @@ function computeStreaks(resultsOldToNew: boolean[]): { current: TeamDashboardSum
 // em grupo (buildTeamMatches) — >=MIN_TEAM_MATCH_PLAYERS membros rastreados
 // juntos —, com uma exigência a mais: todo mundo do MESMO lado (teamId).
 // buildTeamMatches não checa isso porque não precisa (só lista partidas);
-// aqui precisa, senão "melhor combinação" ficaria sem sentido se o grupo
-// tivesse caído dividido nos dois lados por acaso.
+// aqui precisa, senão as variações de formação não fariam sentido se o
+// grupo tivesse caído dividido nos dois lados por acaso.
 export async function buildTeamDashboard(): Promise<TeamDashboardSummary | null> {
   const team = await prisma.team.findFirst({ include: { members: { include: { user: true } } } });
   if (!team) return null;
@@ -85,6 +89,7 @@ export async function buildTeamDashboard(): Promise<TeamDashboardSummary | null>
         won: true,
         agentName: true,
         acs: true,
+        kills: true,
         assists: true,
         match: { select: { modo: true } },
       },
@@ -122,12 +127,18 @@ export async function buildTeamDashboard(): Promise<TeamDashboardSummary | null>
   // Agente mais jogado por cada membro DENTRO de cada formação específica
   // (não o agente favorito dele no geral) — comboKey -> userId -> agente -> contagem.
   const comboAgentCounts = new Map<string, Map<string, Map<string, number>>>();
+  // Composição de 5 agentes (não jogadores) -> vitórias/total — agentes
+  // ordenados viram a chave, então duas partidas com os mesmos 5 agentes
+  // (independente de quem jogou qual) caem no mesmo grupo.
+  const byAgentCompo = new Map<string, { agents: string[]; wins: number; total: number }>();
   const acsAgg = new Map<string, { sum: number; count: number }>();
   const assistAgg = new Map<string, { sum: number; count: number }>();
   const mvpAgg = new Map<string, number>();
   const clutchAgg = new Map<string, { won: number; played: number }>();
   const firstBloodAgg = new Map<string, number>();
+  const firstDeathAgg = new Map<string, number>();
   const agentPickCounts = new Map<string, number>();
+  const agentPerfAgg = new Map<string, { kills: number; assists: number; firstBloods: number; acsSum: number; count: number }>();
 
   let biggestWin: TeamStandoutMatch | null = null;
   let biggestWinMargin = -Infinity;
@@ -139,21 +150,28 @@ export async function buildTeamDashboard(): Promise<TeamDashboardSummary | null>
     const map = mapNameFrom(match.rawJson);
     const score = scoreFor(match.rawJson, list[0]!.teamId);
     const margin = score.own - score.opponent;
+    const won = list[0]!.won;
 
     const mEntry = byMap.get(map) ?? { mapId: match.mapId, wins: 0, total: 0 };
     mEntry.total++;
-    if (list[0]!.won) mEntry.wins++;
+    if (won) mEntry.wins++;
     byMap.set(map, mEntry);
 
     const comboUserIds = [...list.map((r) => memberByPuuid.get(r.puuid)!.userId)].sort();
     const comboKey = comboUserIds.join(",");
     const cEntry = byCombo.get(comboKey) ?? { memberUserIds: comboUserIds, wins: 0, overtime: 0, total: 0 };
     cEntry.total++;
-    if (list[0]!.won) cEntry.wins++;
+    if (won) cEntry.wins++;
     // Overtime: rounds além dos 24 de regulação (12 de cada lado) — mesmo
     // corte que insights.ts usa pro ataque/defesa por overtime.
     if (raw.rounds.length > 24) cEntry.overtime++;
     byCombo.set(comboKey, cEntry);
+
+    const agentCompoKey = [...list.map((r) => r.agentName)].sort().join(",");
+    const compoEntry = byAgentCompo.get(agentCompoKey) ?? { agents: [...list.map((r) => r.agentName)].sort(), wins: 0, total: 0 };
+    compoEntry.total++;
+    if (won) compoEntry.wins++;
+    byAgentCompo.set(agentCompoKey, compoEntry);
 
     const memberAgentCounts = comboAgentCounts.get(comboKey) ?? new Map<string, Map<string, number>>();
     for (const r of list) {
@@ -189,9 +207,18 @@ export async function buildTeamDashboard(): Promise<TeamDashboardSummary | null>
         clutchEntry.played += replayRow.clutchesPlayed;
         clutchAgg.set(userId, clutchEntry);
         firstBloodAgg.set(userId, (firstBloodAgg.get(userId) ?? 0) + replayRow.firstBloods);
+        firstDeathAgg.set(userId, (firstDeathAgg.get(userId) ?? 0) + replayRow.firstDeaths);
       }
 
       agentPickCounts.set(r.agentName, (agentPickCounts.get(r.agentName) ?? 0) + 1);
+
+      const perfEntry = agentPerfAgg.get(r.agentName) ?? { kills: 0, assists: 0, firstBloods: 0, acsSum: 0, count: 0 };
+      perfEntry.kills += r.kills;
+      perfEntry.assists += r.assists;
+      perfEntry.firstBloods += replayRow?.firstBloods ?? 0;
+      perfEntry.acsSum += r.acs;
+      perfEntry.count++;
+      agentPerfAgg.set(r.agentName, perfEntry);
     }
 
     const standout: TeamStandoutMatch = {
@@ -201,7 +228,7 @@ export async function buildTeamDashboard(): Promise<TeamDashboardSummary | null>
       marginRounds: margin,
       playedAtLabel: formatPlayedAt(match.startedAt, now),
     };
-    if (list[0]!.won && margin > biggestWinMargin) {
+    if (won && margin > biggestWinMargin) {
       biggestWinMargin = margin;
       biggestWin = standout;
     }
@@ -237,6 +264,27 @@ export async function buildTeamDashboard(): Promise<TeamDashboardSummary | null>
     })
     .sort((a, b) => b.total - a.total);
 
+  // Composição de 5 agentes com mais vitórias repetidas; sem nenhuma
+  // repetição de peso (>1 vitória), cai pra "a última vez que o time
+  // ganhou", que é sempre uma composição válida (não uma "melhor" de
+  // verdade, só a mais recente que funcionou).
+  const bestCompoEntry = [...byAgentCompo.values()].sort((a, b) => b.wins - a.wins)[0];
+  let bestAgentComposition: BestAgentComposition | null = null;
+  if (bestCompoEntry && bestCompoEntry.wins > 1) {
+    bestAgentComposition = { agents: bestCompoEntry.agents, wins: bestCompoEntry.wins, total: bestCompoEntry.total, isFallback: false, playedAtLabel: null };
+  } else {
+    const lastWin = [...qualifying].reverse().find(({ list }) => list[0]!.won);
+    if (lastWin) {
+      bestAgentComposition = {
+        agents: [...lastWin.list.map((r) => r.agentName)].sort(),
+        wins: 1,
+        total: 1,
+        isFallback: true,
+        playedAtLabel: formatPlayedAt(lastWin.match.startedAt, now),
+      };
+    }
+  }
+
   const acsRanking = [...acsAgg.entries()]
     .map(([userId, s]) => ({ userId, name: nameByUserId.get(userId) ?? "?", value: round0(s.sum / s.count), matchesPlayed: s.count }))
     .sort((a, b) => b.value - a.value);
@@ -257,11 +305,45 @@ export async function buildTeamDashboard(): Promise<TeamDashboardSummary | null>
     .map(([userId, value]) => ({ userId, name: nameByUserId.get(userId) ?? "?", value, matchesPlayed: acsAgg.get(userId)?.count ?? 0 }))
     .sort((a, b) => b.value - a.value);
 
+  const firstDeathRanking = [...firstDeathAgg.entries()]
+    .map(([userId, value]) => ({ userId, name: nameByUserId.get(userId) ?? "?", value, matchesPlayed: acsAgg.get(userId)?.count ?? 0 }))
+    .sort((a, b) => b.value - a.value);
+
   const agentColors = await loadAgentColorsByName();
   const mostPickedAgents: TeamAgentPick[] = [...agentPickCounts.entries()]
     .map(([agent, count]) => ({ agent, color: agentColors.get(agent) ?? "#9A9DA1", count }))
     .sort((a, b) => b.count - a.count)
     .slice(0, 6);
+
+  // "Melhores agentes": kills/assistências/first bloods/impacto (ACS) são
+  // média por partida jogada com aquele agente, cada métrica normalizada
+  // 0-100 (min-max contra os outros agentes) e a pontuação final é a média
+  // simples das 4 — sem pesar uma métrica mais que outra, decisão neutra
+  // já que ninguém pediu um peso específico.
+  const agentPerfEntries = [...agentPerfAgg.entries()];
+  const perAgent = agentPerfEntries.map(([agent, s]) => ({
+    agent,
+    color: agentColors.get(agent) ?? "#9A9DA1",
+    picks: s.count,
+    kills: round1(s.kills / s.count),
+    assists: round1(s.assists / s.count),
+    firstBloods: round1(s.firstBloods / s.count),
+    impact: round0(s.acsSum / s.count),
+  }));
+  const normalize = (values: number[]) => {
+    const min = Math.min(...values);
+    const max = Math.max(...values);
+    const span = max - min || 1;
+    return (v: number) => ((v - min) / span) * 100;
+  };
+  const killsNorm = normalize(perAgent.map((a) => a.kills));
+  const assistsNorm = normalize(perAgent.map((a) => a.assists));
+  const fbNorm = normalize(perAgent.map((a) => a.firstBloods));
+  const impactNorm = normalize(perAgent.map((a) => a.impact));
+  const bestAgents: TeamAgentPerformance[] = perAgent
+    .map((a) => ({ ...a, score: (killsNorm(a.kills) + assistsNorm(a.assists) + fbNorm(a.firstBloods) + impactNorm(a.impact)) / 4 }))
+    .sort((a, b) => b.score - a.score)
+    .map(({ score: _score, ...rest }) => rest);
 
   return {
     qualifyingMatchCount: qualifying.length,
@@ -272,11 +354,14 @@ export async function buildTeamDashboard(): Promise<TeamDashboardSummary | null>
     bestWinStreak,
     mapWinrates,
     lineupCombos,
+    bestAgentComposition,
+    bestAgents,
     acsRanking,
     assistRanking,
     mvpRanking,
     clutchRanking,
     firstBloodRanking,
+    firstDeathRanking,
     mostPickedAgents,
     biggestWin,
     closestMatch,

@@ -348,6 +348,32 @@ export interface TeamAgentPick {
   count: number;
 }
 
+// Ranking de agentes (não jogadores) — kills/assistências/first bloods são
+// média por partida jogada com aquele agente (mesma base do "impacto", que
+// é o ACS médio — misturar total com média deixaria agente pouco jogado
+// injustamente baixo ou um agente muito jogado inflado só por volume).
+export interface TeamAgentPerformance {
+  agent: string;
+  color: string;
+  picks: number;
+  kills: number;
+  assists: number;
+  firstBloods: number;
+  impact: number;
+}
+
+// A composição de 5 agentes (não jogadores — a mesma composição pode ter
+// sido jogada por formações de pessoas diferentes) com mais vitórias.
+// `isFallback` = não teve nenhuma composição repetida com mais de 1
+// vitória, então isso é só a composição da vitória mais recente do time.
+export interface BestAgentComposition {
+  agents: string[];
+  wins: number;
+  total: number;
+  isFallback: boolean;
+  playedAtLabel: string | null;
+}
+
 export interface TeamStandoutMatch {
   matchId: string;
   map: string;
@@ -365,11 +391,14 @@ export interface TeamDashboardSummary {
   bestWinStreak: number;
   mapWinrates: MapWinrate[];
   lineupCombos: LineupCombo[];
+  bestAgentComposition: BestAgentComposition | null;
+  bestAgents: TeamAgentPerformance[];
   acsRanking: MemberStatRow[];
   assistRanking: MemberStatRow[];
   mvpRanking: MemberStatRow[];
   clutchRanking: MemberClutchRow[];
   firstBloodRanking: MemberStatRow[];
+  firstDeathRanking: MemberStatRow[];
   mostPickedAgents: TeamAgentPick[];
   biggestWin: TeamStandoutMatch | null;
   closestMatch: TeamStandoutMatch | null;

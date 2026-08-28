@@ -1,11 +1,37 @@
 import { useEffect } from 'react';
 import { useNavigate, useOutletContext } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
-import { MIN_TEAM_MATCH_PLAYERS, type LineupCombo } from '@callout/shared';
+import { MIN_TEAM_MATCH_PLAYERS, type BestAgentComposition, type LineupCombo, type TeamAgentPerformance } from '@callout/shared';
 import type { OutletContext } from '../components/AppShell';
 import { LoadingFill } from '../components/Spinner';
 import { cardStyle, WIN, LOSS, rateBarColor, plural, RateBlock, RankingBlock, type RankingRow } from '../components/statsPrimitives';
 import { agentImageUrl } from '../lib/agentImages';
+
+function AgentAvatar({ agent, size, title }: { agent: string; size: number; title?: string }) {
+  const imageUrl = agentImageUrl(agent);
+  return (
+    <div
+      title={title ?? agent}
+      style={{
+        width: size,
+        height: size,
+        borderRadius: size >= 30 ? 9 : 7,
+        overflow: 'hidden',
+        flex: 'none',
+        background: imageUrl ? '#141415' : 'var(--avatar-bg)',
+        border: '1px solid var(--surface-border)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        fontSize: size >= 30 ? 9 : 7,
+        fontWeight: 700,
+        color: 'var(--text-muted)',
+      }}
+    >
+      {imageUrl ? <img src={imageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : agent.slice(0, 2).toUpperCase()}
+    </div>
+  );
+}
 
 function KpiTile({ label, value, sub }: { label: string; value: string; sub: string }) {
   return (
@@ -14,6 +40,35 @@ function KpiTile({ label, value, sub }: { label: string; value: string; sub: str
       <span style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 26, letterSpacing: '-.02em', lineHeight: 1.15 }}>{value}</span>
       <div style={{ borderTop: '1px solid var(--divider)', paddingTop: 8 }}>
         <span style={{ fontSize: 11.5, lineHeight: 1.35, color: 'var(--text-dim)' }}>{sub}</span>
+      </div>
+    </div>
+  );
+}
+
+// Mesmo formato do KpiTile, mas o "valor" é a fileira de ícones dos 5
+// agentes em vez de texto — não tem um número único que resuma "melhor
+// composição de agentes" do jeito que resume "melhor mapa".
+function AgentComboKpiTile({ compo }: { compo: BestAgentComposition | null }) {
+  return (
+    <div style={{ ...cardStyle, padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-3)' }}>Melhor composição de agentes</span>
+      {compo ? (
+        <div style={{ display: 'flex', gap: 5 }}>
+          {compo.agents.map((agent, i) => (
+            <AgentAvatar key={`${agent}-${i}`} agent={agent} size={32} />
+          ))}
+        </div>
+      ) : (
+        <span style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 26 }}>—</span>
+      )}
+      <div style={{ borderTop: '1px solid var(--divider)', paddingTop: 8 }}>
+        <span style={{ fontSize: 11.5, lineHeight: 1.35, color: 'var(--text-dim)' }}>
+          {compo
+            ? compo.isFallback
+              ? `Última vitória do time com essa composição — ${compo.playedAtLabel}.`
+              : `${plural(compo.wins, 'vitória')} em ${plural(compo.total, 'partida')} com essa composição.`
+            : 'Ainda sem vitórias registradas.'}
+        </span>
       </div>
     </div>
   );
@@ -28,8 +83,8 @@ function LineupVariations({ combos }: { combos: LineupCombo[] }) {
   return (
     <div style={{ ...cardStyle, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 11 }}>
       <div>
-        <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 15 }}>Variações de time</div>
-        <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 3 }}>Composições de 5 jogadores diferentes nas partidas do time</div>
+        <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 15 }}>Variações de time - Jogadores</div>
+        <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 3 }}>Formações de 5 jogadores diferentes nas partidas do time</div>
       </div>
       {combos.length === 0 ? (
         <div style={{ fontSize: 12.5, color: 'var(--text-faint)' }}>Sem dados ainda.</div>
@@ -48,37 +103,76 @@ function LineupVariations({ combos }: { combos: LineupCombo[] }) {
               style={{ display: 'grid', gridTemplateColumns: '1fr 34px 34px 50px 50px', gap: 8, alignItems: 'center', padding: '9px 0', borderTop: '1px solid var(--divider)' }}
             >
               <div style={{ display: 'flex', gap: 4 }}>
-                {c.members.map((m) => {
-                  const imageUrl = agentImageUrl(m.agent);
-                  return (
-                    <div
-                      key={m.userId}
-                      title={m.name}
-                      style={{
-                        width: 26,
-                        height: 26,
-                        borderRadius: 7,
-                        overflow: 'hidden',
-                        flex: 'none',
-                        background: imageUrl ? '#141415' : 'var(--avatar-bg)',
-                        border: '1px solid var(--surface-border)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: 8,
-                        fontWeight: 700,
-                        color: 'var(--text-muted)',
-                      }}
-                    >
-                      {imageUrl ? <img src={imageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : m.name.slice(0, 2).toUpperCase()}
-                    </div>
-                  );
-                })}
+                {c.members.map((m) => (
+                  <AgentAvatar key={m.userId} agent={m.agent} size={26} title={m.name} />
+                ))}
               </div>
               <span style={{ fontSize: 12.5, fontWeight: 600, color: WIN, textAlign: 'right' }}>{c.wins}</span>
               <span style={{ fontSize: 12.5, fontWeight: 600, color: LOSS, textAlign: 'right' }}>{c.losses}</span>
               <span style={{ fontSize: 12.5, color: 'var(--text-muted)', textAlign: 'right' }}>{c.overtimeCount || '—'}</span>
               <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--text-3)', textAlign: 'right' }}>{c.winratePercent}%</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Kills/assistências/first bloods são média por partida jogada com o
+// agente (mesma base do impacto/ACS) — total puro premiaria só quem foi
+// mais pickado, não quem rendeu mais quando jogado.
+function BestAgentsTable({ agents }: { agents: TeamAgentPerformance[] }) {
+  return (
+    <div style={{ ...cardStyle, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 11 }}>
+      <div>
+        <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 15 }}>Melhores agentes do time</div>
+        <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 3 }}>Kills, assistências e first bloods são média por partida com o agente</div>
+      </div>
+      {agents.length === 0 ? (
+        <div style={{ fontSize: 12.5, color: 'var(--text-faint)' }}>Sem dados ainda.</div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 46px 52px 36px 58px', gap: 8, padding: '0 0 6px', fontSize: 9.5, letterSpacing: '.08em', color: 'var(--text-faint)' }}>
+            <span>AGENTE</span>
+            <span style={{ textAlign: 'right' }}>KILLS</span>
+            <span style={{ textAlign: 'right' }}>ASSIST</span>
+            <span style={{ textAlign: 'right' }}>FB</span>
+            <span style={{ textAlign: 'right' }}>IMPACTO</span>
+          </div>
+          {agents.map((a) => (
+            <div
+              key={a.agent}
+              style={{ display: 'grid', gridTemplateColumns: '1fr 46px 52px 36px 58px', gap: 8, alignItems: 'center', padding: '8px 0', borderTop: '1px solid var(--divider)' }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+                <AgentAvatar agent={a.agent} size={24} />
+                <span style={{ fontSize: 13, color: 'var(--text-3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.agent}</span>
+              </div>
+              <span style={{ fontSize: 12.5, color: 'var(--text-2)', textAlign: 'right' }}>{a.kills}</span>
+              <span style={{ fontSize: 12.5, color: 'var(--text-2)', textAlign: 'right' }}>{a.assists}</span>
+              <span style={{ fontSize: 12.5, color: 'var(--text-2)', textAlign: 'right' }}>{a.firstBloods}</span>
+              <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--text-3)', textAlign: 'right' }}>{a.impact}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function DestaquesDoTime({ insights }: { insights: string[] }) {
+  return (
+    <div style={{ ...cardStyle, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 11 }}>
+      <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 15 }}>Destaques do time</div>
+      {insights.length === 0 ? (
+        <div style={{ fontSize: 12.5, color: 'var(--text-faint)' }}>Sem destaques ainda.</div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {insights.map((text, i) => (
+            <div key={i} style={{ display: 'flex', gap: 8, fontSize: 12.5, color: 'var(--text-dim)', lineHeight: 1.4 }}>
+              <span style={{ color: 'var(--text-faint)' }}>•</span>
+              <span>{text}</span>
             </div>
           ))}
         </div>
@@ -102,6 +196,7 @@ export function TeamDashboard() {
   const assistRows: RankingRow[] = (data?.assistRanking ?? []).map((r) => ({ key: r.userId, name: r.name, value: String(r.value) }));
   const clutchRows: RankingRow[] = (data?.clutchRanking ?? []).map((r) => ({ key: r.userId, name: r.name, value: `${r.clutchesWon} de ${r.clutchesPlayed}` }));
   const firstBloodRows: RankingRow[] = (data?.firstBloodRanking ?? []).map((r) => ({ key: r.userId, name: r.name, value: String(r.value) }));
+  const firstDeathRows: RankingRow[] = (data?.firstDeathRanking ?? []).map((r) => ({ key: r.userId, name: r.name, value: String(r.value) }));
   const agentRows: RankingRow[] = (data?.mostPickedAgents ?? []).map((a) => ({ key: a.agent, name: a.agent, value: plural(a.count, 'pick'), dot: a.color }));
 
   const insights: string[] = [];
@@ -115,6 +210,7 @@ export function TeamDashboard() {
       insights.push(`${data.clutchRanking[0].name} lidera em clutches (${data.clutchRanking[0].clutchesWon} de ${data.clutchRanking[0].clutchesPlayed}).`);
     }
     if (data.firstBloodRanking[0]) insights.push(`${data.firstBloodRanking[0].name} lidera em first bloods, com ${data.firstBloodRanking[0].value}.`);
+    if (data.firstDeathRanking[0]) insights.push(`${data.firstDeathRanking[0].name} é quem mais morre primeiro nos rounds, ${data.firstDeathRanking[0].value} vezes.`);
     if (data.biggestWin) insights.push(`Maior goleada: ${data.biggestWin.score} no ${data.biggestWin.map} (${data.biggestWin.playedAtLabel}).`);
     if (data.closestMatch) insights.push(`Partida mais apertada: ${data.closestMatch.score} no ${data.closestMatch.map} (${data.closestMatch.playedAtLabel}).`);
   }
@@ -164,25 +260,25 @@ export function TeamDashboard() {
               value={data.currentStreak.type ? plural(data.currentStreak.count, data.currentStreak.type === 'V' ? 'vitória' : 'derrota') : '—'}
               sub={`Melhor sequência: ${plural(data.bestWinStreak, 'vitória')} seguidas.`}
             />
+            <AgentComboKpiTile compo={data.bestAgentComposition} />
           </div>
 
+          {/* 4 cards médios, 2 colunas x 2 linhas */}
           <div className="grid-responsive-2">
-            <RateBlock title="Em quais mapas o time ganha" sub="% de partidas vencidas em cada mapa" rows={data.mapWinrates.map((m) => ({ key: m.map, name: m.map, wins: m.wins, total: m.total }))} colorFor={rateBarColor} />
             <LineupVariations combos={data.lineupCombos} />
+            <DestaquesDoTime insights={insights} />
+            <RateBlock title="Em quais mapas o time ganha" sub="% de partidas vencidas em cada mapa" rows={data.mapWinrates.map((m) => ({ key: m.map, name: m.map, wins: m.wins, total: m.total }))} colorFor={rateBarColor} />
+            <BestAgentsTable agents={data.bestAgents} />
           </div>
 
-          <div className="grid-responsive-2">
+          {/* 8 cards pequenos, 4 colunas x 2 linhas */}
+          <div className="grid-responsive-4">
             <RankingBlock title="Ranking de ACS" sub="Média de ACS nas partidas do time" rows={acsRows} />
             <RankingBlock title="Ranking de MVP" sub="Maior ACS do time na partida" rows={mvpRows} />
-          </div>
-
-          <div className="grid-responsive-2">
             <RankingBlock title="Ranking de assistências" sub="Total de assistências nas partidas do time" rows={assistRows} />
             <RankingBlock title="Ranking de clutches" sub="Rounds ganhos sozinho contra a vantagem numérica" rows={clutchRows} />
-          </div>
-
-          <div className="grid-responsive-4">
             <RankingBlock title="Ranking de first bloods" sub="Primeira eliminação do round" rows={firstBloodRows} />
+            <RankingBlock title="Ranking de primeira morte" sub="Primeiro a morrer no round" rows={firstDeathRows} />
             <RankingBlock title="Agentes mais pickados" sub="Em todas as partidas do time" rows={agentRows} />
             <div style={{ ...cardStyle, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 14 }}>
               <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 15 }}>Destaques de placar</div>
@@ -214,18 +310,6 @@ export function TeamDashboard() {
               </div>
             </div>
           </div>
-
-          {insights.length > 0 && (
-            <div style={{ ...cardStyle, padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 16, marginBottom: 4 }}>Destaques do time</div>
-              {insights.map((text, i) => (
-                <div key={i} style={{ display: 'flex', gap: 8, fontSize: 12.5, color: 'var(--text-dim)', lineHeight: 1.4 }}>
-                  <span style={{ color: 'var(--text-faint)' }}>•</span>
-                  <span>{text}</span>
-                </div>
-              ))}
-            </div>
-          )}
         </>
       )}
     </div>

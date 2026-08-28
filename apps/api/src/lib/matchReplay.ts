@@ -4,6 +4,7 @@ export interface PlayerMatchReplayStats {
   puuid: string;
   teamId: string;
   firstBloods: number;
+  firstDeaths: number;
   plants: number;
   clutchesPlayed: number;
   clutchesWon: number;
@@ -30,7 +31,7 @@ export function replayMatchStats(match: MatchV4Data): Map<string, PlayerMatchRep
 
   const stats = new Map<string, PlayerMatchReplayStats>();
   for (const p of match.players) {
-    stats.set(p.puuid, { puuid: p.puuid, teamId: p.team_id, firstBloods: 0, plants: 0, clutchesPlayed: 0, clutchesWon: 0 });
+    stats.set(p.puuid, { puuid: p.puuid, teamId: p.team_id, firstBloods: 0, firstDeaths: 0, plants: 0, clutchesPlayed: 0, clutchesWon: 0 });
   }
 
   const teamIds = [...new Set(match.players.map((p) => p.team_id))];
@@ -41,6 +42,8 @@ export function replayMatchStats(match: MatchV4Data): Map<string, PlayerMatchRep
     if (kills.length > 0) {
       const killer = stats.get(kills[0]!.killer.puuid);
       if (killer) killer.firstBloods++;
+      const victim = stats.get(kills[0]!.victim.puuid);
+      if (victim) victim.firstDeaths++;
     }
     if (round.plant) {
       const planter = stats.get(round.plant.player.puuid);
