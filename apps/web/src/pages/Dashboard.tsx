@@ -659,11 +659,11 @@ export function Dashboard() {
             {isSelf && (
               <button
                 className="btn-primary"
-                style={{ minHeight: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 17px', fontSize: 13 }}
+                style={{ minHeight: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '0 17px', fontSize: 13 }}
                 onClick={startSync}
                 disabled={sync?.state === 'syncing'}
               >
-                + Sincronizar
+                {sync?.state === 'syncing' ? <SnakeSpinner size={14} /> : '+'} Sincronizar
               </button>
             )}
           </div>
