@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useNavigate, useOutletContext } from 'react-router-dom';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, History } from 'lucide-react';
 import { MIN_TEAM_MATCH_PLAYERS, type BestAgentComposition, type LineupCombo, type TeamAgentPerformance } from '@callout/shared';
 import type { OutletContext } from '../components/AppShell';
 import { LoadingFill } from '../components/Spinner';
@@ -280,20 +280,26 @@ export function TeamDashboard() {
 
   return (
     <div style={{ padding: 26, display: 'flex', flexDirection: 'column', gap: 16 }}>
-      <div>
-        <button
-          onClick={() => navigate('/time')}
-          style={{ display: 'flex', alignItems: 'center', gap: 7, background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 12.5, cursor: 'pointer', padding: 0, marginBottom: 10 }}
-        >
-          <ArrowLeft size={14} strokeWidth={1.75} />
-          Voltar pro time
-        </button>
-        <h1 style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 700, fontSize: 32, letterSpacing: '-.025em', margin: 0 }}>Painel do time</h1>
-        <div style={{ fontSize: 14, color: 'var(--text-muted)', marginTop: 6 }}>
-          {data
-            ? `${plural(data.qualifyingMatchCount, 'partida')} juntos · ${data.wins}V–${data.losses}D · ${data.winratePercent}%`
-            : `${team ? team.name : ''} · partidas com pelo menos ${MIN_TEAM_MATCH_PLAYERS} membros do time juntos`}
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+        <div>
+          <button
+            onClick={() => navigate('/time')}
+            style={{ display: 'flex', alignItems: 'center', gap: 7, background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 12.5, cursor: 'pointer', padding: 0, marginBottom: 10 }}
+          >
+            <ArrowLeft size={14} strokeWidth={1.75} />
+            Voltar pro time
+          </button>
+          <h1 style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 700, fontSize: 32, letterSpacing: '-.025em', margin: 0 }}>Painel do time</h1>
+          <div style={{ fontSize: 14, color: 'var(--text-muted)', marginTop: 6 }}>
+            {data
+              ? `${plural(data.qualifyingMatchCount, 'partida')} juntos · ${data.wins}V–${data.losses}D · ${data.winratePercent}%`
+              : `${team ? team.name : ''} · partidas com pelo menos ${MIN_TEAM_MATCH_PLAYERS} membros do time juntos`}
+          </div>
         </div>
+        <button className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: 9 }} onClick={() => navigate('/time/partidas')}>
+          <History size={15} strokeWidth={1.75} />
+          Histórico de partidas
+        </button>
       </div>
 
       {error ? (
