@@ -123,7 +123,7 @@ export async function buildTeamDashboard(): Promise<TeamDashboardSummary | null>
   const { current, bestWinStreak } = computeStreaks(qualifying.map(({ list }) => list[0]!.won));
 
   const byMap = new Map<string, { mapId: string | null; wins: number; total: number }>();
-  const byCombo = new Map<string, { memberUserIds: string[]; wins: number; overtime: number; total: number }>();
+  const byCombo = new Map<string, { memberUserIds: string[]; wins: number; overtimeWins: number; overtimeLosses: number; total: number }>();
   // Agente mais jogado por cada membro DENTRO de cada formação específica
   // (não o agente favorito dele no geral) — comboKey -> userId -> agente -> contagem.
   const comboAgentCounts = new Map<string, Map<string, Map<string, number>>>();
@@ -159,12 +159,18 @@ export async function buildTeamDashboard(): Promise<TeamDashboardSummary | null>
 
     const comboUserIds = [...list.map((r) => memberByPuuid.get(r.puuid)!.userId)].sort();
     const comboKey = comboUserIds.join(",");
-    const cEntry = byCombo.get(comboKey) ?? { memberUserIds: comboUserIds, wins: 0, overtime: 0, total: 0 };
+    const cEntry = byCombo.get(comboKey) ?? { memberUserIds: comboUserIds, wins: 0, overtimeWins: 0, overtimeLosses: 0, total: 0 };
     cEntry.total++;
-    if (won) cEntry.wins++;
     // Overtime: rounds além dos 24 de regulação (12 de cada lado) — mesmo
-    // corte que insights.ts usa pro ataque/defesa por overtime.
-    if (raw.rounds.length > 24) cEntry.overtime++;
+    // corte que insights.ts usa pro ataque/defesa por overtime. Separado por
+    // V/D pra mostrar "4 (2OT)" ao lado de cada um, não uma coluna à parte.
+    const wentToOvertime = raw.rounds.length > 24;
+    if (won) {
+      cEntry.wins++;
+      if (wentToOvertime) cEntry.overtimeWins++;
+    } else if (wentToOvertime) {
+      cEntry.overtimeLosses++;
+    }
     byCombo.set(comboKey, cEntry);
 
     const agentCompoKey = [...list.map((r) => r.agentName)].sort().join(",");
@@ -257,7 +263,8 @@ export async function buildTeamDashboard(): Promise<TeamDashboardSummary | null>
         }),
         wins: s.wins,
         losses: s.total - s.wins,
-        overtimeCount: s.overtime,
+        overtimeWins: s.overtimeWins,
+        overtimeLosses: s.overtimeLosses,
         total: s.total,
         winratePercent: s.total ? round0((s.wins / s.total) * 100) : 0,
       };

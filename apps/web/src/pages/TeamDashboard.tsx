@@ -121,27 +121,31 @@ function LineupVariations({ combos }: { combos: LineupCombo[] }) {
         <div style={{ fontSize: 12.5, color: 'var(--text-faint)' }}>Sem dados ainda.</div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 34px 34px 50px 50px', gap: 8, padding: '0 0 6px', fontSize: 9.5, letterSpacing: '.08em', color: 'var(--text-faint)' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 64px 64px 50px', gap: 8, padding: '0 0 6px', fontSize: 9.5, letterSpacing: '.08em', color: 'var(--text-faint)' }}>
             <span>COMPOSIÇÃO</span>
             <span style={{ textAlign: 'right' }}>V</span>
             <span style={{ textAlign: 'right' }}>D</span>
-            <span style={{ textAlign: 'right' }}>OT</span>
             <span style={{ textAlign: 'right' }}>TAXA</span>
           </div>
           <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
             {combos.map((c) => (
               <div
                 key={c.comboKey}
-                style={{ display: 'grid', gridTemplateColumns: '1fr 34px 34px 50px 50px', gap: 8, alignItems: 'center', padding: '9px 0', borderTop: '1px solid var(--divider)' }}
+                style={{ display: 'grid', gridTemplateColumns: '1fr 64px 64px 50px', gap: 8, alignItems: 'center', padding: '9px 0', borderTop: '1px solid var(--divider)' }}
               >
                 <div style={{ display: 'flex', gap: 4 }}>
                   {c.members.map((m) => (
                     <PlayerInitials key={m.userId} name={m.name} size={26} />
                   ))}
                 </div>
-                <span style={{ fontSize: 12.5, fontWeight: 600, color: WIN, textAlign: 'right' }}>{c.wins}</span>
-                <span style={{ fontSize: 12.5, fontWeight: 600, color: LOSS, textAlign: 'right' }}>{c.losses}</span>
-                <span style={{ fontSize: 12.5, color: 'var(--text-muted)', textAlign: 'right' }}>{c.overtimeCount || '—'}</span>
+                <span style={{ fontSize: 12.5, fontWeight: 600, color: WIN, textAlign: 'right', whiteSpace: 'nowrap' }}>
+                  {c.wins}
+                  {c.overtimeWins > 0 && <span style={{ fontWeight: 400, color: 'var(--text-faint)' }}> ({c.overtimeWins}OT)</span>}
+                </span>
+                <span style={{ fontSize: 12.5, fontWeight: 600, color: LOSS, textAlign: 'right', whiteSpace: 'nowrap' }}>
+                  {c.losses}
+                  {c.overtimeLosses > 0 && <span style={{ fontWeight: 400, color: 'var(--text-faint)' }}> ({c.overtimeLosses}OT)</span>}
+                </span>
                 <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--text-3)', textAlign: 'right' }}>{c.winratePercent}%</span>
               </div>
             ))}

@@ -337,7 +337,8 @@ export interface LineupCombo {
   members: LineupComboMember[];
   wins: number;
   losses: number;
-  overtimeCount: number;
+  overtimeWins: number; // quantas das vitórias foram na overtime — mostrado ao lado de V, tipo "4 (2OT)"
+  overtimeLosses: number; // idem, ao lado de D
   total: number;
   winratePercent: number;
 }
