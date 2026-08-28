@@ -663,7 +663,7 @@ export function Dashboard() {
                 onClick={startSync}
                 disabled={sync?.state === 'syncing'}
               >
-                {sync?.state === 'syncing' ? <SnakeSpinner size={14} /> : '+'} Sincronizar
+                {sync?.state === 'syncing' ? <SnakeSpinner size={14} color="#000" /> : '+'} Sincronizar
               </button>
             )}
           </div>
