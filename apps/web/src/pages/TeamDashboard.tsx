@@ -226,7 +226,10 @@ export function TeamDashboard() {
     if (data === null && !loading) loadTeamDashboard();
   }, [data, loading, loadTeamDashboard]);
 
-  const bestMap = data?.mapWinrates.find((m) => m.total >= 3) ?? null;
+  // Maior taxa de vitória, sem piso de amostra — mapWinrates já vem
+  // ordenado desc por winratePercent, então é só pegar o primeiro (mesmo
+  // que seja 1 vitória em 1 partida só).
+  const bestMap = data?.mapWinrates[0] ?? null;
 
   const acsRows: RankingRow[] = (data?.acsRanking ?? []).map((r) => ({ key: r.userId, name: r.name, value: String(r.value), caption: `(${plural(r.matchesPlayed, 'partida')})` }));
   const mvpRows: RankingRow[] = (data?.mvpRanking ?? []).map((r) => ({ key: r.userId, name: r.name, value: plural(r.value, 'vez') }));
@@ -290,7 +293,7 @@ export function TeamDashboard() {
             <KpiTile
               label="Melhor mapa"
               value={bestMap ? bestMap.map : '—'}
-              sub={bestMap ? `${bestMap.winratePercent}% em ${plural(bestMap.total, 'partida')}.` : 'Ainda sem amostra suficiente.'}
+              sub={bestMap ? `${plural(bestMap.total, 'partida')} jogada${bestMap.total === 1 ? '' : 's'} e ${plural(bestMap.wins, 'vitória')}.` : 'Ainda sem partidas.'}
             />
             <KpiTile
               label="Sequência atual"
