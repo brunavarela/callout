@@ -2,8 +2,9 @@ import type { BestAgentComposition, MatchV4Data, TeamAgentPerformance, TeamAgent
 import { MIN_TEAM_MATCH_PLAYERS } from "@callout/shared";
 import { prisma } from "./prisma.js";
 import { loadAgentColorsByName } from "./assets.js";
+import { getMmrHistory } from "./henrikdev.js";
 import { mapNameFrom, scoreFor, formatPlayedAt } from "./dashboard.js";
-import { countsTowardStats } from "./match-result.js";
+import { countsTowardStats, matchResult } from "./match-result.js";
 import { replayMatchStats } from "./matchReplay.js";
 
 const round0 = (n: number) => Math.round(n);
@@ -122,8 +123,30 @@ export async function buildTeamDashboard(): Promise<TeamDashboardSummary | null>
   const losses = qualifying.length - wins;
   const { current, bestWinStreak } = computeStreaks(qualifying.map(({ list }) => list[0]!.won));
 
+  // Só pra "Variações de time - Jogadores" (vitória/derrota/empate por
+  // formação) — a Riot não expõe empate em `won` (vem `false`, igual
+  // derrota); o único jeito de identificar é pelo RR ganho na partida (ver
+  // matchResult em match-result.ts). Uma chamada por jogador (não por
+  // partida), igual buildTeamMatches já faz.
+  const rrByPuuidMatch = new Map<string, Map<string, number>>();
+  await Promise.all(
+    trackedMembers.map(async (m) => {
+      const puuid = m.user.riotPuuid!;
+      if (!m.user.riotRegion) return;
+      try {
+        const history = await getMmrHistory(m.user.riotRegion, puuid);
+        rrByPuuidMatch.set(puuid, new Map(history.map((h) => [h.match_id, h.last_change])));
+      } catch {
+        // sem histórico pra esse jogador — matchResult cai pro won cru (nunca vira empate)
+      }
+    }),
+  );
+
   const byMap = new Map<string, { mapId: string | null; wins: number; total: number }>();
-  const byCombo = new Map<string, { memberUserIds: string[]; wins: number; overtimeWins: number; overtimeLosses: number; total: number }>();
+  const byCombo = new Map<
+    string,
+    { memberUserIds: string[]; wins: number; losses: number; draws: number; overtimeWins: number; overtimeLosses: number; total: number }
+  >();
   // Agente mais jogado por cada membro DENTRO de cada formação específica
   // (não o agente favorito dele no geral) — comboKey -> userId -> agente -> contagem.
   const comboAgentCounts = new Map<string, Map<string, Map<string, number>>>();
@@ -159,17 +182,24 @@ export async function buildTeamDashboard(): Promise<TeamDashboardSummary | null>
 
     const comboUserIds = [...list.map((r) => memberByPuuid.get(r.puuid)!.userId)].sort();
     const comboKey = comboUserIds.join(",");
-    const cEntry = byCombo.get(comboKey) ?? { memberUserIds: comboUserIds, wins: 0, overtimeWins: 0, overtimeLosses: 0, total: 0 };
+    const cEntry = byCombo.get(comboKey) ?? { memberUserIds: comboUserIds, wins: 0, losses: 0, draws: 0, overtimeWins: 0, overtimeLosses: 0, total: 0 };
     cEntry.total++;
     // Overtime: rounds além dos 24 de regulação (12 de cada lado) — mesmo
     // corte que insights.ts usa pro ataque/defesa por overtime. Separado por
     // V/D pra mostrar "4 (2OT)" ao lado de cada um, não uma coluna à parte.
     const wentToOvertime = raw.rounds.length > 24;
-    if (won) {
+    // V/D/E pelo RR, não pelo `won` cru — a Riot não tem flag de empate
+    // (vem `false`, igual derrota); ver comentário no fetch de rrByPuuidMatch.
+    const rrDelta = rrByPuuidMatch.get(list[0]!.puuid)?.get(match.id) ?? null;
+    const comboResult = matchResult(won, rrDelta);
+    if (comboResult === "V") {
       cEntry.wins++;
       if (wentToOvertime) cEntry.overtimeWins++;
-    } else if (wentToOvertime) {
-      cEntry.overtimeLosses++;
+    } else if (comboResult === "D") {
+      cEntry.losses++;
+      if (wentToOvertime) cEntry.overtimeLosses++;
+    } else {
+      cEntry.draws++;
     }
     byCombo.set(comboKey, cEntry);
 
@@ -262,7 +292,8 @@ export async function buildTeamDashboard(): Promise<TeamDashboardSummary | null>
           return { userId, name: nameByUserId.get(userId) ?? "?", agent: topAgent ?? "?" };
         }),
         wins: s.wins,
-        losses: s.total - s.wins,
+        losses: s.losses,
+        draws: s.draws,
         overtimeWins: s.overtimeWins,
         overtimeLosses: s.overtimeLosses,
         total: s.total,

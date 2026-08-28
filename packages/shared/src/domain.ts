@@ -337,6 +337,7 @@ export interface LineupCombo {
   members: LineupComboMember[];
   wins: number;
   losses: number;
+  draws: number; // raro — Riot não expõe empate direto, só via RR ganho (ver matchResult)
   overtimeWins: number; // quantas das vitórias foram na overtime — mostrado ao lado de V, tipo "4 (2OT)"
   overtimeLosses: number; // idem, ao lado de D
   total: number;

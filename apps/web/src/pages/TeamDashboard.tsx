@@ -110,57 +110,65 @@ function AgentComboKpiTile({ compo }: { compo: BestAgentComposition | null }) {
 // time" é sobre o que aconteceu, não um ranking de qual formação é
 // "melhor" (isso soaria como "o time rende mais sem Fulano"). Ordenado por
 // quantas vezes cada formação jogou.
+const LINEUP_COLUMNS = '1fr 74px 74px 56px 50px 66px';
+
 function LineupVariations({ combos }: { combos: LineupCombo[] }) {
   return (
     <div style={{ ...cardStyle, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 11, height: MEDIUM_CARD_HEIGHT }}>
-      <div>
-        <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 15 }}>Variações de time - Jogadores</div>
-        <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 3 }}>Formações de 5 jogadores diferentes nas partidas do time</div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
+        <div>
+          <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 15 }}>Variações de time - Jogadores</div>
+          <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 3 }}>Formações de 5 jogadores diferentes nas partidas do time</div>
+        </div>
+        <span style={{ fontSize: 10.5, color: 'var(--text-faint)', whiteSpace: 'nowrap' }}>OT = overtime</span>
       </div>
       {combos.length === 0 ? (
         <div style={{ fontSize: 12.5, color: 'var(--text-faint)' }}>Sem dados ainda.</div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 64px 64px 50px', gap: 8, padding: '0 0 6px', fontSize: 9.5, letterSpacing: '.08em', color: 'var(--text-faint)' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: LINEUP_COLUMNS, gap: 8, padding: '0 0 6px', fontSize: 9.5, letterSpacing: '.08em', color: 'var(--text-faint)' }}>
             <span>COMPOSIÇÃO</span>
-            <span style={{ textAlign: 'right' }}>V</span>
-            <span style={{ textAlign: 'right' }}>D</span>
+            <span style={{ textAlign: 'right' }}>VITÓRIAS</span>
+            <span style={{ textAlign: 'right' }}>DERROTAS</span>
+            <span style={{ textAlign: 'right' }}>EMPATE</span>
             <span style={{ textAlign: 'right' }}>TAXA</span>
+            <span style={{ textAlign: 'right' }}>TAXA OT</span>
           </div>
           <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
-            {combos.map((c) => (
-              <div
-                key={c.comboKey}
-                style={{ display: 'grid', gridTemplateColumns: '1fr 64px 64px 50px', gap: 8, alignItems: 'center', padding: '9px 0', borderTop: '1px solid var(--divider)' }}
-              >
-                <div style={{ display: 'flex', gap: 4 }}>
-                  {c.members.map((m) => (
-                    <PlayerInitials key={m.userId} name={m.name} size={26} />
-                  ))}
+            {combos.map((c) => {
+              const otRate = c.total ? Math.round(((c.overtimeWins + c.overtimeLosses) / c.total) * 100) : 0;
+              return (
+                <div key={c.comboKey} style={{ display: 'grid', gridTemplateColumns: LINEUP_COLUMNS, gap: 8, alignItems: 'center', padding: '9px 0', borderTop: '1px solid var(--divider)' }}>
+                  <div style={{ display: 'flex', gap: 4 }}>
+                    {c.members.map((m) => (
+                      <PlayerInitials key={m.userId} name={m.name} size={26} />
+                    ))}
+                  </div>
+                  <span style={{ fontSize: 12.5, fontWeight: 600, color: WIN, textAlign: 'right', whiteSpace: 'nowrap' }}>
+                    {c.wins}
+                    {c.overtimeWins > 0 && (
+                      <span style={{ fontWeight: 400, color: 'var(--text-faint)' }}>
+                        {' ('}
+                        <span style={{ fontWeight: 700, color: WIN }}>{c.overtimeWins}</span>OT)
+                      </span>
+                    )}
+                  </span>
+                  <span style={{ fontSize: 12.5, fontWeight: 600, color: LOSS, textAlign: 'right', whiteSpace: 'nowrap' }}>
+                    {c.losses}
+                    {c.overtimeLosses > 0 && (
+                      <span style={{ fontWeight: 400, color: 'var(--text-faint)' }}>
+                        {' ('}
+                        <span style={{ fontWeight: 700, color: LOSS }}>{c.overtimeLosses}</span>OT)
+                      </span>
+                    )}
+                  </span>
+                  <span style={{ fontSize: 12.5, color: 'var(--text-muted)', textAlign: 'right' }}>{c.draws}</span>
+                  <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--text-3)', textAlign: 'right' }}>{c.winratePercent}%</span>
+                  <span style={{ fontSize: 12.5, color: 'var(--text-muted)', textAlign: 'right' }}>{otRate}%</span>
                 </div>
-                <span style={{ fontSize: 12.5, fontWeight: 600, color: WIN, textAlign: 'right', whiteSpace: 'nowrap' }}>
-                  {c.wins}
-                  {c.overtimeWins > 0 && (
-                    <span style={{ fontWeight: 400, color: 'var(--text-faint)' }}>
-                      {' ('}
-                      <span style={{ fontWeight: 700, color: WIN }}>{c.overtimeWins}</span>OT)
-                    </span>
-                  )}
-                </span>
-                <span style={{ fontSize: 12.5, fontWeight: 600, color: LOSS, textAlign: 'right', whiteSpace: 'nowrap' }}>
-                  {c.losses}
-                  {c.overtimeLosses > 0 && (
-                    <span style={{ fontWeight: 400, color: 'var(--text-faint)' }}>
-                      {' ('}
-                      <span style={{ fontWeight: 700, color: LOSS }}>{c.overtimeLosses}</span>OT)
-                    </span>
-                  )}
-                </span>
-                <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--text-3)', textAlign: 'right' }}>{c.winratePercent}%</span>
-              </div>
-            ))}
+              );
+            })}
           </div>
-          <div style={{ fontSize: 10.5, color: 'var(--text-faint)', paddingTop: 8 }}>OT = overtime</div>
         </div>
       )}
     </div>
