@@ -1,167 +1,312 @@
 # callout — plano de lançamento público
 
 > Documento de handoff de **produto/negócio**. Registra a decisão da Bruna
-> (31/08/2026) de tirar o callout do grupo fechado de amigos e abrir pro
-> público, com monetização prevista ~2 meses depois do ar. Para arquitetura
-> técnica atual ver [CONTEXT.md](CONTEXT.md), para estado de implementação
-> ver [PROGRESS.md](PROGRESS.md).
+> (31/08/2026) de tirar o callout do grupo fechado de amigos, abrir pro
+> público e monetizar (plano PRO) ~2 meses depois do ar. Varredura completa
+> — técnico, jurídico, produto, infra, divulgação. Para arquitetura técnica
+> atual ver [CONTEXT.md](CONTEXT.md), pra estado de implementação ver
+> [PROGRESS.md](PROGRESS.md).
 >
-> Este documento é um ponto de partida informado, não uma sentença — se
-> algo aqui não fizer mais sentido durante o trabalho, ajuste e siga.
+> Ponto de partida informado, não uma sentença — se algo aqui não fizer mais
+> sentido durante o trabalho, ajuste e siga.
 
 ---
 
 ## 1. A visão
 
-- **Time é o diferencial.** O app mostra números individuais, mas o produto
-  que a Bruna quer construir é focado em **equipe**: montar time, definir
-  função, desenhar estratégia por mapa, salvar spots/lineups. Isso precisa
-  funcionar perfeitamente — é o que diferencia de qualquer tracker de stats
-  genérico.
-- **Grátis no lançamento.** Sem cobrança nos primeiros ~2 meses no ar, pra
-  ganhar tração e feedback real.
+- **Time é o diferencial.** Números individuais existem, mas o produto é
+  focado em **equipe**: montar time, função, estratégia por mapa, spots.
+  Essa parte precisa funcionar perfeitamente — é o que diferencia de
+  qualquer tracker de stats genérico.
+- **Grátis no lançamento.** Sem cobrança nos primeiros ~2 meses no ar.
 - **Monetização depois:** plano **PRO** mensal (R$ 19,90/mês, valor de
   referência) libera **Time, Estratégia (Board) e Spots**. Dashboard
-  individual continua grátis. Possibilidade futura de anúncios também
-  cogitada, não decidida.
-- **Trabalho feito na branch `dev`** enquanto essa frente não está pronta
-  pra produção. `main` continua sendo o que está no ar hoje (grupo fechado).
+  individual continua grátis. Anúncios cogitados como receita extra, não
+  decidido.
+- **Trabalho técnico roda na branch `dev`** enquanto essa frente não está
+  pronta pra produção; `main` continua sendo o que está no ar hoje.
 
 ---
 
-## 2. Por que isto não é só "trocar uma flag" — gaps reais encontrados no código
+## 2. O que muda de "ferramenta de 10 amigos" pra "produto público" — gaps técnicos reais
 
-Revisão feita em 31/08/2026 contra o estado atual do repo. Isto muda o
-cálculo de esforço: **não é lançar o que já existe pro público**, é
-**mudar premissas estruturais** que foram decisões corretas pra "10 amigos"
-e viram bloqueios pra "produto público".
+Revisão contra o código atual (31/08/2026):
 
 | # | Gap | Onde | Por que bloqueia lançamento público |
 |---|---|---|---|
-| 1 | **Um único time, hardcoded** | `apps/api/src/lib/team.ts:15` — `prisma.team.findFirst()` cria o time na primeira vez e depois sempre reusa **o único time que existir no banco**. Todo usuário novo entra automaticamente nesse mesmo time. | Com usuários públicos desconhecidos, o segundo usuário cadastrado cairia dentro do time (e veria as estratégias/spots) do primeiro. Isto é a diferença entre "não tem multi-tenancy porque não precisa" (CONTEXT.md §1, correto pra 10 amigos) e "vaza dado de um grupo pro outro" (inaceitável em produto público). |
-| 2 | **Spots são globais** | PROGRESS.md, Fase 4 — `GET /spots` não filtra por time porque `Spot` não tem `teamId` no schema. | Mesmo problema do #1: qualquer usuário logado vê spot de qualquer outro time. |
-| 3 | **Login exige pertencer a um servidor Discord específico** | `apps/api/src/routes/auth.ts` → `findGuildMembership()` (`apps/api/src/lib/discord.ts`) | É o controle de acesso do grupo fechado (CONTEXT.md §6.1). Precisa virar cadastro aberto — Discord OAuth continua ótimo como login, só sem o allowlist de servidor. |
-| 4 | **Dado de partida vem de API não-oficial (HenrikDev)** | CONTEXT.md §5.1–5.2 | Tem rate limit por tier de chave, pode quebrar a qualquer patch, e o acesso foi pensado pro volume de ~10 usuários. Produto público muda o volume por uma ordem de grandeza ou mais. |
-| 5 | **Chave oficial da Riot foi descartada por ser "app fechado"** | CONTEXT.md §5.1 | O motivo documentado pra não perseguir RSO/chave de produção foi justamente "site fechado pra 10 amigos é o perfil recusado". **Isso muda com o produto público** — vale reabrir essa conversa com a Riot (ver §5 abaixo). |
-| 6 | **Nome do produto/domínio não pode citar "Valorant"** | CONTEXT.md §10.2 | Já era regra pro fechado, continua valendo (e fica mais visível/exposta a risco legal) pro público. |
-| 7 | **Sem monitoramento de erro/observabilidade** | não há menção em PROGRESS.md | Com 10 amigos, bug some com um "ei, deu erro aqui" no Discord. Com público desconhecido, bug silencioso = usuário que só vai embora. |
+| 1 | **Um único time, hardcoded** | `apps/api/src/lib/team.ts:15` — `prisma.team.findFirst()` sempre pega/cria **o único time que existir**. Todo usuário novo entra automaticamente nele. | Usuário público desconhecido cairia dentro do time (e veria estratégias/spots) de outro grupo qualquer. Vazamento de dado entre contas — inaceitável em produto público, mesmo sendo a decisão certa pra "10 amigos" (CONTEXT.md §1). |
+| 2 | **Spots são globais** | `Spot` não tem `teamId` no schema (PROGRESS.md, Fase 4) | Mesmo problema do #1: qualquer usuário logado vê spot de qualquer time. |
+| 3 | **Login exige pertencer a um servidor Discord específico** | `findGuildMembership()` em `apps/api/src/lib/discord.ts`, chamado em `apps/api/src/routes/auth.ts` | É o controle de acesso do grupo fechado. Precisa virar cadastro aberto (Discord OAuth sem allowlist obrigatório de servidor). |
+| 4 | **Dado de partida vem de API não-oficial (HenrikDev)** | CONTEXT.md §5.1–5.2 | Rate limit por tier de chave, pode quebrar a qualquer patch, pensada pro volume de ~10 usuários. |
+| 5 | **Sem monitoramento de erro/observabilidade** | não há menção em PROGRESS.md | Com público desconhecido, bug silencioso = usuário que só vai embora, sem ninguém saber. |
 
 ---
 
-## 3. Jurídico e marca
+## 3. Jurídico e compliance — varredura completa
 
-⚠️ **Não sou advogada nem contadora — o que segue é um checklist do que
-precisa ser verificado/decidido, não parecer jurídico.** Vale confirmar com
-profissional antes de cobrar de fato.
+⚠️ **Não sou advogada nem contadora.** O que segue é um mapa do que precisa
+ser resolvido e, onde consegui, a resposta verificada com fonte — não
+substitui revisão por profissional antes de operar de fato (principalmente
+antes de emitir a primeira cobrança).
 
-- [ ] **Nome/domínio**: escolher algo sem "Valorant"/marcas da Riot (regra já
-      documentada, CONTEXT.md §10.2). Verificar disponibilidade de domínio
-      e, se possível, checar se não colide com marca já registrada no INPI.
-- [ ] **Pessoa jurídica**: pra emitir nota fiscal e receber assinatura
-      recorrente de forma legal no Brasil, provavelmente precisa de MEI ou
-      ME (CNPJ). Decidir se já existe alguma estrutura ou se abre uma nova.
-- [ ] **Termos de uso + Política de privacidade**: obrigatório antes de
-      abrir cadastro público. Precisa cobrir LGPD (dado pessoal: Discord ID,
-      Riot ID, e-mail se houver, IP).
-- [ ] **Disclaimer de não afiliação com a Riot Games** — já previsto em
-      CONTEXT.md §10.4, agora deixa de ser hipotético.
-- [ ] **Opt-in explícito de compartilhamento de dado de partida** — idem,
-      §10.4. O usuário precisa consentir que os dados da conta Riot dele
-      sejam puxados e mostrados (inclusive pro time dele).
-- [ ] **⚠️ Política de monetização da Riot Games / HenrikDev** — **não
-      verificado ainda, verificar antes de ligar cobrança.** APIs de jogo
-      costumam ter cláusulas restringindo cobrar dinheiro em cima de dado
-      derivado do jogo sem aprovação. Isso vale tanto pra eventual chave
-      oficial da Riot (Developer Portal tem uma seção de política de uso/
-      monetização) quanto pros termos da HenrikDev (API não-oficial —
-      conferir se ela permite uso comercial/redistribuição paga). Achar essa
-      resposta **antes** de aceitar o primeiro pagamento, não depois.
+### 3.1 Política da Riot Games — **verificado agora, isso muda o plano**
+
+Fui checar direto na fonte (`developer.riotgames.com`) em vez de deixar como
+suposição. Achados:
+
+- **Chave de VALORANT: só produção, não tem "chave pessoal".** Citação
+  literal da doc: *"Personal Key Applications are currently not supported."*
+  Pra pedir a de produção: registrar o produto no Developer Portal, integrar
+  **RSO** (Riot Sign On) pro opt-in do jogador, e o caso de uso ser aprovado.
+- **App fechado/pessoal é explicitamente recusado**: a doc lista, como caso
+  de uso não aprovado, *"Apps that are not public and are designed for
+  personal use only"*. **Isso deixa de ser o caso do callout assim que ele
+  vira produto público** — o motivo documentado em CONTEXT.md §5.1 pra não
+  perseguir esse caminho some com essa mudança de plano.
+- **Monetização é permitida, com condições claras:**
+  - Precisa ter **camada grátis** (*"You must have a free tier of access
+    for players, which may include advertising"*) — bate com a decisão de
+    manter o dashboard individual sempre grátis.
+  - O que é cobrado precisa ser **"transformative"** (agregar informação/
+    estética/entendimento novo sobre o dado bruto) — Time, Estratégia e
+    Spots se encaixam bem aqui: não é só mostrar stat, é o usuário criando
+    conteúdo próprio (composição de time, desenho de jogada, anotação de
+    spot) em cima do dado.
+  - Métodos aceitos incluem explicitamente **assinatura**.
+  - Precisa registrar o produto no Developer Portal e ter status
+    *Approved* ou *Acknowledged* antes de monetizar.
+  - Proibido: apostas/gambling, monetização "unfair"/abusiva.
+- **Preferência declarada por fonte de dado oficial**: a política diz que
+  produtos devem usar os serviços suportados pela Riot pra ingestão de
+  dado — reforça que vale migrar de HenrikDev pra API oficial assim que o
+  produto for público, não só por robustez técnica mas por estar dentro da
+  política.
+- **Marca/branding**: uso de logo/marca da Riot só onde for "inevitável pro
+  valor central do produto", e o produto não pode se parecer visualmente/
+  funcionalmente com os jogos da Riot. Precisa do aviso de não-afiliação
+  (já previsto em CONTEXT.md §10.4). Regra de não usar "Valorant" no nome
+  do produto/domínio (CONTEXT.md §10.2) continua valendo — a política não
+  entra em detalhe sobre nome/domínio, mas é prudente manter a regra.
+
+  Fontes: [Riot Games Developer Policies (geral)](https://developer.riotgames.com/policies/general),
+  [VALORANT — Riot Developer Portal](https://developer.riotgames.com/docs/valorant).
+
+- [ ] **Ação decorrente**: registrar o callout no Riot Developer Portal e
+      abrir o processo de chave de produção + RSO assim que a Fase A
+      (arquitetura pública) estiver perto do fim — não precisa esperar o
+      produto estar 100% pronto, o processo de aprovação da Riot pode
+      demorar e pode rodar em paralelo.
+
+### 3.2 HenrikDev (API não-oficial) — **não achei um ToS formal claro**
+
+Busquei um termo de uso comercial explícito da HenrikDev e não encontrei um
+documento dedicado com essa cláusula — a doc (`docs.henrikdev.xyz`) deixa
+claro que não é afiliada à Riot, mas não achei texto específico permitindo
+ou proibindo uso comercial/monetização em cima da API. **Não dá pra tratar
+isso como "liberado" nem como "proibido" — a única forma confiável de saber
+é perguntar direto pro mantenedor (Discord/e-mail `contact@henrikdev.xyz`,
+conforme a doc) antes de cobrar algo que dependa desse dado.** Isso reforça
+o item anterior: migrar pra API oficial da Riot resolve essa incerteza de
+uma vez.
+
+### 3.3 Estrutura jurídica (pessoa jurídica) para receber assinatura
+
+- **MEI**: teto de faturamento **R$ 81.000/ano** (~R$ 6.750/mês), valor em
+  vigor desde 2018 (fonte: [Contabilizei, dados 2026](https://www.contabilizei.com.br/contabilidade-online/faturamento-mei-2026/)).
+  Ultrapassar até 20% (até R$ 97.200/ano) ainda permite continuar até
+  dezembro daquele ano, com DAS complementar. Em R$ 19,90/mês, o teto do
+  MEI cobre até ~340 assinantes simultâneos — folgado pro início, mas é um
+  número pra ter em mente se o produto crescer rápido (nesse caso migrar
+  pra ME/CNPJ normal).
+  - MEI não permite CNAE de "desenvolvimento de programas de computador sob
+    encomenda" de forma ampla — verificar com contador se o CNAE de SaaS/
+    aplicativo se encaixa nas atividades permitidas pro MEI ou se precisa
+    já nascer como ME.
+- **Decisão prática**: se já existe algum CNPJ (MEI ou outro) que a Bruna
+  possa usar, provavelmente é o caminho mais rápido/barato pra começar.
+  Senão, abrir MEI é gratuito e rápido (portal gov.br) — mas **fazer essa
+  abertura só precisa acontecer antes da Fase D (cobrança)**, não antes.
+- [ ] **Verificar com contador**: CNAE correto, se MEI aguenta o modelo de
+      negócio (SaaS com assinatura recorrente + eventual publicidade), e
+      regra de emissão de nota fiscal por assinatura recorrente.
+
+### 3.4 LGPD e termos legais
+
+- **Política de Privacidade** e **Termos de Uso** obrigatórios antes de
+  abrir cadastro público — cobrindo: quais dados são coletados (Discord ID,
+  e-mail se houver, Riot ID/puuid, histórico de partidas, IP), pra que
+  servem, por quanto tempo ficam guardados, como o usuário pode pedir
+  exclusão (direito da LGPD).
+- **Disclaimer de não afiliação com a Riot Games** — CONTEXT.md §10.4 já
+  previa, agora deixa de ser hipotético.
+- **Opt-in explícito** de vínculo de conta Riot e de compartilhamento do
+  próprio dado de partida com o time (idem §10.4) — e isso também é
+  **requisito técnico da Riot** pro RSO (§3.1), não só boa prática.
+- **Cancelamento de assinatura self-service**: regra de proteção ao
+  consumidor no Brasil vem endurecendo sobre cancelamento de assinatura
+  digital ter que ser tão fácil quanto a contratação — não deixar isso
+  depender de pedir por Discord/e-mail.
+- [ ] **Verificar com advogado**: se o volume justifica registrar
+      "encarregado" (DPO) formal (LGPD art. 41) ou se, no tamanho inicial,
+      um canal de contato já basta; texto final de Termos/Privacidade.
+
+### 3.5 Publicidade (se for usada)
+
+- Redes tipo Google AdSense exigem site com conteúdo próprio suficiente,
+  política de privacidade publicada e, em geral, alguns meses de operação
+  antes de aprovar — não é algo pra ativar no dia 1.
+- Anúncio em cima de dado da Riot precisa respeitar a mesma política do
+  §3.1 (camada grátis pode ter anúncio, mas sem gambling/promoção
+  inadequada).
 
 ---
 
-## 4. Arquitetura — o que muda antes de abrir pro público
+## 4. Produto — grátis vs PRO
 
-Ordem sugerida (cada item destrava o próximo):
+- **Grátis, pra sempre**: dashboard individual (KPIs, histórico, evolução
+  de rank, winrate por mapa/agente).
+- **PRO (R$ 19,90/mês, referência)**: Time, Estratégia (Board), Spots.
+- **Em aberto** (ver §10): Heatmap e Comentários entram no grátis (junto do
+  individual) ou no PRO (junto do time)? Preço final ou placeholder?
 
-1. **Multi-tenancy real de time**
-   - Criar time deixa de ser automático-no-primeiro-login; usuário cria um
-     time ou entra num via convite (código/link).
-   - `Spot` ganha `teamId` (migration) e `GET /spots` filtra por time do
-     usuário logado.
-   - Revisar todo lugar que hoje faz `team.findFirst()` — não é só
-     `team.ts`, conferir `sync.ts`/`match-result.ts` também (retornaram na
-     busca por "guild" mas por coincidência de palavra — confirmar se usam
-     o mesmo padrão de time único antes de mexer).
-2. **Auth aberta**
-   - Tirar o `findGuildMembership()` do fluxo obrigatório de login, ou
-     transformar em allowlist opcional por time (dono do time pode restringir
-     quem entra, mas isso não é mais controle de acesso da plataforma
-     inteira).
-3. **Decisão sobre fonte de dado de partida**
-   - Curto prazo: continuar HenrikDev, mas checar tier de rate limit
-     necessário pro volume esperado e ter plano de fallback (fila,
-     backoff, mensagem clara de "sincronização atrasada" em vez de tela
-     quebrada).
-   - Médio prazo: reabrir pedido de chave de produção oficial da Riot
-     (RSO) agora que existe produto público de verdade — CONTEXT.md §5.1
-     documentava a recusa esperada especificamente pro caso de app
-     fechado, que deixa de valer.
+---
+
+## 5. Arquitetura técnica necessária
+
+Ordem sugerida — cada item destrava o próximo:
+
+1. **Multi-tenancy real de time**: criar time deixa de ser automático no
+   primeiro login; usuário cria um time ou entra via convite (código/link).
+   `Spot` ganha `teamId` (migration); `GET /spots` filtra por time do
+   usuário logado. Revisar todo `team.findFirst()`/padrão equivalente em
+   `sync.ts`/`match-result.ts`.
+2. **Auth aberta**: tirar `findGuildMembership()` do fluxo obrigatório, ou
+   virar allowlist opcional por time (dono do time restringe quem entra no
+   *time dele*, não mais controle de acesso da plataforma inteira).
+3. **Migração de fonte de dado** (ver §3.1): abrir processo de chave de
+   produção Riot + RSO em paralelo ao resto; manter HenrikDev como fallback
+   até a chave oficial sair, com fila/backoff e mensagem clara de
+   "sincronização atrasada" em vez de tela quebrada.
 4. **Observabilidade mínima**: error tracking (ex.: Sentry free tier) e log
    estruturado antes de aceitar tráfego desconhecido.
-5. **Paywall técnico** (só depois que 1–4 estiverem de pé):
-   - Campo de plano/assinatura no usuário ou tabela `subscriptions`
-     (status, `currentPeriodEnd`, gateway, `externalId`).
-   - Middleware/guard nas rotas de `team`, `strategies`, `spots` que
-     verifica plano PRO ativo.
-   - Dashboard individual (KPIs, histórico, rank) continua sem guard —
-     é o gancho grátis que atrai gente pro produto.
+5. **Paywall técnico** (só depois de 1–4 de pé): campo de plano/assinatura
+   no usuário ou tabela `subscriptions` (status, `currentPeriodEnd`,
+   gateway, `externalId`); guard nas rotas de `team`/`strategies`/`spots`.
 
 ---
 
-## 5. Pagamento
+## 6. Pagamento
 
-- **Gateway**: Mercado Pago (PIX/boleto, forte no Brasil) vs Stripe
-  (cartão internacional, mais familiar pra devs, exige conta e KYC) — a
-  Bruna decide, cada um tem trade-off de taxa/UX/burocracia de abertura.
-- Assinatura recorrente mensal, R$ 19,90 de referência, cancelamento
-  self-service (usuário não deveria precisar pedir por Discord/e-mail pra
-  cancelar).
-- Anúncios: cogitado como fonte extra de receita, não decidido ainda
-  (rede — AdSense? — e onde entrariam na UI ficam em aberto).
+- **Gateway**: Mercado Pago (PIX/boleto, forte no Brasil, recorrência via
+  cartão) vs Stripe (cartão internacional, já opera no Brasil em BRL,
+  mais familiar em stacks Node) — decisão da Bruna, cada um tem trade-off
+  de taxa/UX/burocracia de abertura de conta.
+- Assinatura recorrente mensal, cancelamento self-service (§3.4).
+- Anúncios como receita extra: cogitado, não decidido, e não antes de ter
+  tráfego suficiente pra valer a pena (§3.5).
 
 ---
 
-## 6. Infra e deploy
+## 7. Infra e deploy
 
 - Hoje: Railway (produção) + Neon Postgres (branch `production` separado
-  do `dev`, ver memória do projeto sobre o estouro de cota de agosto/2026).
-  Confirmar se o plano atual do Railway aguenta tráfego público (tiers
-  free/hobby costumam ter limite de horas/RAM) antes do lançamento amplo.
-- Domínio: comprar e apontar DNS pro Railway (API) e onde o front for
-  servido.
-- Todo o trabalho desta frente (multi-tenancy, auth aberta, paywall) fica
-  na branch `dev` até estar validado — só depois vai pra `main`/produção.
+  do `dev`, ver memória do projeto sobre a cota de agosto/2026). Confirmar
+  se o plano atual do Railway aguenta tráfego público antes da divulgação
+  ampla (Fase C).
+- Domínio: comprar (checar disponibilidade + ausência de conflito de marca
+  no INPI antes de registrar) e apontar DNS.
+- Trabalho desta frente inteiro na branch `dev` até validado.
 
 ---
 
-## 7. Fases (sequência, não data fixa)
+## 8. Divulgação (go-to-market)
+
+- Comunidade natural: espaços de Valorant no Discord, r/VALORANT e afins,
+  Twitter/X da cena competitiva — mas checar regra de cada comunidade
+  sobre autopromoção antes de postar.
+- Possível parceria com criador de conteúdo/streamer de Valorant BR pra
+  divulgar — decisão de mais pra frente, não bloqueia nada agora.
+- Landing page própria antes de divulgar (separada do app logado), pra
+  explicar a proposta e captar interesse antes do cadastro.
+
+---
+
+## 9. Suporte e operação pós-lançamento
+
+- Canal de suporte/feedback (Discord próprio do produto, ou formulário) —
+  com usuário desconhecido não dá mais pra depender de DM pessoal.
+- Processo simples de triagem de bug (onde reportar, como priorizar) antes
+  do volume de usuários crescer.
+
+---
+
+## 10. Fases (sequência, não data fixa)
 
 | Fase | Escopo | Cobra? |
 |---|---|---|
-| **A — Fundação pro público** | §4 inteiro (multi-tenancy, auth aberta, decisão de dado, observabilidade) + §3 (jurídico/domínio/termos) | não |
-| **B — Soft launch** | Cadastro aberto mas divulgação pequena/controlada, pra pegar bug real com usuário desconhecido antes de divulgar largo | não |
-| **C — Divulgação ampla** | Marketing de verdade, comunidade Valorant, etc. | não |
-| **D — Liga monetização** (~2 meses depois de B) | Paywall técnico (§4.5) + gateway de pagamento (§5) ativos. Time/Estratégia/Spots viram PRO; individual continua grátis | **sim** |
-| **E — Anúncios** (opcional, sem data) | Só se fizer sentido depois de D rodando | sim (indireto) |
+| **A — Fundação pro público** | §5 inteiro (arquitetura) + §3 (jurídico/marca/domínio/termos) + abrir processo de chave Riot | não |
+| **B — Soft launch** | Cadastro aberto, divulgação pequena/controlada, pegar bug real antes de divulgar largo | não |
+| **C — Divulgação ampla** | §8 — marketing de verdade | não |
+| **D — Liga monetização** (~2 meses depois de B) | Paywall técnico + gateway de pagamento ativos; abrir MEI/CNPJ se ainda não existir | **sim** |
+| **E — Anúncios** (opcional, sem data) | Só depois de D rodando e com tráfego que justifique | sim (indireto) |
 
 ---
 
-## 8. Perguntas em aberto (só a Bruna decide)
+## 11. Perguntas em aberto — em ordem do que precisa ser resolvido primeiro
 
-- Nome/domínio candidato?
-- Mercado Pago ou Stripe (ou os dois)?
-- Já existe CNPJ/MEI, ou abre um novo pra isso?
-- Heatmap e comentários ficam grátis (junto do individual) ou entram no
-  PRO junto de Time/Estratégia/Spots?
-- Meta de usuários pro soft launch (fase B) antes de abrir geral (fase C)?
-- R$ 19,90/mês é preço final ou placeholder pra validar depois?
+1. **Nome/domínio candidato?** Bloqueia: checagem de marca no INPI, compra
+   de domínio, identidade visual, registro no Riot Developer Portal (o
+   produto precisa de nome pra ser cadastrado lá).
+2. **Já existe CNPJ/MEI utilizável, ou abre um novo?** Não bloqueia o
+   desenvolvimento (Fase A/B/C), mas precisa estar resolvido **antes** da
+   Fase D — vale já direcionar com um contador em paralelo, sem pressa.
+3. **Heatmap e Comentários ficam grátis (com o individual) ou entram no
+   PRO (com Time/Estratégia/Spots)?** Bloqueia o desenho final do paywall
+   técnico (§5 item 5) — precisa estar decidido antes de implementar o
+   guard nas rotas.
+4. **Meta de usuários pra soft launch (Fase B) antes de abrir geral (Fase
+   C)?** Ajuda a dimensionar infra (Railway/Neon) e o volume esperado pra
+   pedir tier de chave (HenrikDev, enquanto a oficial não sai).
+5. **Mercado Pago, Stripe, ou os dois?** Só bloqueia a Fase D — pode ficar
+   pra decidir mais perto da hora.
+6. **R$ 19,90/mês é preço final ou placeholder pra validar depois?** Idem,
+   só importa perto da Fase D.
+
+---
+
+## 12. O que já dá pra começar agora — sem custo e sem implicação jurídica
+
+Tudo isto é trabalho interno/técnico na branch `dev`, não expõe nada pro
+público e não assume compromisso com terceiros:
+
+- [ ] Multi-tenancy: `Spot.teamId` (migration), time deixa de ser
+      `findFirst()` automático, fluxo de criar/entrar em time por convite.
+- [ ] Tornar o allowlist de servidor Discord opcional/por-time em vez de
+      obrigatório pra plataforma inteira.
+- [ ] Modelagem técnica do paywall (schema `subscriptions`) — só a
+      estrutura de dado, sem integrar nenhum gateway ainda.
+- [ ] Observabilidade: configurar error tracking em tier gratuito (ex.:
+      Sentry).
+- [ ] Decisão interna de produto: escopo exato do PRO (pergunta #3 do §11
+      — essa não depende de terceiro, só de decisão da Bruna).
+- [ ] Brainstorm de nomes candidatos + **pesquisa** (não registro) de
+      disponibilidade de domínio e de conflito no INPI — pesquisar é de
+      graça, registrar é que tem custo/compromisso.
+- [ ] Rascunho interno (não publicado) do conteúdo que Termos de Uso e
+      Política de Privacidade vão precisar cobrir — organiza o material
+      pra revisão jurídica formal ser mais rápida e barata depois.
+- [ ] Planejar canais de divulgação (§8) — sem contatar ninguém ainda.
+
+Fora dessa lista (tem custo e/ou implicação jurídica, mesmo que pequena):
+registrar no Riot Developer Portal (aceita um contrato de desenvolvedor,
+mesmo sendo grátis), comprar domínio, abrir MEI/CNPJ, publicar Termos/
+Privacidade de verdade, integrar gateway de pagamento.
+
+---
+
+## Fontes consultadas
+
+- [Riot Games Developer Policies (geral)](https://developer.riotgames.com/policies/general)
+- [VALORANT — Riot Developer Portal](https://developer.riotgames.com/docs/valorant)
+- [HenrikDev API docs](https://docs.henrikdev.xyz/valorant/general)
+- [Limite de faturamento MEI 2026 — Contabilizei](https://www.contabilizei.com.br/contabilidade-online/faturamento-mei-2026/)
