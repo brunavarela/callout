@@ -40,7 +40,26 @@ export function hasAce(rawJson: unknown, puuid: string): boolean {
   return [...killsByRound.values()].some((count) => count >= 5);
 }
 
-type Row = Awaited<ReturnType<typeof prisma.matchPlayer.findMany<{ include: { match: true } }>>>[number];
+const dashboardRowArgs = {
+  select: {
+    puuid: true,
+    teamId: true,
+    won: true,
+    agentName: true,
+    roundsPlayed: true,
+    acs: true,
+    kills: true,
+    deaths: true,
+    assists: true,
+    headshots: true,
+    bodyshots: true,
+    legshots: true,
+    damageDealt: true,
+    match: { select: { id: true, modo: true, mapId: true, startedAt: true } },
+  },
+} satisfies Parameters<typeof prisma.matchPlayer.findMany>[0];
+
+type Row = Awaited<ReturnType<typeof prisma.matchPlayer.findMany<typeof dashboardRowArgs>>>[number];
 
 function aggregate(list: Row[]) {
   if (list.length === 0) return { kda: 0, acs: 0, adr: 0, hsPercent: 0, wins: 0, losses: 0 };
@@ -87,12 +106,21 @@ export async function buildDashboardSummary(
   // todos os mapas, não muda com o filtro); tudo o mais que usa `rows`
   // aplica o filtro de mapa em cima desse resultado, sem bater no banco de
   // novo.
+  //
+  // Sem `include: { match: true }` — traria o rawJson de CADA partida do
+  // histórico inteiro do jogador (~400KB em média) só pra ler campos como
+  // `won`/`acs` que já estão em matchPlayer. Com histórico longo (comum em
+  // Valorant) isso é o mesmo padrão que estourou a memória em produção nas
+  // queries de time (ver 408cf5d). Busca só os campos escalares aqui; o
+  // rawJson é buscado depois, uma vez, só para as partidas que realmente
+  // precisam dele (mapNameFrom/scoreFor/hasAce).
   const rows = await prisma.matchPlayer.findMany({
     where: { puuid, ...(modoFilter ? { match: { modo: modoFilter } } : {}) },
-    include: { match: true },
     orderBy: { match: { startedAt: "desc" } },
+    ...dashboardRowArgs,
   });
   const filteredRows = mapIdFilter ? rows.filter((r) => r.match.mapId === mapIdFilter) : rows;
+  const recentRows = filteredRows.slice(0, 7);
 
   const now = new Date();
   const windowStart = new Date(now.getTime() - 30 * 86_400_000);
@@ -150,9 +178,23 @@ export async function buildDashboardSummary(
     },
   };
 
+  // rawJson só é buscado aqui, uma vez, e só para as partidas que realmente
+  // precisam dele: as dos últimos 30 dias que contam pra stats (mapWinrates)
+  // e as últimas 7 exibidas em recentMatches — não o histórico inteiro (ver
+  // comentário na query de `rows` acima).
+  const rawJsonMatchIds = new Set([...allMapsCurrent.map((r) => r.match.id), ...recentRows.map((r) => r.match.id)]);
+  const rawJsonByMatchId =
+    rawJsonMatchIds.size > 0
+      ? new Map(
+          (
+            await prisma.match.findMany({ where: { id: { in: [...rawJsonMatchIds] } }, select: { id: true, rawJson: true } })
+          ).map((m) => [m.id, m.rawJson]),
+        )
+      : new Map<string, unknown>();
+
   const byMap = new Map<string, { wins: number; total: number; mapId: string | null }>();
   for (const r of allMapsCurrent) {
-    const map = mapNameFrom(r.match.rawJson);
+    const map = mapNameFrom(rawJsonByMatchId.get(r.match.id));
     const mEntry = byMap.get(map) ?? { wins: 0, total: 0, mapId: null };
     mEntry.total++;
     if (r.won) mEntry.wins++;
@@ -212,7 +254,6 @@ export async function buildDashboardSummary(
     .reverse()
     .map((r) => matchResult(r.won, rrByMatch.get(r.match.id)));
 
-  const recentRows = filteredRows.slice(0, 7);
   // MVP = maior ACS do seu próprio time na partida (não dos 10 jogadores —
   // isso deixaria de fora quem foi o melhor do time mas perdeu de alguém do
   // time adversário). `rows`/`filteredRows` só trazem as linhas do próprio
@@ -232,18 +273,19 @@ export async function buildDashboardSummary(
   }
 
   const recentMatches = recentRows.map((r) => {
-    const score = scoreFor(r.match.rawJson, r.teamId);
+    const rawJson = rawJsonByMatchId.get(r.match.id);
+    const score = scoreFor(rawJson, r.teamId);
     const shotsTotal = r.headshots + r.bodyshots + r.legshots;
     return {
       id: r.match.id,
       result: matchResult(r.won, rrByMatch.get(r.match.id)),
-      map: mapNameFrom(r.match.rawJson),
+      map: mapNameFrom(rawJson),
       agent: r.agentName,
       score: `${score.own}—${score.opponent}`,
       kda: `${r.kills}/${r.deaths}/${r.assists}`,
       hsPercent: shotsTotal > 0 ? Math.round((r.headshots / shotsTotal) * 100) : 0,
       mvp: r.acs === maxAcsByMatchTeam.get(`${r.match.id}:${r.teamId}`),
-      ace: hasAce(r.match.rawJson, r.puuid),
+      ace: hasAce(rawJson, r.puuid),
       rr: rrByMatch.get(r.match.id) ?? null,
       playedAtLabel: formatPlayedAt(r.match.startedAt, now),
     };
