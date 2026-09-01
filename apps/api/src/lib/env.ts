@@ -5,7 +5,6 @@ const envSchema = z.object({
   DISCORD_CLIENT_ID: z.string().min(1),
   DISCORD_CLIENT_SECRET: z.string().min(1),
   DISCORD_REDIRECT_URI: z.string().min(1),
-  DISCORD_GUILD_ID: z.string().min(1),
   HENRIKDEV_API_KEY: z.string().min(1),
   SESSION_SECRET: z.string().min(16),
   PORT: z.coerce.number().default(3333),

@@ -3,7 +3,7 @@ import { randomBytes } from "node:crypto";
 import { z } from "zod";
 import { env } from "../lib/env.js";
 import { prisma } from "../lib/prisma.js";
-import { buildAuthorizeUrl, exchangeCodeForToken, fetchDiscordProfile, avatarUrl, findGuildMembership } from "../lib/discord.js";
+import { buildAuthorizeUrl, exchangeCodeForToken, fetchDiscordProfile, avatarUrl } from "../lib/discord.js";
 import { getAccountByRiotId, HenrikDevError } from "../lib/henrikdev.js";
 import { setSessionCookie, clearSessionCookie, requireAuth, getSessionUser } from "../lib/session.js";
 import { getUserEquipe } from "../lib/equipe.js";
@@ -40,14 +40,7 @@ export async function authRoutes(app: FastifyInstance) {
 
     try {
       const token = await exchangeCodeForToken(query.code);
-      const [profile, membership] = await Promise.all([
-        fetchDiscordProfile(token.access_token),
-        findGuildMembership(token.access_token),
-      ]);
-
-      if (!membership) {
-        return reply.redirect(`${env.WEB_ORIGIN}/login?erro=fora-do-servidor`);
-      }
+      const profile = await fetchDiscordProfile(token.access_token);
 
       const user = await prisma.user.upsert({
         where: { discordId: profile.id },

@@ -36,9 +36,16 @@ export async function equipeRoutes(app: FastifyInstance) {
     const overview = await buildEquipeOverview(equipeId);
     if (!overview) return reply.code(404).send({ error: "Nenhuma equipe encontrada." });
 
+    const members = overview.members.map((m) => ({ ...m, isSelf: m.userId === request.user!.id }));
+    const requesterIsAdmin = members.find((m) => m.isSelf)?.isAdmin ?? false;
+
     return {
       ...overview,
-      members: overview.members.map((m) => ({ ...m, isSelf: m.userId === request.user!.id })),
+      // Código de convite só vai pra admin — quem não é admin nem deveria
+      // conseguir ver o valor via rede (a UI já esconde o bloco inteiro,
+      // isso aqui é a garantia de verdade).
+      codigoConvite: requesterIsAdmin ? overview.codigoConvite : null,
+      members,
     };
   });
 

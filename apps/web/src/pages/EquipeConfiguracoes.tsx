@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { useNavigate, useOutletContext } from 'react-router-dom';
-import { ArrowLeft, Camera, Check, Copy, MoreVertical, Pencil, Shield, ShieldOff, Trash2 } from 'lucide-react';
+import { ArrowLeft, Camera, Check, Copy, Eye, EyeOff, MoreVertical, Pencil, Shield, ShieldOff, Trash2 } from 'lucide-react';
 import type { Cargo, MembroEquipeCard } from '@callout/shared';
 import { apiFetch, ApiError } from '../lib/api';
 import { useSession } from '../lib/session';
@@ -209,6 +209,7 @@ export function EquipeConfiguracoes() {
   const [descricaoDraft, setDescricaoDraft] = useState('');
   const equipeImageInputRef = useRef<HTMLInputElement>(null);
   const [copiedCode, setCopiedCode] = useState(false);
+  const [codeVisible, setCodeVisible] = useState(false);
 
   const self = equipe?.members.find((m) => m.isSelf) ?? null;
   const isAdmin = self?.isAdmin ?? false;
@@ -311,7 +312,7 @@ export function EquipeConfiguracoes() {
   }
 
   async function handleCopyCode() {
-    if (!equipe) return;
+    if (!equipe?.codigoConvite) return;
     try {
       await navigator.clipboard.writeText(equipe.codigoConvite);
       setCopiedCode(true);
@@ -425,15 +426,22 @@ export function EquipeConfiguracoes() {
           )}
         </div>
 
-        <button
-          className="btn-secondary"
-          style={{ display: 'flex', alignItems: 'center', gap: 9, fontFamily: 'monospace', letterSpacing: '.04em', flex: 'none' }}
-          onClick={handleCopyCode}
-          title="Copiar código de convite"
-        >
-          {copiedCode ? <Check size={15} strokeWidth={1.75} /> : <Copy size={15} strokeWidth={1.75} />}
-          {copiedCode ? 'Copiado!' : equipe.codigoConvite}
-        </button>
+        {isAdmin && equipe.codigoConvite && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 'none' }}>
+            <button
+              className="btn-secondary"
+              style={{ display: 'flex', alignItems: 'center', gap: 9, fontFamily: 'monospace', letterSpacing: '.04em' }}
+              onClick={() => setCodeVisible((v) => !v)}
+              title={codeVisible ? 'Ocultar código de convite' : 'Mostrar código de convite'}
+            >
+              {codeVisible ? <EyeOff size={15} strokeWidth={1.75} /> : <Eye size={15} strokeWidth={1.75} />}
+              {codeVisible ? equipe.codigoConvite : '••••••••'}
+            </button>
+            <button className="btn-secondary" style={{ display: 'flex', alignItems: 'center', padding: '11px' }} onClick={handleCopyCode} title="Copiar código de convite">
+              {copiedCode ? <Check size={15} strokeWidth={1.75} /> : <Copy size={15} strokeWidth={1.75} />}
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Membros */}

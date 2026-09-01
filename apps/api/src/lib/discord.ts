@@ -7,7 +7,10 @@ export function buildAuthorizeUrl(state: string) {
   url.searchParams.set("client_id", env.DISCORD_CLIENT_ID);
   url.searchParams.set("redirect_uri", env.DISCORD_REDIRECT_URI);
   url.searchParams.set("response_type", "code");
-  url.searchParams.set("scope", "identify guilds");
+  // Scope "guilds" não é mais necessário — login não checa mais servidor
+  // específico (LAUNCH.md §5 item 2, 01/09/2026). Acesso por equipe agora é
+  // via código de convite (Equipe.codigoConvite), não mais servidor Discord.
+  url.searchParams.set("scope", "identify");
   url.searchParams.set("state", state);
   return url.toString();
 }
@@ -56,18 +59,4 @@ export async function fetchDiscordProfile(accessToken: string): Promise<DiscordP
 export function avatarUrl(profile: DiscordProfile): string | null {
   if (!profile.avatar) return null;
   return `https://cdn.discordapp.com/avatars/${profile.id}/${profile.avatar}.png`;
-}
-
-export interface GuildMembership {
-  id: string;
-  name: string;
-}
-
-export async function findGuildMembership(accessToken: string): Promise<GuildMembership | null> {
-  const res = await fetch(`${API_BASE}/users/@me/guilds`, {
-    headers: { Authorization: `Bearer ${accessToken}` },
-  });
-  if (!res.ok) throw new Error(`Falha ao listar servidores do Discord (${res.status})`);
-  const guilds = (await res.json()) as Array<{ id: string; name: string }>;
-  return guilds.find((g) => g.id === env.DISCORD_GUILD_ID) ?? null;
 }

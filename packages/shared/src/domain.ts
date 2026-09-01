@@ -284,12 +284,11 @@ export interface EquipeOverview {
   descricao: string;
   imagemUrl: string | null;
   donoId: string;
-  // Código de convite (POST /equipes/entrar) — visível pra qualquer membro
-  // da equipe, mesmo espírito de "recado social" ser editável por todo
-  // mundo (README do handoff: bagunça de amigos, sem controle de permissão
-  // fino nisso — função/cargo/admin já são mais sérios, ver PATCH
-  // correspondentes).
-  codigoConvite: string;
+  // Código de convite (POST /equipes/entrar) — só admin recebe o valor de
+  // verdade (GET /equipe já devolve null pra quem não é admin, não é só a
+  // UI escondendo). `null` também cobre "não é admin", a tela nem tenta
+  // mostrar nesse caso.
+  codigoConvite: string | null;
   memberCount: number;
   matchesTogether30d: number;
   groupWinratePercent: number;

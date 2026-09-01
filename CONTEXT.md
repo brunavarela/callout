@@ -163,17 +163,24 @@ projete features que dependam de reconstruir movimento.
 roubo de conta, quebra o ToS da Riot e mata o projeto. Se em algum momento uma
 tarefa parecer pedir isso, pare e levante a questão.
 
-O RSO (OAuth2 oficial da Riot) seria o caminho correto, mas só está disponível
-para quem tem chave de produção — que, por §5.1, não vamos ter.
+O RSO (OAuth2 oficial da Riot) é o caminho certo assim que existir chave de
+produção — ver LAUNCH.md §5.1 pro spec completo (bloqueado até a Riot
+aprovar o produto).
 
 Fluxo adotado:
 
-1. Login via **Discord OAuth2**. Restringir a membros de um servidor específico
-   resolve o controle de acesso do grupo fechado sem construir nada.
-2. Após login, o usuário informa o Riot ID no formato `nome#tag`.
-3. Backend valida chamando a HenrikDev, guarda o `puuid` e usa ele daí em diante.
+1. Login via **Discord OAuth2**, aberto — desde 01/09/2026 não exige mais
+   pertencer a um servidor específico (`scope=identify`, sem `guilds`). O
+   controle de acesso é por **equipe**: criar uma nova ou entrar numa
+   existente via código de convite (`Equipe.codigoConvite`, só admin vê).
+2. Depois do Discord, o usuário cria/entra numa equipe (`/login/equipe`).
+3. Então informa o Riot ID no formato `nome#tag`; backend valida chamando a
+   HenrikDev, guarda o `puuid` e usa ele daí em diante.
 
-A modelagem é `usuário → puuid`. Se um dia migrarmos para RSO, só a etapa 2 muda.
+A modelagem é `usuário → puuid`. Se um dia migrarmos pra RSO, só a etapa 3
+muda. Visibilidade de dado nunca dependeu do Discord — `resolveDashboardTarget`
+(`apps/api/src/lib/equipe.ts`) só deixa ver o painel de outro usuário se ele
+for membro da MESMA equipe, isso vale igual antes e depois dessa mudança.
 
 ---
 

@@ -3,7 +3,6 @@ import { LoginShell } from '../components/LoginShell';
 import { API_URL } from '../lib/api';
 
 const ERROR_MESSAGES: Record<string, string> = {
-  'fora-do-servidor': 'Sua conta do Discord não está no servidor do grupo — só quem está no servidor entra.',
   'falha-login': 'Não deu pra completar o login com o Discord. Tenta de novo.',
 };
 
@@ -20,7 +19,7 @@ export function LoginStep1() {
         não guarda.
       </h1>
       <p style={{ fontSize: 16, lineHeight: 1.6, color: 'var(--text-muted)', margin: '0 0 36px', maxWidth: '38ch', textWrap: 'pretty' }}>
-        Suas últimas 30 partidas e as estratégias que o time desenhou. Entre com o Discord do grupo.
+        Suas últimas 30 partidas e as estratégias que sua equipe desenhou. Entre com o Discord e monte sua equipe.
       </p>
       <a className="btn-primary" style={{ width: '100%' }} href={`${API_URL}/auth/discord`}>
         <span
@@ -43,7 +42,7 @@ export function LoginStep1() {
       {erro && (
         <div style={{ marginTop: 14, fontSize: 13, color: 'var(--acc, #EF4958)' }}>{ERROR_MESSAGES[erro] ?? 'Algo deu errado no login.'}</div>
       )}
-      <div style={{ marginTop: 16, fontSize: 13, color: 'var(--text-dim)' }}>Só quem está no servidor entra. Sem senha, sem cadastro.</div>
+      <div style={{ marginTop: 16, fontSize: 13, color: 'var(--text-dim)' }}>Sem senha, sem cadastro — só o Discord.</div>
     </LoginShell>
   );
 }
