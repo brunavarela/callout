@@ -9,6 +9,7 @@ import { LoadingFill } from '../components/Spinner';
 import { ConfirmModal } from '../components/ConfirmModal';
 import { MembroConfiguracoesModal } from '../components/MembroConfiguracoesModal';
 import { compressImageToDataUrl } from '../lib/imageCompress';
+import { agentImageUrl } from '../lib/agentImages';
 
 const cardStyle: React.CSSProperties = { borderRadius: 'var(--radius-lg)', background: 'var(--surface)', border: '1px solid var(--surface-border)' };
 
@@ -185,7 +186,42 @@ function MemberMenu({
   );
 }
 
-const ROW_COLUMNS = '36px minmax(120px,1.4fr) minmax(100px,1fr) 150px minmax(140px,1.2fr) 90px 32px';
+const ROW_COLUMNS = '36px minmax(120px,1.2fr) 96px minmax(100px,1fr) 150px minmax(140px,1.2fr) 90px 32px';
+
+// Carinhas dos agentes principais (selecionados no modal de Função) — até
+// MAX_MAIN_AGENTS, mesmo ícone usado no resto do app (agentImageUrl).
+function MainAgentIcons({ agents }: { agents: MembroEquipeCard['mainAgents'] }) {
+  if (agents.length === 0) return <span style={{ color: 'var(--text-faint)' }}>—</span>;
+  return (
+    <div style={{ display: 'flex', gap: 4 }}>
+      {agents.map((a) => {
+        const imageUrl = agentImageUrl(a.name);
+        return (
+          <div
+            key={a.uuid}
+            title={a.name}
+            style={{
+              width: 22,
+              height: 22,
+              borderRadius: 7,
+              overflow: 'hidden',
+              flex: 'none',
+              background: imageUrl ? '#141415' : 'var(--avatar-bg)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: 7,
+              fontWeight: 700,
+              color: 'var(--text-muted)',
+            }}
+          >
+            {imageUrl ? <img src={imageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : a.name.slice(0, 2).toUpperCase()}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
 export function EquipeConfiguracoes() {
   const navigate = useNavigate();
@@ -439,10 +475,11 @@ export function EquipeConfiguracoes() {
       <div style={{ ...cardStyle, padding: '18px 20px' }}>
         <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 15, marginBottom: 12 }}>Membros</div>
         <div className="scroll-x-mobile">
-          <div style={{ minWidth: 780 }}>
+          <div style={{ minWidth: 880 }}>
             <div style={{ display: 'grid', gridTemplateColumns: ROW_COLUMNS, gap: 14, padding: '0 0 8px', fontSize: 9.5, letterSpacing: '.08em', color: 'var(--text-faint)' }}>
               <span />
               <span>NOME</span>
+              <span>AGENTES</span>
               <span>APELIDO</span>
               <span>CARGO</span>
               <span>FUNÇÃO</span>
@@ -477,6 +514,8 @@ export function EquipeConfiguracoes() {
                     />
                   )}
                 />
+
+                <MainAgentIcons agents={m.mainAgents} />
 
                 <span style={{ color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.riotIdLabel ?? '—'}</span>
 
