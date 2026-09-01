@@ -12,13 +12,18 @@ function initialsOf(name: string) {
   return name.slice(0, 2).toUpperCase();
 }
 
-// Mesmas colunas da tabela de Membros em /equipe/configuracoes, só sem os
-// 3 pontinhos — aqui é só retrato da equipe, nada clicável/editável.
-const ROW_COLUMNS = '36px minmax(120px,1.2fr) 96px minmax(100px,1fr) 150px minmax(140px,1.2fr) 90px';
+// Mesmas colunas (e mesmo espaçamento) da tabela de Membros em
+// /equipe/configuracoes, só sem os 3 pontinhos — aqui é só retrato da
+// equipe, nada clicável/editável. `minmax(piso, 1fr)` — cada coluna nunca
+// fica menor que o próprio conteúdo, e o espaço sobrando na linha é
+// dividido em partes iguais entre elas, em vez de tudo empilhado à
+// esquerda ou de uma coluna esticar mais que as outras.
+const ROW_COLUMNS = '36px minmax(140px,1fr) 90px minmax(120px,1fr) minmax(150px,1fr) minmax(140px,1fr) minmax(90px,1fr)';
+const ROW_GAP = 28;
 
 function MemberRow({ member }: { member: MembroEquipeCard }) {
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: ROW_COLUMNS, gap: 14, alignItems: 'center', padding: '10px 0', borderTop: '1px solid var(--divider)', fontSize: 13 }}>
+    <div style={{ display: 'grid', gridTemplateColumns: ROW_COLUMNS, gap: ROW_GAP, alignItems: 'center', padding: '10px 0', borderTop: '1px solid var(--divider)', fontSize: 13 }}>
       <div
         style={{ width: 32, height: 32, borderRadius: '50%', overflow: 'hidden', background: 'var(--avatar-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)' }}
       >
@@ -107,8 +112,8 @@ export function Equipe() {
           <div style={{ padding: 20, textAlign: 'center', color: 'var(--text-muted)', fontSize: 14 }}>Ninguém na equipe ainda.</div>
         ) : (
           <div className="scroll-x-mobile">
-            <div style={{ minWidth: 780 }}>
-              <div style={{ display: 'grid', gridTemplateColumns: ROW_COLUMNS, gap: 14, padding: '0 0 8px', fontSize: 9.5, letterSpacing: '.08em', color: 'var(--text-faint)' }}>
+            <div style={{ minWidth: 960 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: ROW_COLUMNS, gap: ROW_GAP, padding: '0 0 8px', fontSize: 9.5, letterSpacing: '.08em', color: 'var(--text-faint)' }}>
                 <span />
                 <span>NOME</span>
                 <span>AGENTES</span>

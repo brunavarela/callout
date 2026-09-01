@@ -180,7 +180,13 @@ function MemberMenu({
   );
 }
 
-const ROW_COLUMNS = '36px minmax(120px,1.2fr) 96px minmax(100px,1fr) 150px minmax(140px,1.2fr) 90px 32px';
+// `minmax(piso, 1fr)` — cada coluna nunca fica menor que o próprio
+// conteúdo, e o espaço sobrando na linha é dividido em partes iguais
+// entre elas (preenche a largura toda, sem empilhar tudo à esquerda nem
+// esticar uma coluna mais que as outras). Mesmo espaçamento da tela
+// inicial (Equipe.tsx), só com a coluna dos 3 pontinhos a mais no final.
+const ROW_COLUMNS = '36px minmax(140px,1fr) 90px minmax(120px,1fr) minmax(150px,1fr) minmax(140px,1fr) minmax(90px,1fr) 32px';
+const ROW_GAP = 28;
 
 export function EquipeConfiguracoes() {
   const navigate = useNavigate();
@@ -434,8 +440,8 @@ export function EquipeConfiguracoes() {
       <div style={{ ...cardStyle, padding: '18px 20px' }}>
         <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 15, marginBottom: 12 }}>Membros</div>
         <div className="scroll-x-mobile">
-          <div style={{ minWidth: 880 }}>
-            <div style={{ display: 'grid', gridTemplateColumns: ROW_COLUMNS, gap: 14, padding: '0 0 8px', fontSize: 9.5, letterSpacing: '.08em', color: 'var(--text-faint)' }}>
+          <div style={{ minWidth: 1000 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: ROW_COLUMNS, gap: ROW_GAP, padding: '0 0 8px', fontSize: 9.5, letterSpacing: '.08em', color: 'var(--text-faint)' }}>
               <span />
               <span>NOME</span>
               <span>AGENTES</span>
@@ -446,7 +452,7 @@ export function EquipeConfiguracoes() {
               <span />
             </div>
             {equipe.members.map((m) => (
-              <div key={m.userId} style={{ display: 'grid', gridTemplateColumns: ROW_COLUMNS, gap: 14, alignItems: 'center', padding: '10px 0', borderTop: '1px solid var(--divider)', fontSize: 13 }}>
+              <div key={m.userId} style={{ display: 'grid', gridTemplateColumns: ROW_COLUMNS, gap: ROW_GAP, alignItems: 'center', padding: '10px 0', borderTop: '1px solid var(--divider)', fontSize: 13 }}>
                 <MemberAvatar member={m} editable={m.isSelf} onUploaded={saveOwnAvatar} />
 
                 <EditableCell
