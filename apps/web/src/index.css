@@ -324,6 +324,13 @@ button {
   color: var(--accSoft, #f4707c);
 }
 
+/* Lápis/câmera discretos que só aparecem no hover da linha/célula — tela
+   de Configurações da equipe (imagem, nome, cargo, função). */
+.hover-reveal:hover .hover-reveal-target,
+.hover-reveal:focus-within .hover-reveal-target {
+  opacity: 1 !important;
+}
+
 /* ===================================================================
    Responsivo — o app inteiro é estilo inline (React style={}), então as
    classes abaixo só existem pra carregar as propriedades de layout que

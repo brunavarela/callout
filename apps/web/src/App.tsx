@@ -9,6 +9,7 @@ import { MatchDetail } from './pages/MatchDetail';
 import { Equipe } from './pages/Equipe';
 import { EquipePartidas } from './pages/EquipePartidas';
 import { EquipePainel } from './pages/EquipePainel';
+import { EquipeConfiguracoes } from './pages/EquipeConfiguracoes';
 import { Board } from './pages/Board';
 import { Spots } from './pages/Spots';
 import { Competitions } from './pages/Competitions';
@@ -25,6 +26,7 @@ function App() {
         <Route path="/partidas" element={<Matches />} />
         <Route path="/partida/:id" element={<MatchDetail />} />
         <Route path="/equipe" element={<Equipe />} />
+        <Route path="/equipe/configuracoes" element={<EquipeConfiguracoes />} />
         <Route path="/equipe/partidas" element={<EquipePartidas />} />
         <Route path="/equipe/painel" element={<EquipePainel />} />
         <Route path="/board" element={<Board />} />

@@ -2,9 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type {
   AgentAsset,
   DashboardSummary,
-  Funcao,
   Lado,
-  MainAgent,
   MapAsset,
   MatchCountFilter,
   MatchModeFilter,
@@ -133,10 +131,6 @@ export function useAppData(user: SessionUser | null) {
 
   const updateEquipeMembroNota = useCallback((userId: string, note: string) => {
     setEquipe((prev) => (prev ? { ...prev, members: prev.members.map((m) => (m.userId === userId ? { ...m, note } : m)) } : prev));
-  }, []);
-
-  const updateEquipeMembroConfiguracoes = useCallback((userId: string, roles: Funcao[], mainAgents: MainAgent[]) => {
-    setEquipe((prev) => (prev ? { ...prev, members: prev.members.map((m) => (m.userId === userId ? { ...m, roles, mainAgents } : m)) } : prev));
   }, []);
 
   const [equipePartidas, setEquipePartidas] = useState<PartidaEquipeSummary[] | null>(null);
@@ -363,7 +357,6 @@ export function useAppData(user: SessionUser | null) {
     equipeError,
     reloadEquipe: loadEquipe,
     updateEquipeMembroNota,
-    updateEquipeMembroConfiguracoes,
     equipePartidas,
     equipePartidasError,
     equipePartidasLoading,
