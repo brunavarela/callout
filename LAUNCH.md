@@ -183,9 +183,14 @@ Ordem sugerida — cada item destrava o próximo:
    meio-tempo (pedido à parte); permissões de admin, cargo (jogador/
    treinador) e a página `/equipe/configuracoes` também saíram do papel —
    ver §12 abaixo e a memória do projeto.
-2. **Auth aberta**: tirar `findGuildMembership()` do fluxo obrigatório, ou
-   virar allowlist opcional por time (dono do time restringe quem entra no
-   *time dele*, não mais controle de acesso da plataforma inteira).
+2. ✅ **Auth aberta** (feito 2026-09-01) — `findGuildMembership()` saiu do
+   fluxo (scope OAuth caiu pra só `identify`, `DISCORD_GUILD_ID` não é mais
+   exigido). Controle de acesso virou por equipe — código de convite — em
+   vez de plataforma inteira. Confirmado que `resolveDashboardTarget` nunca
+   dependeu do Discord: dashboard de outro usuário só é visível se ele for
+   da mesma equipe, isso não mudou. Código de convite passou a só ir pro
+   admin (`GET /equipe` zera o campo pra quem não é — proteção no backend,
+   não só a UI escondendo), com botão de olhinho pra mostrar/esconder.
 3. **Migração de fonte de dado** (ver §3.1): abrir processo de chave de
    produção Riot + RSO em paralelo ao resto; manter HenrikDev como fallback
    até a chave oficial sair, com fila/backoff e mensagem clara de
@@ -353,8 +358,9 @@ público e não assume compromisso com terceiros:
       tabela de membros, promover admin/excluir membro/excluir equipe) e
       tela inicial da equipe virou resumo só-leitura. Ver memória do
       projeto (`project_lancamento_publico`) pro detalhe completo.
-- [ ] Tornar o allowlist de servidor Discord opcional/por-time em vez de
-      obrigatório pra plataforma inteira.
+- ✅ **Feito (2026-09-01):** Allowlist de servidor Discord saiu do login —
+      controle de acesso agora é por código de convite da equipe. Ver §5
+      item 2.
 - [ ] Modelagem técnica do paywall (schema `subscriptions`) — só a
       estrutura de dado, sem integrar nenhum gateway ainda.
 - [ ] Observabilidade: configurar error tracking em tier gratuito (ex.:
