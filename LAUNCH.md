@@ -195,8 +195,11 @@ Ordem sugerida — cada item destrava o próximo:
    produção Riot + RSO em paralelo ao resto; manter HenrikDev como fallback
    até a chave oficial sair, com fila/backoff e mensagem clara de
    "sincronização atrasada" em vez de tela quebrada.
-4. **Observabilidade mínima**: error tracking (ex.: Sentry free tier) e log
-   estruturado antes de aceitar tráfego desconhecido.
+4. ✅ **Observabilidade mínima** (feito 2026-09-01) — `@sentry/node` no
+   backend (`Sentry.setupFastifyErrorHandler`) e `@sentry/react` no front
+   (`ErrorBoundary` com fallback amigável). `SENTRY_DSN`/`VITE_SENTRY_DSN`
+   opcionais — sem DSN é no-op dos dois lados, só captura de verdade quando
+   alguém criar os projetos gratuitos no sentry.io e colar o DSN no `.env`.
 5. **Paywall técnico** (só depois de 1–4 de pé): campo de plano/assinatura
    no usuário ou tabela `subscriptions` (status, `currentPeriodEnd`,
    gateway, `externalId`); guard nas rotas de `team`/`strategies`/`spots`.
@@ -363,16 +366,21 @@ público e não assume compromisso com terceiros:
       item 2.
 - [ ] Modelagem técnica do paywall (schema `subscriptions`) — só a
       estrutura de dado, sem integrar nenhum gateway ainda.
-- [ ] Observabilidade: configurar error tracking em tier gratuito (ex.:
-      Sentry).
+- ✅ **Feito (2026-09-01):** Observabilidade — error tracking com Sentry
+      (tier gratuito, opcional). Ver §5 item 4.
 - [ ] Decisão interna de produto: escopo exato do PRO (pergunta #3 do §11
       — essa não depende de terceiro, só de decisão da Bruna).
 - [ ] Brainstorm de nomes candidatos + **pesquisa** (não registro) de
       disponibilidade de domínio e de conflito no INPI — pesquisar é de
       graça, registrar é que tem custo/compromisso.
-- [ ] Rascunho interno (não publicado) do conteúdo que Termos de Uso e
-      Política de Privacidade vão precisar cobrir — organiza o material
-      pra revisão jurídica formal ser mais rápida e barata depois.
+- ✅ **Feito (2026-09-01):** Rascunho do conteúdo que Termos de Uso e
+      Política de Privacidade vão precisar cobrir — foi além do "interno,
+      não publicado" original: virou páginas de verdade (`/termos`,
+      `/privacidade`, acessíveis sem login) com aviso de rascunho/sem
+      revisão jurídica bem visível no topo, mais um rodapé (linha fina +
+      mira pequena + "todos os direitos reservados" + links pros dois) que
+      aparece no fim de toda página, logada ou não. Ainda falta a revisão
+      jurídica formal de verdade antes de tirar o aviso.
 - [ ] Planejar canais de divulgação (§8) — sem contatar ninguém ainda.
 
 Fora dessa lista (tem custo e/ou implicação jurídica, mesmo que pequena):
