@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { Logo } from './Logo';
 
 export function LoginShell({ children }: { children: ReactNode }) {
   return (
@@ -26,11 +27,8 @@ export function LoginShell({ children }: { children: ReactNode }) {
               pointerEvents: 'none',
             }}
           />
-          <div style={{ position: 'relative', display: 'flex', alignItems: 'baseline', gap: 10 }}>
-            <span style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 700, fontSize: 26, letterSpacing: '-.02em' }}>
-              callout<span style={{ color: 'var(--acc, #EF4958)' }}>.</span>
-            </span>
-            <span style={{ fontSize: 11, letterSpacing: '.12em', color: 'var(--text-dim)' }}>V0.1 — PRIVADO</span>
+          <div style={{ position: 'relative', display: 'flex', alignItems: 'center', color: 'var(--text)' }}>
+            <Logo height={24} />
           </div>
 
           <div style={{ position: 'relative', maxWidth: 460 }}>{children}</div>
