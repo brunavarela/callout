@@ -342,7 +342,7 @@ export function EquipeConfiguracoes() {
   }
 
   return (
-    <div style={{ padding: 26, display: 'flex', flexDirection: 'column', gap: 20, maxWidth: 980 }}>
+    <div style={{ padding: 26, display: 'flex', flexDirection: 'column', gap: 20 }}>
       <div>
         <button
           onClick={() => navigate('/equipe')}
