@@ -175,10 +175,14 @@ uma vez.
 
 Ordem sugerida — cada item destrava o próximo:
 
-1. ✅ **Multi-tenancy real de time** (feito 2026-09-01) — criar time deixou
-   de ser automático no primeiro login; usuário cria um time ou entra via
-   convite (código). `Spot` ganhou `teamId`. Todo `team.findFirst()` foi
-   substituído por resolução via `TeamMember` do usuário logado.
+1. ✅ **Multi-tenancy real de equipe** (feito 2026-09-01) — criar equipe
+   deixou de ser automático no primeiro login; usuário cria uma equipe ou
+   entra via convite (código). `Spot` ganhou `equipeId`. Todo
+   `team.findFirst()` foi substituído por resolução via `MembroEquipe` do
+   usuário logado. Rename completo "Time"→"Equipe" em todo o código nesse
+   meio-tempo (pedido à parte); permissões de admin, cargo (jogador/
+   treinador) e a página `/equipe/configuracoes` também saíram do papel —
+   ver §12 abaixo e a memória do projeto.
 2. **Auth aberta**: tirar `findGuildMembership()` do fluxo obrigatório, ou
    virar allowlist opcional por time (dono do time restringe quem entra no
    *time dele*, não mais controle de acesso da plataforma inteira).
@@ -339,8 +343,16 @@ Fontes: mesmas de §3.1 ([Riot Games Developer Policies](https://developer.riotg
 Tudo isto é trabalho interno/técnico na branch `dev`, não expõe nada pro
 público e não assume compromisso com terceiros:
 
-- [ ] Multi-tenancy: `Spot.teamId` (migration), time deixa de ser
-      `findFirst()` automático, fluxo de criar/entrar em time por convite.
+- ✅ **Feito (2026-09-01):** Multi-tenancy — `Spot.equipeId` (migration),
+      equipe deixou de ser `findFirst()` automático, fluxo de criar/entrar
+      em equipe por convite (`/login/equipe`). Foi além do escopo original
+      desta linha: rename completo "Time"→"Equipe" em todo o código (pedido
+      à parte, escopo máximo — model Prisma, rotas, arquivos, texto),
+      permissões de admin por equipe (`MembroEquipe.isAdmin`/`cargo`),
+      página `/equipe/configuracoes` (imagem/nome/descrição da equipe,
+      tabela de membros, promover admin/excluir membro/excluir equipe) e
+      tela inicial da equipe virou resumo só-leitura. Ver memória do
+      projeto (`project_lancamento_publico`) pro detalhe completo.
 - [ ] Tornar o allowlist de servidor Discord opcional/por-time em vez de
       obrigatório pra plataforma inteira.
 - [ ] Modelagem técnica do paywall (schema `subscriptions`) — só a
