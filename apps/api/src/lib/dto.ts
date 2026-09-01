@@ -1,7 +1,7 @@
 import type { User } from "@prisma/client";
 import type { SessionUser, ThemeMode } from "@callout/shared";
 
-export function toSessionUser(user: User): SessionUser {
+export function toSessionUser(user: User, team: { id: string; nome: string } | null): SessionUser {
   return {
     discordId: user.discordId,
     discordUsername: user.discordUsername,
@@ -10,6 +10,7 @@ export function toSessionUser(user: User): SessionUser {
       user.riotName && user.riotTag && user.riotPuuid
         ? { name: user.riotName, tag: user.riotTag, puuid: user.riotPuuid }
         : null,
+    team: team ? { id: team.id, name: team.nome } : null,
     theme: {
       accentColor: user.themeAccent,
       negativeColor: user.themeNegative,

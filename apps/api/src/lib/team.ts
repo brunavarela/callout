@@ -1,4 +1,6 @@
-import type { User } from "@prisma/client";
+import type { User, Team } from "@prisma/client";
+import { randomBytes } from "node:crypto";
+import { Prisma } from "@prisma/client";
 import type { TeamMatchSummary, TeamOverview } from "@callout/shared";
 import { MIN_TEAM_MATCH_PLAYERS } from "@callout/shared";
 import { prisma } from "./prisma.js";
@@ -7,49 +9,76 @@ import { loadAgentsByUuid } from "./assets.js";
 import { mapNameFrom, scoreFor, hasAce, formatPlayedAt } from "./dashboard.js";
 import { matchResult, countsTowardStats } from "./match-result.js";
 
-// App de time único (< 10 amigos, sem multi-tenancy — CONTEXT.md §1). Todo
-// usuário que loga entra automaticamente no único time existente; o primeiro
-// a logar vira "dono" só porque a coluna owner_id precisa de alguém, isso não
-// tem efeito prático hoje.
-export async function ensureTeamMembership(userId: string, guildName: string) {
-  const team = await prisma.team.findFirst();
+// Multi-tenancy real (LAUNCH.md §5) — um usuário pertence a no máximo um
+// time (TeamMember.userId é @unique). "Qual é o meu time" sempre se resolve
+// a partir de quem está logado, nunca "o time que existir" (era assim antes,
+// funcionava só porque só existia um time — ver CONTEXT.md §1 pro contexto
+// de <10 amigos que motivou aquela simplificação original).
+export async function getUserTeamId(userId: string): Promise<string | null> {
+  const membership = await prisma.teamMember.findUnique({ where: { userId } });
+  return membership?.teamId ?? null;
+}
 
-  if (!team) {
-    return prisma.team.create({
-      data: {
-        nome: guildName,
-        ownerId: userId,
-        members: { create: { userId } },
-      },
-    });
+export async function getUserTeam(userId: string): Promise<{ id: string; nome: string } | null> {
+  const membership = await prisma.teamMember.findUnique({ where: { userId }, include: { team: true } });
+  return membership ? { id: membership.team.id, nome: membership.team.nome } : null;
+}
+
+function generateInviteCode(): string {
+  return randomBytes(4).toString("hex").toUpperCase(); // 8 chars, ex. "A3F9C210"
+}
+
+// Cria um time novo com quem chamou como dono e primeiro membro. Retry em
+// colisão de inviteCode (P2002) — espaço de 16^8 códigos torna isso
+// astronomicamente raro, mas o custo de tratar é baixo (mesmo padrão de
+// ensureMapAsset em strategy.ts).
+export async function createTeam(userId: string, nome: string): Promise<Team> {
+  for (let attempt = 0; attempt < 5; attempt++) {
+    try {
+      return await prisma.team.create({
+        data: { nome, ownerId: userId, inviteCode: generateInviteCode(), members: { create: { userId } } },
+      });
+    } catch (err) {
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") continue;
+      throw err;
+    }
   }
+  throw new Error("Não consegui gerar um código de convite único.");
+}
 
-  await prisma.teamMember.upsert({
-    where: { teamId_userId: { teamId: team.id, userId } },
-    update: {},
-    create: { teamId: team.id, userId },
-  });
+// `null` cobre tanto "código não existe" quanto qualquer erro de formato —
+// a rota trata os dois como 404, sem distinguir motivo (não vaza se o código
+// é de outro time válido ou simplesmente não existe).
+export async function joinTeamByCode(userId: string, code: string): Promise<Team | null> {
+  const team = await prisma.team.findUnique({ where: { inviteCode: code.trim().toUpperCase() } });
+  if (!team) return null;
 
+  await prisma.teamMember.create({ data: { teamId: team.id, userId } });
   return team;
 }
 
 const round0 = (n: number) => Math.round(n);
 
 // Resolve de quem é o painel que a rota /dashboard* deve montar: o próprio
-// usuário autenticado (sem `targetUserId`) ou outro membro do time — usado
-// pelo filtro "ver painel de outro membro". `null` cobre os dois motivos de
-// recusa (não é membro do time / não existe) — a rota trata os dois como 404.
+// usuário autenticado (sem `targetUserId`) ou outro membro do MESMO time —
+// usado pelo filtro "ver painel de outro membro". `null` cobre os três
+// motivos de recusa (usuário autenticado não tem time / alvo não existe /
+// alvo não é membro do mesmo time) — a rota trata todos como 404.
 export async function resolveDashboardTarget(authUser: User, targetUserId: string | undefined): Promise<User | null> {
   if (!targetUserId || targetUserId === authUser.id) return authUser;
 
-  const team = await prisma.team.findFirst({ include: { members: true } });
-  if (!team || !team.members.some((m) => m.userId === targetUserId)) return null;
+  const teamId = await getUserTeamId(authUser.id);
+  if (!teamId) return null;
+
+  const isMember = await prisma.teamMember.findUnique({ where: { teamId_userId: { teamId, userId: targetUserId } } });
+  if (!isMember) return null;
 
   return prisma.user.findUnique({ where: { id: targetUserId } });
 }
 
-export async function buildTeamOverview(): Promise<TeamOverview | null> {
-  const team = await prisma.team.findFirst({
+export async function buildTeamOverview(teamId: string): Promise<TeamOverview | null> {
+  const team = await prisma.team.findUnique({
+    where: { id: teamId },
     include: { members: { include: { user: true } } },
   });
   if (!team) return null;
@@ -139,6 +168,8 @@ export async function buildTeamOverview(): Promise<TeamOverview | null> {
   return {
     id: team.id,
     name: team.nome,
+    ownerId: team.ownerId,
+    inviteCode: team.inviteCode,
     memberCount: team.members.length,
     matchesTogether30d: togetherMatches.length,
     groupWinratePercent: togetherMatches.length ? round0((togetherWins / togetherMatches.length) * 100) : 0,
@@ -152,8 +183,8 @@ export async function buildTeamOverview(): Promise<TeamOverview | null> {
 // >=5 dos nossos jogados na mesma partida já significa que o time inteiro
 // daquela partida é gente rastreada — não sobra vaga pra ninguém de fora,
 // então dá pra calcular MVP só entre os `list`, sem query extra dos 10.
-export async function buildTeamMatches(): Promise<TeamMatchSummary[]> {
-  const team = await prisma.team.findFirst({ include: { members: { include: { user: true } } } });
+export async function buildTeamMatches(teamId: string): Promise<TeamMatchSummary[]> {
+  const team = await prisma.team.findUnique({ where: { id: teamId }, include: { members: { include: { user: true } } } });
   if (!team) return [];
 
   const trackedMembers = team.members.filter((m) => m.user.riotPuuid);

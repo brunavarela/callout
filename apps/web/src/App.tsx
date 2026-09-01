@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { AppShell } from './components/AppShell';
 import { LoginStep1 } from './pages/LoginStep1';
+import { LoginTeam } from './pages/LoginTeam';
 import { LoginStep2 } from './pages/LoginStep2';
 import { Dashboard } from './pages/Dashboard';
 import { Matches } from './pages/Matches';
@@ -16,6 +17,7 @@ function App() {
   return (
     <Routes>
       <Route path="/login" element={<LoginStep1 />} />
+      <Route path="/login/time" element={<LoginTeam />} />
       <Route path="/login/vincular" element={<LoginStep2 />} />
 
       <Route element={<AppShell />}>

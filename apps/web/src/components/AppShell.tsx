@@ -173,6 +173,7 @@ export function AppShell() {
 
   if (loading) return null;
   if (!user) return <Navigate to="/login" replace />;
+  if (!user.team) return <Navigate to="/login/time" replace />;
   if (!user.riotId) return <Navigate to="/login/vincular" replace />;
 
   const navItems = [

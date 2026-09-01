@@ -128,13 +128,19 @@ model MatchPlayer {
 }
 
 model Team {
-  id      String @id @default(cuid())
-  nome    String
-  ownerId String
-  owner   User   @relation("TeamOwner", fields: [ownerId], references: [id])
+  id         String @id @default(cuid())
+  nome       String
+  ownerId    String
+  owner      User   @relation("TeamOwner", fields: [ownerId], references: [id])
+  // Código curto pra convidar gente pro time (POST /teams/join). Gerado na
+  // criação do time (ver generateInviteCode em lib/team.ts) — Prisma não tem
+  // default de string aleatória, então é responsabilidade do código de
+  // aplicação, com retry em colisão (P2002).
+  inviteCode String @unique
 
   members    TeamMember[]
   strategies Strategy[]
+  spots      Spot[]
 
   @@map("teams")
 }
@@ -143,7 +149,10 @@ model TeamMember {
   id      String  @id @default(cuid())
   teamId  String
   team    Team    @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  userId  String
+  // Um usuário só pode estar em um time por vez (v1 — ver LAUNCH.md/decisão
+  // de 01/09/2026). Sem isso, "qual é o meu time" vira ambíguo em toda
+  // rota que hoje assume um só.
+  userId  String  @unique
   user    User    @relation(fields: [userId], references: [id])
   funcoes         String[] @default([]) // até 2 — controlador | duelista | iniciador | sentinela | flex
   nota            String?  // recado social do card ("Segura o mapa inteiro sozinho..."), editável pelo grupo
@@ -214,6 +223,8 @@ model StratItem {
 // tamanho do grupo (<10 usuários) isso é suficiente por ora.
 model Spot {
   id          String   @id @default(cuid())
+  teamId      String
+  team        Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
   mapId       String
   map         MapAsset @relation(fields: [mapId], references: [id])
   agentUuid   String

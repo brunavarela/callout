@@ -3,6 +3,7 @@ import { z } from "zod";
 import { requireAuth } from "../lib/session.js";
 import { prisma } from "../lib/prisma.js";
 import { ensureMapAsset, loadUsageStats, toStrategyDTO } from "../lib/strategy.js";
+import { getUserTeamId } from "../lib/team.js";
 
 const STRATEGY_INCLUDE = { items: true, map: true, criadoPor: true } as const;
 
@@ -28,11 +29,6 @@ const updateBodySchema = z.object({
   description: z.string().max(2000).optional(),
   items: z.array(itemSchema).optional(),
 });
-
-async function getUserTeamId(userId: string): Promise<string | null> {
-  const membership = await prisma.teamMember.findFirst({ where: { userId } });
-  return membership?.teamId ?? null;
-}
 
 export async function strategiesRoutes(app: FastifyInstance) {
   app.get("/strategies", { preHandler: requireAuth }, async (request, reply) => {

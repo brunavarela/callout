@@ -73,6 +73,7 @@ export interface SessionUser {
   discordUsername: string;
   discordAvatarUrl: string | null;
   riotId: { name: string; tag: string; puuid: string } | null;
+  team: { id: string; name: string } | null;
   theme: ThemePreferences;
   isAdmin: boolean;
 }
@@ -267,6 +268,12 @@ export interface TeamMemberCard {
 export interface TeamOverview {
   id: string;
   name: string;
+  ownerId: string;
+  // Código de convite (POST /teams/join) — visível pra qualquer membro do
+  // time, mesmo espírito de "recado social" e função serem editáveis por
+  // todo mundo (README do handoff: bagunça de amigos, sem controle de
+  // permissão fino aqui).
+  inviteCode: string;
   memberCount: number;
   matchesTogether30d: number;
   groupWinratePercent: number;

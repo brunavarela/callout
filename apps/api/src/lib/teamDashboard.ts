@@ -58,8 +58,8 @@ function computeStreaks(resultsOldToNew: boolean[]): { current: TeamDashboardSum
 // buildTeamMatches não checa isso porque não precisa (só lista partidas);
 // aqui precisa, senão as variações de formação não fariam sentido se o
 // grupo tivesse caído dividido nos dois lados por acaso.
-export async function buildTeamDashboard(): Promise<TeamDashboardSummary | null> {
-  const team = await prisma.team.findFirst({ include: { members: { include: { user: true } } } });
+export async function buildTeamDashboard(teamId: string): Promise<TeamDashboardSummary | null> {
+  const team = await prisma.team.findUnique({ where: { id: teamId }, include: { members: { include: { user: true } } } });
   if (!team) return null;
 
   const trackedMembers = team.members.filter((m) => m.user.riotPuuid);

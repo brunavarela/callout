@@ -13,7 +13,7 @@ export function LoginStep1() {
 
   return (
     <LoginShell>
-      <div style={{ fontSize: 11, letterSpacing: '.14em', color: 'var(--text-dim)', marginBottom: 18 }}>ETAPA 1 DE 2</div>
+      <div style={{ fontSize: 11, letterSpacing: '.14em', color: 'var(--text-dim)', marginBottom: 18 }}>ETAPA 1 DE 3</div>
       <h1 className="login-heading" style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 700, lineHeight: 1.06, letterSpacing: '-.03em', margin: '0 0 16px' }}>
         O que a memória
         <br />

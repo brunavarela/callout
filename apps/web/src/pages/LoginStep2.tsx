@@ -15,7 +15,9 @@ export function LoginStep2() {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    if (!loading && !user) navigate('/login', { replace: true });
+    if (loading) return;
+    if (!user) navigate('/login', { replace: true });
+    else if (!user.team) navigate('/login/time', { replace: true });
   }, [loading, user, navigate]);
 
   async function handleSubmit() {
@@ -47,7 +49,7 @@ export function LoginStep2() {
 
   return (
     <LoginShell>
-      <div style={{ fontSize: 11, letterSpacing: '.14em', color: 'var(--acc, #EF4958)', marginBottom: 18 }}>ETAPA 2 DE 2</div>
+      <div style={{ fontSize: 11, letterSpacing: '.14em', color: 'var(--acc, #EF4958)', marginBottom: 18 }}>ETAPA 3 DE 3</div>
       <h1 className="login-heading" style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 700, lineHeight: 1.06, letterSpacing: '-.03em', margin: '0 0 16px' }}>
         Vincule
         <br />

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useOutletContext } from 'react-router-dom';
-import { Settings, History, BarChart3 } from 'lucide-react';
+import { Settings, History, BarChart3, Copy, Check } from 'lucide-react';
 import type { TeamMemberCard } from '@callout/shared';
 import { apiFetch } from '../lib/api';
 import type { OutletContext } from '../components/AppShell';
@@ -107,6 +107,34 @@ function NoteEditor({ member, onSave }: { member: TeamMemberCard; onSave: (note:
   );
 }
 
+// Código visível pra qualquer membro (não só o dono) — mesmo espírito de
+// recado/função serem editáveis por todo mundo (ver README do handoff).
+function InviteCodeButton({ code }: { code: string }) {
+  const [copied, setCopied] = useState(false);
+
+  async function handleCopy() {
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
+    } catch {
+      // clipboard indisponível (http sem permissão etc.) — código continua visível pra copiar à mão
+    }
+  }
+
+  return (
+    <button
+      className="btn-secondary"
+      style={{ display: 'flex', alignItems: 'center', gap: 9, fontFamily: 'monospace', letterSpacing: '.04em' }}
+      onClick={handleCopy}
+      title="Copiar código de convite"
+    >
+      {copied ? <Check size={15} strokeWidth={1.75} /> : <Copy size={15} strokeWidth={1.75} />}
+      {copied ? 'Copiado!' : code}
+    </button>
+  );
+}
+
 export function Team() {
   const navigate = useNavigate();
   const { team, teamError, reloadTeam, updateTeamMemberNote, updateTeamMemberSettings, agents, loadAgents } = useOutletContext<OutletContext>();
@@ -156,6 +184,7 @@ export function Team() {
           </div>
         </div>
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+          <InviteCodeButton code={team.inviteCode} />
           <button className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: 9 }} onClick={() => navigate('/time/painel')}>
             <BarChart3 size={15} strokeWidth={1.75} />
             Painel do time

@@ -4,6 +4,7 @@ import { requireAuth } from "../lib/session.js";
 import { prisma } from "../lib/prisma.js";
 import { toSpotDTO } from "../lib/spots.js";
 import { loadAgentsByUuid } from "../lib/assets.js";
+import { getUserTeamId } from "../lib/team.js";
 
 const SPOT_INCLUDE = { map: true, criadoPor: true } as const;
 
@@ -36,11 +37,15 @@ const createBodySchema = z.object({
 });
 
 export async function spotsRoutes(app: FastifyInstance) {
-  // Schema de Spot não tem teamId — lista é global, não por time (ver
-  // PROGRESS.md, Fase 4).
-  app.get("/spots", { preHandler: requireAuth }, async () => {
+  // Spot é escopado por time desde a migration team_multi_tenancy_1 — antes
+  // era global (PROGRESS.md, Fase 4), qualquer usuário logado via/apagava
+  // spot de qualquer time.
+  app.get("/spots", { preHandler: requireAuth }, async (request, reply) => {
+    const teamId = await getUserTeamId(request.user!.id);
+    if (!teamId) return reply.code(404).send({ error: "Você ainda não tem um time." });
+
     const [spots, agentsByUuid] = await Promise.all([
-      prisma.spot.findMany({ include: SPOT_INCLUDE, orderBy: { createdAt: "desc" } }),
+      prisma.spot.findMany({ where: { teamId }, include: SPOT_INCLUDE, orderBy: { createdAt: "desc" } }),
       loadAgentsByUuid(),
     ]);
     return spots.map((spot) => toSpotDTO(spot, agentsByUuid));
@@ -52,11 +57,15 @@ export async function spotsRoutes(app: FastifyInstance) {
       return reply.code(400).send({ error: parsed.error.issues[0]?.message ?? "Dados inválidos" });
     }
 
+    const teamId = await getUserTeamId(request.user!.id);
+    if (!teamId) return reply.code(404).send({ error: "Você ainda não tem um time." });
+
     const map = await prisma.mapAsset.findUnique({ where: { id: parsed.data.mapId } });
     if (!map) return reply.code(400).send({ error: "Mapa inválido." });
 
     const spot = await prisma.spot.create({
       data: {
+        teamId,
         mapId: map.id,
         agentUuid: parsed.data.agentId,
         side: parsed.data.side,
@@ -72,11 +81,12 @@ export async function spotsRoutes(app: FastifyInstance) {
     return reply.code(201).send(toSpotDTO(spot, agentsByUuid));
   });
 
-  // Spot é global (sem teamId, ver comentário acima) — qualquer usuário
-  // autenticado pode apagar, igual já podia editar tudo mais por aqui.
   app.delete("/spots/:id", { preHandler: requireAuth }, async (request, reply) => {
     const { id } = request.params as { id: string };
-    const existing = await prisma.spot.findUnique({ where: { id } });
+    const teamId = await getUserTeamId(request.user!.id);
+    if (!teamId) return reply.code(404).send({ error: "Você ainda não tem um time." });
+
+    const existing = await prisma.spot.findFirst({ where: { id, teamId } });
     if (!existing) return reply.code(404).send({ error: "Spot não encontrado." });
 
     await prisma.spot.delete({ where: { id } });
