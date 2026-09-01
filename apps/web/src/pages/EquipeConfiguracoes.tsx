@@ -400,29 +400,26 @@ export function EquipeConfiguracoes() {
               </div>
             </>
           ) : (
-            <div
-              className={isAdmin ? 'hover-reveal' : undefined}
-              style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}
-            >
-              <div style={{ flex: 1, minWidth: 0 }}>
+            <div className={isAdmin ? 'hover-reveal' : undefined}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 20 }}>{equipe.name}</div>
-                <div style={{ fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.5, marginTop: 4 }}>{equipe.descricao || 'Sem descrição ainda.'}</div>
+                {isAdmin && (
+                  <button
+                    type="button"
+                    className="hover-reveal-target"
+                    onClick={() => {
+                      setNomeDraft(equipe.name);
+                      setDescricaoDraft(equipe.descricao);
+                      setEditingEquipeInfo(true);
+                    }}
+                    title="Editar nome e descrição"
+                    style={{ background: 'none', border: 'none', color: 'var(--text-faint)', cursor: 'pointer', padding: 2, display: 'flex', flex: 'none', opacity: 0, transition: 'opacity .12s ease' }}
+                  >
+                    <Pencil size={13} strokeWidth={1.75} />
+                  </button>
+                )}
               </div>
-              {isAdmin && (
-                <button
-                  type="button"
-                  className="hover-reveal-target"
-                  onClick={() => {
-                    setNomeDraft(equipe.name);
-                    setDescricaoDraft(equipe.descricao);
-                    setEditingEquipeInfo(true);
-                  }}
-                  title="Editar nome e descrição"
-                  style={{ background: 'none', border: 'none', color: 'var(--text-faint)', cursor: 'pointer', padding: 2, display: 'flex', flex: 'none', opacity: 0, transition: 'opacity .12s ease' }}
-                >
-                  <Pencil size={13} strokeWidth={1.75} />
-                </button>
-              )}
+              <div style={{ fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.5, marginTop: 4 }}>{equipe.descricao || 'Sem descrição ainda.'}</div>
             </div>
           )}
         </div>
