@@ -1,10 +1,11 @@
 import type { ReactNode } from 'react';
 import { Logo } from './Logo';
+import { Footer } from './Footer';
 
 export function LoginShell({ children }: { children: ReactNode }) {
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', justifyContent: 'center', background: 'var(--bg)' }}>
-      <div className="login-shell-grid">
+    <div style={{ display: 'flex', flexDirection: 'column', background: 'var(--bg)' }}>
+      <div className="login-shell-grid" style={{ marginInline: 'auto' }}>
         <div
           className="login-shell-col"
           style={{
@@ -63,6 +64,7 @@ export function LoginShell({ children }: { children: ReactNode }) {
           />
         </div>
       </div>
+      <Footer />
     </div>
   );
 }

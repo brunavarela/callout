@@ -13,6 +13,8 @@ import { EquipeConfiguracoes } from './pages/EquipeConfiguracoes';
 import { Board } from './pages/Board';
 import { Spots } from './pages/Spots';
 import { Competitions } from './pages/Competitions';
+import { Termos } from './pages/Termos';
+import { Privacidade } from './pages/Privacidade';
 
 function App() {
   return (
@@ -20,6 +22,8 @@ function App() {
       <Route path="/login" element={<LoginStep1 />} />
       <Route path="/login/equipe" element={<LoginEquipe />} />
       <Route path="/login/vincular" element={<LoginStep2 />} />
+      <Route path="/termos" element={<Termos />} />
+      <Route path="/privacidade" element={<Privacidade />} />
 
       <Route element={<AppShell />}>
         <Route path="/" element={<Dashboard />} />

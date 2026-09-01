@@ -5,6 +5,7 @@ import { useSession } from '../lib/session';
 import { useAppData, type AppData } from '../lib/appData';
 import { ThemeSettings } from './ThemeSettings';
 import { Logo, LogoMark } from './Logo';
+import { Footer } from './Footer';
 
 const BASE_NAV_ITEMS = [
   { to: '/', label: 'Painel', icon: LayoutDashboard, match: (p: string) => p === '/' },
@@ -351,6 +352,7 @@ export function AppShell() {
         </header>
 
         <Outlet context={appData satisfies OutletContext} />
+        <Footer />
       </main>
     </div>
   );
