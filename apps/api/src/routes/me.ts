@@ -16,6 +16,15 @@ const themeBodySchema = z.object({
   mode: z.enum(THEME_MODES),
 });
 
+// Nome de exibição e foto de perfil — só o próprio dono edita (ver
+// MembroEquipeCard.name/avatarUrl, resolvidos com fallback pro
+// riotName/discordUsername e discordAvatarUrl quando null). Imagem já vem
+// comprimida (canvas) e em data URL — mesmo padrão de Spot.imagens.
+const perfilBodySchema = z.object({
+  displayName: z.string().max(60).optional(),
+  avatarUrl: z.string().min(1).max(2_000_000).optional(),
+});
+
 export async function meRoutes(app: FastifyInstance) {
   app.patch("/me/theme", { preHandler: requireAuth }, async (request, reply) => {
     const parsed = themeBodySchema.safeParse(request.body);
@@ -34,5 +43,22 @@ export async function meRoutes(app: FastifyInstance) {
     });
 
     return toSessionUser(user, await getUserEquipe(user.id));
+  });
+
+  app.patch("/me/perfil", { preHandler: requireAuth }, async (request, reply) => {
+    const parsed = perfilBodySchema.safeParse(request.body);
+    if (!parsed.success) {
+      return reply.code(400).send({ error: parsed.error.issues[0]?.message ?? "Dado inválido" });
+    }
+
+    await prisma.user.update({
+      where: { id: request.user!.id },
+      data: {
+        ...(parsed.data.displayName !== undefined ? { displayName: parsed.data.displayName } : {}),
+        ...(parsed.data.avatarUrl !== undefined ? { avatarUrl: parsed.data.avatarUrl } : {}),
+      },
+    });
+
+    return { ok: true };
   });
 }

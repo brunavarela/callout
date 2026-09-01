@@ -244,7 +244,9 @@ export interface MatchDetail {
   };
 }
 
-// --- Time ---
+// --- Equipe ---
+
+export type Cargo = "jogador" | "treinador_principal" | "treinador_assistente";
 
 export interface MainAgent {
   uuid: string;
@@ -253,12 +255,23 @@ export interface MainAgent {
 
 export interface MembroEquipeCard {
   userId: string;
+  // Nome de exibição — displayName custom (editável só pelo dono do
+  // perfil) com fallback pro riotName/discordUsername. Ver
+  // ConfiguracoesEquipe pro "Apelido" (Riot ID de verdade, não editável
+  // aqui).
   name: string;
+  avatarUrl: string | null; // avatarUrl custom (editável só pelo dono do perfil) com fallback pro discordAvatarUrl
+  riotIdLabel: string | null; // "apelido" da tela de configurações — "nome#tag" quando vinculado, null senão
   rankLabel: string;
-  roles: Funcao[]; // até MAX_FUNCOES
+  roles: Funcao[]; // até MAX_FUNCOES — só editável por admin (ver PATCH /equipe/membros/:userId/configuracoes)
+  cargo: Cargo; // só editável por admin
+  isAdmin: boolean;
+  isOwner: boolean; // dono da equipe — permanente, não removível nem rebaixável (ver LAUNCH.md/decisão de 01/09/2026)
+  joinedAtLabel: string; // "data de entrada" — pra membros anteriores a 01/09/2026, é a data da migration, não a entrada real
   isSelf: boolean;
   kda: number;
   acs: number;
+  hsPercent: number;
   winratePercent: number;
   note: string;
   mainAgents: MainAgent[]; // até MAX_MAIN_AGENTS
@@ -268,16 +281,27 @@ export interface MembroEquipeCard {
 export interface EquipeOverview {
   id: string;
   name: string;
+  descricao: string;
+  imagemUrl: string | null;
   donoId: string;
   // Código de convite (POST /equipes/entrar) — visível pra qualquer membro
-  // da equipe, mesmo espírito de "recado social" e função serem editáveis
-  // por todo mundo (README do handoff: bagunça de amigos, sem controle de
-  // permissão fino aqui).
+  // da equipe, mesmo espírito de "recado social" ser editável por todo
+  // mundo (README do handoff: bagunça de amigos, sem controle de permissão
+  // fino nisso — função/cargo/admin já são mais sérios, ver PATCH
+  // correspondentes).
   codigoConvite: string;
   memberCount: number;
   matchesTogether30d: number;
   groupWinratePercent: number;
   members: MembroEquipeCard[];
+}
+
+// Body do PATCH /equipe — só admin. Todos os campos opcionais (atualiza só
+// o que vier).
+export interface EquipePerfilInput {
+  nome?: string;
+  descricao?: string;
+  imagemUrl?: string;
 }
 
 // Body do PATCH /equipe/membros/:userId/configuracoes — igual "nota",

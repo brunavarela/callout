@@ -106,6 +106,9 @@ export async function buildEquipeOverview(equipeId: string): Promise<EquipeOverv
             deaths: true,
             assists: true,
             acs: true,
+            headshots: true,
+            bodyshots: true,
+            legshots: true,
             match: { select: { modo: true } },
           },
         })
@@ -132,6 +135,10 @@ export async function buildEquipeOverview(equipeId: string): Promise<EquipeOverv
       const deaths = memberRows.reduce((s, r) => s + r.deaths, 0);
       const assists = memberRows.reduce((s, r) => s + r.assists, 0);
       const acsSum = memberRows.reduce((s, r) => s + r.acs, 0);
+      const headshots = memberRows.reduce((s, r) => s + r.headshots, 0);
+      const bodyshots = memberRows.reduce((s, r) => s + r.bodyshots, 0);
+      const legshots = memberRows.reduce((s, r) => s + r.legshots, 0);
+      const shotsTotal = headshots + bodyshots + legshots;
       const wins = memberRows.filter((r) => r.won).length;
 
       let rankLabel = "—";
@@ -146,12 +153,19 @@ export async function buildEquipeOverview(equipeId: string): Promise<EquipeOverv
 
       return {
         userId: m.userId,
-        name: m.user.riotName ?? m.user.discordUsername,
+        name: m.user.displayName ?? m.user.riotName ?? m.user.discordUsername,
+        avatarUrl: m.user.avatarUrl ?? m.user.discordAvatarUrl,
+        riotIdLabel: m.user.riotName && m.user.riotTag ? `${m.user.riotName}#${m.user.riotTag}` : null,
         rankLabel,
         roles: (m.funcoes.length > 0 ? m.funcoes : [m.user.funcaoPreferida ?? "iniciador"]) as EquipeOverview["members"][number]["roles"],
+        cargo: m.cargo as EquipeOverview["members"][number]["cargo"],
+        isAdmin: m.isAdmin,
+        isOwner: m.userId === equipe.donoId,
+        joinedAtLabel: m.createdAt.toLocaleDateString("pt-BR"),
         isSelf: false, // preenchido pela rota, que sabe quem é o usuário autenticado
         kda: memberRows.length ? round0(((kills + assists) / Math.max(deaths, 1)) * 100) / 100 : 0,
         acs: memberRows.length ? round0(acsSum / memberRows.length) : 0,
+        hsPercent: shotsTotal > 0 ? round0((headshots / shotsTotal) * 100) : 0,
         winratePercent: memberRows.length ? round0((wins / memberRows.length) * 100) : 0,
         note: m.nota ?? "",
         hasRiotLinked: Boolean(m.user.riotPuuid && m.user.riotRegion),
@@ -168,6 +182,8 @@ export async function buildEquipeOverview(equipeId: string): Promise<EquipeOverv
   return {
     id: equipe.id,
     name: equipe.nome,
+    descricao: equipe.descricao ?? "",
+    imagemUrl: equipe.imagemUrl,
     donoId: equipe.donoId,
     codigoConvite: equipe.codigoConvite,
     memberCount: equipe.membros.length,
@@ -175,6 +191,14 @@ export async function buildEquipeOverview(equipeId: string): Promise<EquipeOverv
     groupWinratePercent: togetherMatches.length ? round0((togetherWins / togetherMatches.length) * 100) : 0,
     members,
   };
+}
+
+// Admin da equipe: qualquer membro com isAdmin true (o dono é sempre um
+// deles, ver criarEquipe/backfillEquipeOwnerAdmin). `null` cobre "não é
+// membro" — quem chama decide o que fazer (as rotas tratam como 403/404).
+export async function isEquipeAdmin(userId: string, equipeId: string): Promise<boolean> {
+  const membership = await prisma.membroEquipe.findUnique({ where: { equipeId_userId: { equipeId, userId } } });
+  return membership?.isAdmin ?? false;
 }
 
 // Histórico de partidas com pelo menos MIN_TEAM_MATCH_PLAYERS membros da
