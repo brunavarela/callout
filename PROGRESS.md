@@ -2,7 +2,7 @@
 
 > Documento de handoff de **implementação** (o que já existe, como rodar,
 > o que falta). Para o briefing de produto/arquitetura, ver [CONTEXT.md](CONTEXT.md).
-> Última atualização: 2026-08-23.
+> Última atualização: 2026-09-01.
 
 ---
 
@@ -105,12 +105,35 @@ projetos nesta máquina (`iexfy_app_back-end` e `sg-super-web-frontend`).
   (`apps/api/src/lib/dashboard.ts`, `apps/api/src/lib/insights.ts`).
 
 ### Fase 2 — Time — ✅ completa
-- Time único criado automaticamente no primeiro login (nome vem do
-  servidor Discord real, não é mais fixo) — `apps/api/src/lib/team.ts`
 - `GET /team` — membros com KDA/ACS/winrate reais (30d), rank, partidas
   jogadas juntos (cruza `MatchPlayer` por `matchId`)
 - `PATCH /team/members/:userId/note` — recado social editável (clique
   duplo no card, na tela Time)
+
+**Multi-tenancy real (2026-09-01, LAUNCH.md — primeiro passo pro
+lançamento público):** até aqui só existia um time, criado automático no
+primeiro login (nome vindo do servidor Discord), e todo `prisma.team.
+findFirst()` espalhado pelo código pegava "o time que existir" — correto
+só enquanto existisse exatamente um. Trocado por resolução via
+`TeamMember` do usuário logado (`getUserTeamId`/`getUserTeam` em
+`lib/team.ts`); `TeamMember.userId` agora é `@unique` — 1 time por
+usuário (decisão de produto, v1, múltiplos times por pessoa fica pra
+depois se fizer falta). Login não entra mais automático em nenhum time:
+`POST /teams` cria um novo (dono = quem cria, gera `inviteCode`
+alfanumérico de 8 chars via `generateInviteCode()`), `POST /teams/join`
+entra num existente pelo código. Etapa nova no login,
+`apps/web/src/pages/LoginTeam.tsx` (`/login/time`), entre o Discord e o
+vínculo de Riot ID — fluxo virou Discord → time → Riot ID (3 etapas,
+`AppShell.tsx` redireciona pra lá se `!user.team`). Tela Time mostra o
+código de convite (`InviteCodeButton`, copia pro clipboard) pra qualquer
+membro convidar mais gente. `Spot` ganhou `teamId` (era global antes,
+ver Fase 4) — migrations em duas etapas (`team_multi_tenancy_1`/`_2`,
+coluna nullable → backfill → NOT NULL, mesmo padrão do backfill de
+`Match.mapId`).
+
+Não mexe no allowlist de servidor Discord (`findGuildMembership` em
+`auth.ts`) — login continua fechado ao grupo atual. Abrir cadastro
+público é outra frente do LAUNCH.md.
 
 ### Fase 3 — Board de estratégia — ✅ completa
 - `GET/POST /strategies`, `GET/PATCH /strategies/:id` —
@@ -173,10 +196,12 @@ do mock continuam só como fallback decorativo pros poucos mapas sem
   não religada aos uuids reais do seed, ver Fase 0 item 4), agora
   compartilhada em
   `packages/shared/src/agents.ts` (`PLACEHOLDER_AGENTS`) e reusada pelo
-  Board também (antes tinha uma cópia local lá). Schema não tem `teamId`
-  em `Spot`, então `GET /spots` é uma lista global (todo usuário logado
-  vê todos os spots de todo mundo) — não filtra por time porque o schema
-  não suporta isso hoje.
+  Board também (antes tinha uma cópia local lá).
+
+  ✅ **Resolvido (2026-09-01, multi-tenancy — LAUNCH.md):** `Spot` ganhou
+  `teamId`, `GET/POST/DELETE /spots` agora escopam pelo time de quem está
+  logado. Ver seção de multi-tenancy mais abaixo.
+
   `apps/web/src/pages/Spots.tsx` ganhou um fluxo completo de criação:
   botão "+ Novo spot" abre um modal com mapa/habilidade/lado/agente,
   notas e link opcionais, e um picker de clique no mini-mapa (reusa
