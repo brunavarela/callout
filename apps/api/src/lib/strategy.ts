@@ -101,7 +101,7 @@ export async function loadUsageStats(strategyIds: string[]): Promise<Map<string,
 export function toStrategyDTO(strategy: StrategyWithRelations, usage?: UsageStats): StrategyDTO {
   return {
     id: strategy.id,
-    teamId: strategy.teamId,
+    equipeId: strategy.equipeId,
     mapId: strategy.mapId,
     mapName: strategy.map.nome,
     mapDisplayIcon: strategy.map.displayIcon,

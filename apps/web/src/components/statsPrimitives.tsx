@@ -1,5 +1,5 @@
 // Primitivos visuais compartilhados entre o painel individual (Dashboard.tsx)
-// e o painel do time (TeamDashboard.tsx) — cores, formatação e os dois
+// e o painel da equipe (EquipePainel.tsx) — cores, formatação e os dois
 // formatos de card recorrentes (barra de winrate / ranking numerado).
 // Extraído de Dashboard.tsx (era tudo privado lá) sem mudar comportamento.
 
@@ -107,8 +107,8 @@ export interface RankingRow {
 
 // Leaderboard genérico — numerado, nome + legenda opcional, valor alinhado
 // à direita, destaque dourado no 1º lugar (mesma cor do badge de MVP em
-// MatchRow.tsx/TeamMatches.tsx). Cobre ACS/MVP/assistências/first
-// blood/clutches/agentes do painel do time — uma implementação só.
+// MatchRow.tsx/EquipePartidas.tsx). Cobre ACS/MVP/assistências/first
+// blood/clutches/agentes do painel da equipe — uma implementação só.
 export function RankingBlock({ title, sub, rows }: { title: string; sub: string; rows: RankingRow[] }) {
   return (
     <div style={{ ...cardStyle, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 11 }}>

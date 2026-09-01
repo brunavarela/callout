@@ -4,7 +4,7 @@ import type { MatchCountFilter } from "@callout/shared";
 import { requireAuth } from "../lib/session.js";
 import { buildDashboardSummary } from "../lib/dashboard.js";
 import { buildRrAndInsights, buildSidesBreakdown } from "../lib/insights.js";
-import { resolveDashboardTarget } from "../lib/team.js";
+import { resolveDashboardTarget } from "../lib/equipe.js";
 
 // Resolve o membro do time cujo painel a rota deve montar — o próprio
 // usuário autenticado, por padrão, ou outro membro do time quando o filtro

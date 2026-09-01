@@ -6,7 +6,7 @@ import { prisma } from "../lib/prisma.js";
 import { buildAuthorizeUrl, exchangeCodeForToken, fetchDiscordProfile, avatarUrl, findGuildMembership } from "../lib/discord.js";
 import { getAccountByRiotId, HenrikDevError } from "../lib/henrikdev.js";
 import { setSessionCookie, clearSessionCookie, requireAuth, getSessionUser } from "../lib/session.js";
-import { getUserTeam } from "../lib/team.js";
+import { getUserEquipe } from "../lib/equipe.js";
 import { toSessionUser } from "../lib/dto.js";
 
 const STATE_COOKIE = "callout_oauth_state";
@@ -61,9 +61,9 @@ export async function authRoutes(app: FastifyInstance) {
 
       setSessionCookie(reply, user.id);
 
-      const team = await getUserTeam(user.id);
-      if (!team) {
-        reply.redirect(`${env.WEB_ORIGIN}/login/time`);
+      const equipe = await getUserEquipe(user.id);
+      if (!equipe) {
+        reply.redirect(`${env.WEB_ORIGIN}/login/equipe`);
       } else if (!user.riotPuuid) {
         reply.redirect(`${env.WEB_ORIGIN}/login/vincular`);
       } else {
@@ -78,7 +78,7 @@ export async function authRoutes(app: FastifyInstance) {
   app.get("/auth/me", async (request, reply) => {
     const user = await getSessionUser(request);
     if (!user) return reply.code(401).send({ error: "não autenticado" });
-    return toSessionUser(user, await getUserTeam(user.id));
+    return toSessionUser(user, await getUserEquipe(user.id));
   });
 
   app.post("/auth/logout", async (request, reply) => {
@@ -105,7 +105,7 @@ export async function authRoutes(app: FastifyInstance) {
           riotRegion: account.region,
         },
       });
-      return toSessionUser(user, await getUserTeam(user.id));
+      return toSessionUser(user, await getUserEquipe(user.id));
     } catch (err) {
       if (err instanceof HenrikDevError) {
         return reply.code(err.status === 404 ? 404 : 502).send({ error: `Não achamos essa conta na Riot: ${err.message}` });

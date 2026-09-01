@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useOutletContext } from 'react-router-dom';
 import { Settings, History, BarChart3, Copy, Check } from 'lucide-react';
-import type { TeamMemberCard } from '@callout/shared';
+import type { MembroEquipeCard } from '@callout/shared';
 import { apiFetch } from '../lib/api';
 import type { OutletContext } from '../components/AppShell';
 import { LoadingFill } from '../components/Spinner';
-import { TeamSettingsModal } from '../components/TeamSettingsModal';
+import { MembroConfiguracoesModal } from '../components/MembroConfiguracoesModal';
 import { agentImageUrl } from '../lib/agentImages';
 
 const cardStyle: React.CSSProperties = { borderRadius: 'var(--radius-lg)', background: 'var(--surface)', border: '1px solid var(--surface-border)' };
@@ -19,7 +19,7 @@ function initialsOf(name: string) {
   return name.slice(0, 2).toUpperCase();
 }
 
-function MainAgentIcons({ agents }: { agents: TeamMemberCard['mainAgents'] }) {
+function MainAgentIcons({ agents }: { agents: MembroEquipeCard['mainAgents'] }) {
   if (agents.length === 0) return null;
   return (
     <div style={{ display: 'flex', gap: 5, marginTop: 8 }}>
@@ -53,7 +53,7 @@ function MainAgentIcons({ agents }: { agents: TeamMemberCard['mainAgents'] }) {
   );
 }
 
-function NoteEditor({ member, onSave }: { member: TeamMemberCard; onSave: (note: string) => Promise<void> }) {
+function NoteEditor({ member, onSave }: { member: MembroEquipeCard; onSave: (note: string) => Promise<void> }) {
   const [editing, setEditing] = useState(false);
   const [value, setValue] = useState(member.note);
   const [saving, setSaving] = useState(false);
@@ -135,10 +135,10 @@ function InviteCodeButton({ code }: { code: string }) {
   );
 }
 
-export function Team() {
+export function Equipe() {
   const navigate = useNavigate();
-  const { team, teamError, reloadTeam, updateTeamMemberNote, updateTeamMemberSettings, agents, loadAgents } = useOutletContext<OutletContext>();
-  const [editingMember, setEditingMember] = useState<TeamMemberCard | null>(null);
+  const { equipe, equipeError, reloadEquipe, updateEquipeMembroNota, updateEquipeMembroConfiguracoes, agents, loadAgents } = useOutletContext<OutletContext>();
+  const [editingMember, setEditingMember] = useState<MembroEquipeCard | null>(null);
 
   useEffect(() => {
     if (agents === null) loadAgents();
@@ -146,19 +146,19 @@ export function Team() {
 
   async function saveNote(userId: string, note: string) {
     try {
-      await apiFetch(`/team/members/${userId}/note`, { method: 'PATCH', body: JSON.stringify({ note }) });
-      updateTeamMemberNote(userId, note);
+      await apiFetch(`/equipe/membros/${userId}/recado`, { method: 'PATCH', body: JSON.stringify({ note }) });
+      updateEquipeMembroNota(userId, note);
     } catch {
       // falha silenciosa — o campo volta a mostrar o valor anterior na próxima carga
     }
   }
 
-  if (teamError && !team) {
+  if (equipeError && !equipe) {
     return (
       <div style={{ padding: 26 }}>
         <div style={{ ...cardStyle, padding: 22, display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'flex-start' }}>
-          <div style={{ fontSize: 14, color: 'var(--text-3)' }}>{teamError}</div>
-          <button className="btn-secondary" onClick={reloadTeam}>
+          <div style={{ fontSize: 14, color: 'var(--text-3)' }}>{equipeError}</div>
+          <button className="btn-secondary" onClick={reloadEquipe}>
             Tentar de novo
           </button>
         </div>
@@ -166,7 +166,7 @@ export function Team() {
     );
   }
 
-  if (!team) {
+  if (!equipe) {
     return (
       <div style={{ padding: 26, display: 'flex', flexDirection: 'column' }}>
         <LoadingFill />
@@ -178,29 +178,29 @@ export function Team() {
     <div style={{ padding: 26, display: 'flex', flexDirection: 'column', gap: 20 }}>
       <div style={{ display: 'flex', alignItems: 'flex-end', gap: 20, flexWrap: 'wrap' }}>
         <div>
-          <h1 style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 700, fontSize: 32, letterSpacing: '-.025em', margin: 0 }}>{team.name}</h1>
+          <h1 style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 700, fontSize: 32, letterSpacing: '-.025em', margin: 0 }}>{equipe.name}</h1>
           <div style={{ fontSize: 14, color: 'var(--text-muted)', marginTop: 6 }}>
-            {team.memberCount} membros · {team.matchesTogether30d} partidas juntos nos últimos 30 dias · {team.groupWinratePercent}% de winrate em grupo
+            {equipe.memberCount} membros · {equipe.matchesTogether30d} partidas juntos nos últimos 30 dias · {equipe.groupWinratePercent}% de winrate em grupo
           </div>
         </div>
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-          <InviteCodeButton code={team.inviteCode} />
-          <button className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: 9 }} onClick={() => navigate('/time/painel')}>
+          <InviteCodeButton code={equipe.codigoConvite} />
+          <button className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: 9 }} onClick={() => navigate('/equipe/painel')}>
             <BarChart3 size={15} strokeWidth={1.75} />
-            Painel do time
+            Painel da equipe
           </button>
-          <button className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: 9 }} onClick={() => navigate('/time/partidas')}>
+          <button className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: 9 }} onClick={() => navigate('/equipe/partidas')}>
             <History size={15} strokeWidth={1.75} />
             Histórico de partidas
           </button>
         </div>
       </div>
 
-      {team.members.length === 0 ? (
-        <div style={{ ...cardStyle, padding: 40, textAlign: 'center', color: 'var(--text-muted)', fontSize: 14 }}>Ninguém no time ainda.</div>
+      {equipe.members.length === 0 ? (
+        <div style={{ ...cardStyle, padding: 40, textAlign: 'center', color: 'var(--text-muted)', fontSize: 14 }}>Ninguém na equipe ainda.</div>
       ) : (
         <div className="grid-responsive-4">
-          {team.members.map((p) => (
+          {equipe.members.map((p) => (
             <div
               key={p.userId}
               style={{
@@ -289,11 +289,11 @@ export function Team() {
       )}
 
       {editingMember && (
-        <TeamSettingsModal
+        <MembroConfiguracoesModal
           member={editingMember}
           agents={agents}
           onClose={() => setEditingMember(null)}
-          onSaved={(roles, mainAgents) => updateTeamMemberSettings(editingMember.userId, roles, mainAgents)}
+          onSaved={(roles, mainAgents) => updateEquipeMembroConfiguracoes(editingMember.userId, roles, mainAgents)}
         />
       )}
     </div>

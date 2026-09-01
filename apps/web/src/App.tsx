@@ -1,14 +1,14 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { AppShell } from './components/AppShell';
 import { LoginStep1 } from './pages/LoginStep1';
-import { LoginTeam } from './pages/LoginTeam';
+import { LoginEquipe } from './pages/LoginEquipe';
 import { LoginStep2 } from './pages/LoginStep2';
 import { Dashboard } from './pages/Dashboard';
 import { Matches } from './pages/Matches';
 import { MatchDetail } from './pages/MatchDetail';
-import { Team } from './pages/Team';
-import { TeamMatches } from './pages/TeamMatches';
-import { TeamDashboard } from './pages/TeamDashboard';
+import { Equipe } from './pages/Equipe';
+import { EquipePartidas } from './pages/EquipePartidas';
+import { EquipePainel } from './pages/EquipePainel';
 import { Board } from './pages/Board';
 import { Spots } from './pages/Spots';
 import { Competitions } from './pages/Competitions';
@@ -17,16 +17,16 @@ function App() {
   return (
     <Routes>
       <Route path="/login" element={<LoginStep1 />} />
-      <Route path="/login/time" element={<LoginTeam />} />
+      <Route path="/login/equipe" element={<LoginEquipe />} />
       <Route path="/login/vincular" element={<LoginStep2 />} />
 
       <Route element={<AppShell />}>
         <Route path="/" element={<Dashboard />} />
         <Route path="/partidas" element={<Matches />} />
         <Route path="/partida/:id" element={<MatchDetail />} />
-        <Route path="/time" element={<Team />} />
-        <Route path="/time/partidas" element={<TeamMatches />} />
-        <Route path="/time/painel" element={<TeamDashboard />} />
+        <Route path="/equipe" element={<Equipe />} />
+        <Route path="/equipe/partidas" element={<EquipePartidas />} />
+        <Route path="/equipe/painel" element={<EquipePainel />} />
         <Route path="/board" element={<Board />} />
         <Route path="/board/:id" element={<Board />} />
         <Route path="/spots" element={<Spots />} />

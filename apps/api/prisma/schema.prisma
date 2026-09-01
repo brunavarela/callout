@@ -37,8 +37,8 @@ model User {
   // admin sozinho.
   isAdmin Boolean @default(false)
 
-  teamMemberships TeamMember[]
-  ownedTeams      Team[]       @relation("TeamOwner")
+  membrosEquipe    MembroEquipe[]
+  equipesComoDono  Equipe[]     @relation("EquipeDono")
   strategiesFeitas Strategy[]  @relation("StrategyAuthor")
   spotsFeitos     Spot[]       @relation("SpotAuthor")
   comments        Comment[]
@@ -127,45 +127,48 @@ model MatchPlayer {
   @@map("match_players")
 }
 
-model Team {
-  id         String @id @default(cuid())
-  nome       String
-  ownerId    String
-  owner      User   @relation("TeamOwner", fields: [ownerId], references: [id])
-  // Código curto pra convidar gente pro time (POST /teams/join). Gerado na
-  // criação do time (ver generateInviteCode em lib/team.ts) — Prisma não tem
-  // default de string aleatória, então é responsabilidade do código de
+// Nome interno "Equipe" (era "Team") — rename de 2026-09-01. Tabela física
+// continua "teams"/"team_members" (@map/@@map abaixo) — decoupled de
+// propósito, então esse rename não precisou de migration nenhuma.
+model Equipe {
+  id     String @id @default(cuid())
+  nome   String
+  donoId String @map("ownerId")
+  dono   User   @relation("EquipeDono", fields: [donoId], references: [id])
+  // Código curto pra convidar gente pra equipe (POST /equipes/entrar).
+  // Gerado na criação (ver gerarCodigoConvite em lib/equipe.ts) — Prisma não
+  // tem default de string aleatória, então é responsabilidade do código de
   // aplicação, com retry em colisão (P2002).
-  inviteCode String @unique
+  codigoConvite String @unique @map("inviteCode")
 
-  members    TeamMember[]
+  membros    MembroEquipe[]
   strategies Strategy[]
   spots      Spot[]
 
   @@map("teams")
 }
 
-model TeamMember {
-  id      String  @id @default(cuid())
-  teamId  String
-  team    Team    @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  // Um usuário só pode estar em um time por vez (v1 — ver LAUNCH.md/decisão
-  // de 01/09/2026). Sem isso, "qual é o meu time" vira ambíguo em toda
-  // rota que hoje assume um só.
-  userId  String  @unique
-  user    User    @relation(fields: [userId], references: [id])
+model MembroEquipe {
+  id       String @id @default(cuid())
+  equipeId String @map("teamId")
+  equipe   Equipe @relation(fields: [equipeId], references: [id], onDelete: Cascade)
+  // Um usuário só pode estar em uma equipe por vez (v1 — ver LAUNCH.md/decisão
+  // de 01/09/2026). Sem isso, "qual é a minha equipe" vira ambíguo em toda
+  // rota que hoje assume uma só.
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id])
   funcoes         String[] @default([]) // até 2 — controlador | duelista | iniciador | sentinela | flex
   nota            String?  // recado social do card ("Segura o mapa inteiro sozinho..."), editável pelo grupo
   mainAgentUuids  String[] @default([]) // até 3, uuid do AgentAsset — editável pelo grupo, igual funcoes/nota
 
-  @@unique([teamId, userId])
+  @@unique([equipeId, userId])
   @@map("team_members")
 }
 
 model Strategy {
   id          String   @id @default(cuid())
-  teamId      String
-  team        Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  equipeId    String   @map("teamId")
+  equipe      Equipe   @relation(fields: [equipeId], references: [id], onDelete: Cascade)
   mapId       String
   map         MapAsset @relation(fields: [mapId], references: [id])
   lado        String // ATK | DEF
@@ -223,8 +226,8 @@ model StratItem {
 // tamanho do grupo (<10 usuários) isso é suficiente por ora.
 model Spot {
   id          String   @id @default(cuid())
-  teamId      String
-  team        Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  equipeId    String   @map("teamId")
+  equipe      Equipe   @relation(fields: [equipeId], references: [id], onDelete: Cascade)
   mapId       String
   map         MapAsset @relation(fields: [mapId], references: [id])
   agentUuid   String

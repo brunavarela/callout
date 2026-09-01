@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useOutletContext } from 'react-router-dom';
 import { ArrowLeft, BarChart3, ChevronRight } from 'lucide-react';
-import type { TeamMatchParticipant, TeamMatchSummary } from '@callout/shared';
+import type { ParticipanteEquipeMatch, PartidaEquipeSummary } from '@callout/shared';
 import { MIN_TEAM_MATCH_PLAYERS } from '@callout/shared';
 import type { OutletContext } from '../components/AppShell';
 import { LoadingFill } from '../components/Spinner';
@@ -17,9 +17,9 @@ const DRAW = 'var(--text-muted, #9A9DA1)';
 // borda direita (o nome do jogador é a única coluna flexível).
 const PARTICIPANT_COLUMNS = '28px minmax(140px, 1fr) 110px 90px 90px 70px';
 
-const RESULT_LABEL: Record<TeamMatchParticipant['result'], string> = { V: 'VITÓRIA', D: 'DERROTA', E: 'EMPATE' };
+const RESULT_LABEL: Record<ParticipanteEquipeMatch['result'], string> = { V: 'VITÓRIA', D: 'DERROTA', E: 'EMPATE' };
 
-function resultColor(result: TeamMatchParticipant['result']): string {
+function resultColor(result: ParticipanteEquipeMatch['result']): string {
   return result === 'V' ? WIN : result === 'D' ? LOSS : DRAW;
 }
 
@@ -43,7 +43,7 @@ function ParticipantHeader() {
   );
 }
 
-function ParticipantRow({ p }: { p: TeamMatchParticipant }) {
+function ParticipantRow({ p }: { p: ParticipanteEquipeMatch }) {
   return (
     <div style={{ display: 'grid', gridTemplateColumns: PARTICIPANT_COLUMNS, gap: 20, alignItems: 'center', padding: '9px 0', borderTop: '1px solid var(--divider)', fontSize: 12.5 }}>
       <AgentAvatar agent={p.agent} size={26} />
@@ -72,10 +72,10 @@ function ParticipantRow({ p }: { p: TeamMatchParticipant }) {
 
 // Cada partida é uma linha só (mapa + placar + data), clicável — expande
 // pra mostrar os números de cada um, recolhe de novo no segundo clique.
-function TeamMatchCard({ match }: { match: TeamMatchSummary }) {
+function EquipeMatchCard({ match }: { match: PartidaEquipeSummary }) {
   const [expanded, setExpanded] = useState(false);
   // Todo mundo rastreado nessa partida é do mesmo lado (é assim que a
-  // partida qualifica pro histórico do time), então o resultado do
+  // partida qualifica pro histórico da equipe), então o resultado do
   // primeiro participante já vale pra partida inteira.
   const result = match.participants[0]?.result ?? 'E';
   const color = resultColor(result);
@@ -125,53 +125,53 @@ function TeamMatchCard({ match }: { match: TeamMatchSummary }) {
   );
 }
 
-export function TeamMatches() {
+export function EquipePartidas() {
   const navigate = useNavigate();
-  const { teamMatches, teamMatchesError, teamMatchesLoading, loadTeamMatches } = useOutletContext<OutletContext>();
+  const { equipePartidas, equipePartidasError, equipePartidasLoading, loadEquipePartidas } = useOutletContext<OutletContext>();
 
   useEffect(() => {
-    if (teamMatches === null && !teamMatchesLoading) loadTeamMatches();
-  }, [teamMatches, teamMatchesLoading, loadTeamMatches]);
+    if (equipePartidas === null && !equipePartidasLoading) loadEquipePartidas();
+  }, [equipePartidas, equipePartidasLoading, loadEquipePartidas]);
 
   return (
     <div style={{ padding: 26, display: 'flex', flexDirection: 'column', gap: 16 }}>
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
         <div>
           <button
-            onClick={() => navigate('/time')}
+            onClick={() => navigate('/equipe')}
             style={{ display: 'flex', alignItems: 'center', gap: 7, background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 12.5, cursor: 'pointer', padding: 0, marginBottom: 10 }}
           >
             <ArrowLeft size={14} strokeWidth={1.75} />
-            Voltar pro time
+            Voltar pra equipe
           </button>
-          <h1 style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 700, fontSize: 32, letterSpacing: '-.025em', margin: 0 }}>Histórico de partidas do time</h1>
+          <h1 style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 700, fontSize: 32, letterSpacing: '-.025em', margin: 0 }}>Histórico de partidas da equipe</h1>
           <div style={{ fontSize: 14, color: 'var(--text-muted)', marginTop: 6 }}>
-            Só partidas com pelo menos {MIN_TEAM_MATCH_PLAYERS} membros do time juntos — os números de cada um aparecem separados.
+            Só partidas com pelo menos {MIN_TEAM_MATCH_PLAYERS} membros da equipe juntos — os números de cada um aparecem separados.
           </div>
         </div>
-        <button className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: 9 }} onClick={() => navigate('/time/painel')}>
+        <button className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: 9 }} onClick={() => navigate('/equipe/painel')}>
           <BarChart3 size={15} strokeWidth={1.75} />
-          Painel do time
+          Painel da equipe
         </button>
       </div>
 
-      {teamMatchesError ? (
+      {equipePartidasError ? (
         <div style={{ ...cardStyle, padding: 22, display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'flex-start' }}>
-          <div style={{ fontSize: 14, color: 'var(--text-3)' }}>{teamMatchesError}</div>
-          <button className="btn-secondary" onClick={loadTeamMatches}>
+          <div style={{ fontSize: 14, color: 'var(--text-3)' }}>{equipePartidasError}</div>
+          <button className="btn-secondary" onClick={loadEquipePartidas}>
             Tentar de novo
           </button>
         </div>
-      ) : teamMatches === null ? (
+      ) : equipePartidas === null ? (
         <LoadingFill />
-      ) : teamMatches.length === 0 ? (
+      ) : equipePartidas.length === 0 ? (
         <div style={{ ...cardStyle, padding: 40, textAlign: 'center', color: 'var(--text-muted)', fontSize: 14 }}>
-          Nenhuma partida ainda com {MIN_TEAM_MATCH_PLAYERS}+ membros do time juntos.
+          Nenhuma partida ainda com {MIN_TEAM_MATCH_PLAYERS}+ membros da equipe juntos.
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {teamMatches.map((m) => (
-            <TeamMatchCard key={m.id} match={m} />
+          {equipePartidas.map((m) => (
+            <EquipeMatchCard key={m.id} match={m} />
           ))}
         </div>
       )}

@@ -15,9 +15,9 @@ import type {
   Strategy,
   StratItem,
   SyncStatus,
-  TeamDashboardSummary,
-  TeamMatchSummary,
-  TeamOverview,
+  EquipePainelSummary,
+  PartidaEquipeSummary,
+  EquipeOverview,
 } from '@callout/shared';
 import { apiFetch } from './api';
 
@@ -37,14 +37,14 @@ function rrCacheKey(modo: MatchModeFilter, matchCount: MatchCountFilter, memberI
   return `${modo}:${matchCount}:${memberId ?? 'self'}:${mapId ?? 'all-maps'}`;
 }
 
-// Estado do dashboard/time vive aqui, não dentro das páginas — assim ele
+// Estado do dashboard/equipe vive aqui, não dentro das páginas — assim ele
 // sobrevive a trocar de aba e voltar (React desmonta a página, não o shell).
 // Só rebusca quando a sincronização termina ou quando algo pede explicitamente.
 export function useAppData(user: SessionUser | null) {
   const [sync, setSync] = useState<SyncStatus | null>(null);
 
-  const [team, setTeam] = useState<TeamOverview | null>(null);
-  const [teamError, setTeamError] = useState<string | null>(null);
+  const [equipe, setEquipe] = useState<EquipeOverview | null>(null);
+  const [equipeError, setEquipeError] = useState<string | null>(null);
 
   const [dashboard, setDashboard] = useState<DashboardSummary | null>(null);
   const [dashboardError, setDashboardError] = useState<string | null>(null);
@@ -67,12 +67,12 @@ export function useAppData(user: SessionUser | null) {
 
   const wasSyncing = useRef(false);
 
-  const loadTeam = useCallback(async () => {
+  const loadEquipe = useCallback(async () => {
     try {
-      setTeam(await apiFetch<TeamOverview>('/team'));
-      setTeamError(null);
+      setEquipe(await apiFetch<EquipeOverview>('/equipe'));
+      setEquipeError(null);
     } catch {
-      setTeamError('Falha ao carregar o time.');
+      setEquipeError('Falha ao carregar a equipe.');
     }
   }, []);
 
@@ -131,48 +131,48 @@ export function useAppData(user: SessionUser | null) {
     setMapFilterState(mapId);
   }, []);
 
-  const updateTeamMemberNote = useCallback((userId: string, note: string) => {
-    setTeam((prev) => (prev ? { ...prev, members: prev.members.map((m) => (m.userId === userId ? { ...m, note } : m)) } : prev));
+  const updateEquipeMembroNota = useCallback((userId: string, note: string) => {
+    setEquipe((prev) => (prev ? { ...prev, members: prev.members.map((m) => (m.userId === userId ? { ...m, note } : m)) } : prev));
   }, []);
 
-  const updateTeamMemberSettings = useCallback((userId: string, roles: Funcao[], mainAgents: MainAgent[]) => {
-    setTeam((prev) => (prev ? { ...prev, members: prev.members.map((m) => (m.userId === userId ? { ...m, roles, mainAgents } : m)) } : prev));
+  const updateEquipeMembroConfiguracoes = useCallback((userId: string, roles: Funcao[], mainAgents: MainAgent[]) => {
+    setEquipe((prev) => (prev ? { ...prev, members: prev.members.map((m) => (m.userId === userId ? { ...m, roles, mainAgents } : m)) } : prev));
   }, []);
 
-  const [teamMatches, setTeamMatches] = useState<TeamMatchSummary[] | null>(null);
-  const [teamMatchesError, setTeamMatchesError] = useState<string | null>(null);
-  const [teamMatchesLoading, setTeamMatchesLoading] = useState(false);
+  const [equipePartidas, setEquipePartidas] = useState<PartidaEquipeSummary[] | null>(null);
+  const [equipePartidasError, setEquipePartidasError] = useState<string | null>(null);
+  const [equipePartidasLoading, setEquipePartidasLoading] = useState(false);
 
-  // Histórico completo (>=5 do time juntos) — carrega sob demanda, só quando
-  // a tela de histórico do time é aberta (pode envolver bastante chamada à
-  // HenrikDev pra resolver RR de cada membro).
-  const loadTeamMatches = useCallback(async () => {
-    setTeamMatchesLoading(true);
+  // Histórico completo (>=5 da equipe juntos) — carrega sob demanda, só
+  // quando a tela de histórico da equipe é aberta (pode envolver bastante
+  // chamada à HenrikDev pra resolver RR de cada membro).
+  const loadEquipePartidas = useCallback(async () => {
+    setEquipePartidasLoading(true);
     try {
-      setTeamMatches(await apiFetch<TeamMatchSummary[]>('/team/matches'));
-      setTeamMatchesError(null);
+      setEquipePartidas(await apiFetch<PartidaEquipeSummary[]>('/equipe/partidas'));
+      setEquipePartidasError(null);
     } catch {
-      setTeamMatchesError('Falha ao carregar o histórico de partidas do time.');
+      setEquipePartidasError('Falha ao carregar o histórico de partidas da equipe.');
     } finally {
-      setTeamMatchesLoading(false);
+      setEquipePartidasLoading(false);
     }
   }, []);
 
-  const [teamDashboard, setTeamDashboard] = useState<TeamDashboardSummary | null>(null);
-  const [teamDashboardError, setTeamDashboardError] = useState<string | null>(null);
-  const [teamDashboardLoading, setTeamDashboardLoading] = useState(false);
+  const [equipePainel, setEquipePainel] = useState<EquipePainelSummary | null>(null);
+  const [equipePainelError, setEquipePainelError] = useState<string | null>(null);
+  const [equipePainelLoading, setEquipePainelLoading] = useState(false);
 
-  // Igual teamMatches: carrega sob demanda só quando a tela "Painel do
-  // time" é aberta, fica em cache aqui.
-  const loadTeamDashboard = useCallback(async () => {
-    setTeamDashboardLoading(true);
+  // Igual equipePartidas: carrega sob demanda só quando a tela "Painel da
+  // equipe" é aberta, fica em cache aqui.
+  const loadEquipePainel = useCallback(async () => {
+    setEquipePainelLoading(true);
     try {
-      setTeamDashboard(await apiFetch<TeamDashboardSummary>('/team/dashboard'));
-      setTeamDashboardError(null);
+      setEquipePainel(await apiFetch<EquipePainelSummary>('/equipe/painel'));
+      setEquipePainelError(null);
     } catch {
-      setTeamDashboardError('Falha ao carregar o painel do time.');
+      setEquipePainelError('Falha ao carregar o painel da equipe.');
     } finally {
-      setTeamDashboardLoading(false);
+      setEquipePainelLoading(false);
     }
   }, []);
 
@@ -287,7 +287,7 @@ export function useAppData(user: SessionUser | null) {
       setSync(status);
       if (status.state !== 'syncing') startSync();
     }).catch(() => {});
-    loadTeam();
+    loadEquipe();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [riotId]);
 
@@ -335,7 +335,7 @@ export function useAppData(user: SessionUser | null) {
       wasSyncing.current = false;
       loadDashboard(modoFilter, selectedMemberId, mapFilter);
       loadSides(modoFilter, selectedMemberId, mapFilter);
-      loadTeam();
+      loadEquipe();
       loadRrHistory(modoFilter, matchCountFilter, selectedMemberId, mapFilter);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -359,19 +359,19 @@ export function useAppData(user: SessionUser | null) {
   return {
     sync,
     startSync,
-    team,
-    teamError,
-    reloadTeam: loadTeam,
-    updateTeamMemberNote,
-    updateTeamMemberSettings,
-    teamMatches,
-    teamMatchesError,
-    teamMatchesLoading,
-    loadTeamMatches,
-    teamDashboard,
-    teamDashboardError,
-    teamDashboardLoading,
-    loadTeamDashboard,
+    equipe,
+    equipeError,
+    reloadEquipe: loadEquipe,
+    updateEquipeMembroNota,
+    updateEquipeMembroConfiguracoes,
+    equipePartidas,
+    equipePartidasError,
+    equipePartidasLoading,
+    loadEquipePartidas,
+    equipePainel,
+    equipePainelError,
+    equipePainelLoading,
+    loadEquipePainel,
     dashboard,
     dashboardError,
     dashboardLoading,

@@ -1,5 +1,5 @@
 import { useNavigate, useOutletContext } from 'react-router-dom';
-import type { AgentWinrate, DashboardSummary, MapWinrate, MatchCountFilter, MatchModeFilter, RecentFormInsights, RrHistoryPoint, SessionUser, SidesBreakdown, TeamOverview } from '@callout/shared';
+import type { AgentWinrate, DashboardSummary, MapWinrate, MatchCountFilter, MatchModeFilter, RecentFormInsights, RrHistoryPoint, SessionUser, SidesBreakdown, EquipeOverview } from '@callout/shared';
 import type { OutletContext } from '../components/AppShell';
 import { LoadingFill, SnakeSpinner } from '../components/Spinner';
 import { MatchRow } from '../components/MatchRow';
@@ -206,20 +206,20 @@ function MatchCountButtons({ matchCountFilter, setMatchCountFilter }: { matchCou
   );
 }
 
-// Filtro "ver painel de outro membro" — só entram membros do time com Riot
-// ID vinculado (m.hasRiotLinked), já que sem isso não tem partida sincronizada
-// pra montar painel nenhum. Não aparece quando ninguém além de você mesmo
-// está nessa condição.
+// Filtro "ver painel de outro membro" — só entram membros da equipe com
+// Riot ID vinculado (m.hasRiotLinked), já que sem isso não tem partida
+// sincronizada pra montar painel nenhum. Não aparece quando ninguém além
+// de você mesmo está nessa condição.
 function MemberFilterSelect({
-  team,
+  equipe,
   selectedMemberId,
   setSelectedMemberId,
 }: {
-  team: TeamOverview | null;
+  equipe: EquipeOverview | null;
   selectedMemberId: string | null;
   setSelectedMemberId: (id: string | null) => void;
 }) {
-  const options = (team?.members ?? []).filter((m) => m.hasRiotLinked && !m.isSelf);
+  const options = (equipe?.members ?? []).filter((m) => m.hasRiotLinked && !m.isSelf);
   if (options.length === 0) return null;
 
   return (
@@ -583,7 +583,7 @@ export function Dashboard() {
   const {
     sync,
     startSync,
-    team,
+    equipe,
     dashboard: data,
     dashboardError: error,
     dashboardLoading: loading,
@@ -603,7 +603,7 @@ export function Dashboard() {
   } = useOutletContext<OutletContext>();
   const { user } = useSession();
 
-  const selectedMember = selectedMemberId ? (team?.members.find((m) => m.userId === selectedMemberId) ?? null) : null;
+  const selectedMember = selectedMemberId ? (equipe?.members.find((m) => m.userId === selectedMemberId) ?? null) : null;
   const isSelf = !selectedMemberId;
   const subject = selectedMember?.name ?? 'você';
 
@@ -649,7 +649,7 @@ export function Dashboard() {
           )}
         </div>
         <div className="dashboard-header-actions">
-          <MemberFilterSelect team={team} selectedMemberId={selectedMemberId} setSelectedMemberId={setSelectedMemberId} />
+          <MemberFilterSelect equipe={equipe} selectedMemberId={selectedMemberId} setSelectedMemberId={setSelectedMemberId} />
           <MapFilterSelect mapWinrates={data?.mapWinrates ?? []} mapFilter={mapFilter} setMapFilter={setMapFilter} />
           <ModoFilterButtons modoFilter={modoFilter} setModoFilter={setModoFilter} />
           <div className="dashboard-action-buttons">

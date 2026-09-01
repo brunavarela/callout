@@ -1,17 +1,17 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useOutletContext } from 'react-router-dom';
 import { ArrowLeft, ChevronRight, History, TrendingDown, TrendingUp } from 'lucide-react';
-import { MIN_TEAM_MATCH_PLAYERS, type BestAgentComposition, type LineupCombo, type LineupComboMatch, type TeamAgentPerformance } from '@callout/shared';
+import { MIN_TEAM_MATCH_PLAYERS, type BestAgentComposition, type LineupCombo, type LineupComboMatch, type EquipeAgentePerformance } from '@callout/shared';
 import type { OutletContext } from '../components/AppShell';
 import { LoadingFill } from '../components/Spinner';
 import { cardStyle, WIN, LOSS, DRAW, rateBarColor, plural, RateBlock, RankingBlock, type RankingRow } from '../components/statsPrimitives';
 import { AgentAvatar } from '../components/AgentAvatar';
 
-// Altura fixa dos 4 cards médios (Variações de time, Destaques do time, Em
-// quais mapas o time ganha, Melhores agentes do time) — pra ficarem todos
-// do mesmo tamanho independente de quanto conteúdo cada um tem. O que não
-// couber rola dentro do próprio card (título/cabeçalho de coluna continuam
-// fixos, só a lista rola).
+// Altura fixa dos 4 cards médios (Variações de equipe, Destaques da equipe,
+// Em quais mapas a equipe ganha, Melhores agentes da equipe) — pra ficarem
+// todos do mesmo tamanho independente de quanto conteúdo cada um tem. O que
+// não couber rola dentro do próprio card (título/cabeçalho de coluna
+// continuam fixos, só a lista rola).
 const MEDIUM_CARD_HEIGHT = 320;
 
 function PlayerInitials({ name, size }: { name: string; size: number }) {
@@ -75,7 +75,7 @@ function AgentComboKpiTile({ compo }: { compo: BestAgentComposition | null }) {
         <span style={{ fontSize: 11.5, lineHeight: 1.35, color: 'var(--text-dim)' }}>
           {compo
             ? compo.isFallback
-              ? `Última vitória do time com essa composição — ${compo.playedAtLabel}.`
+              ? `Última vitória da equipe com essa composição — ${compo.playedAtLabel}.`
               : `${plural(compo.wins, 'vitória')} em ${plural(compo.total, 'partida')} com essa composição.`
             : 'Ainda sem vitórias registradas.'}
         </span>
@@ -86,9 +86,9 @@ function AgentComboKpiTile({ compo }: { compo: BestAgentComposition | null }) {
 
 // Iniciais de cada jogador da formação (hover mostra o nome completo) —
 // quem são, não "quem falta", e sem ordenar por winrate: "variações de
-// time" é sobre o que aconteceu, não um ranking de qual formação é
-// "melhor" (isso soaria como "o time rende mais sem Fulano"). Ordenado por
-// quantas vezes cada formação jogou.
+// equipe" é sobre o que aconteceu, não um ranking de qual formação é
+// "melhor" (isso soaria como "a equipe rende mais sem Fulano"). Ordenado
+// por quantas vezes cada formação jogou.
 const LINEUP_COLUMNS = '16px 1fr 74px 74px 56px 50px 66px';
 
 function comboResultColor(result: LineupComboMatch['result']): string {
@@ -186,8 +186,8 @@ function LineupVariations({ combos }: { combos: LineupCombo[] }) {
     <div style={{ ...cardStyle, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 11, height: MEDIUM_CARD_HEIGHT }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
         <div>
-          <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 15 }}>Variações de time - Jogadores</div>
-          <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 3 }}>Formações de 5 jogadores diferentes nas partidas do time</div>
+          <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 15 }}>Variações de equipe - Jogadores</div>
+          <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 3 }}>Formações de 5 jogadores diferentes nas partidas da equipe</div>
         </div>
         <span style={{ fontSize: 10.5, color: 'var(--text-faint)', whiteSpace: 'nowrap' }}>OT = overtime</span>
       </div>
@@ -218,11 +218,11 @@ function LineupVariations({ combos }: { combos: LineupCombo[] }) {
 // Kills/assistências/first bloods são média por partida jogada com o
 // agente (mesma base do impacto/ACS) — total puro premiaria só quem foi
 // mais pickado, não quem rendeu mais quando jogado.
-function BestAgentsTable({ agents }: { agents: TeamAgentPerformance[] }) {
+function BestAgentsTable({ agents }: { agents: EquipeAgentePerformance[] }) {
   return (
     <div style={{ ...cardStyle, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 11, height: MEDIUM_CARD_HEIGHT }}>
       <div>
-        <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 15 }}>Melhores agentes do time</div>
+        <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 15 }}>Melhores agentes da equipe</div>
         <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 3 }}>Kills, assistências e first bloods são média por partida com o agente</div>
       </div>
       {agents.length === 0 ? (
@@ -261,10 +261,10 @@ function BestAgentsTable({ agents }: { agents: TeamAgentPerformance[] }) {
   );
 }
 
-function DestaquesDoTime({ insights }: { insights: string[] }) {
+function DestaquesDaEquipe({ insights }: { insights: string[] }) {
   return (
     <div style={{ ...cardStyle, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 11, height: MEDIUM_CARD_HEIGHT }}>
-      <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 15 }}>Destaques do time</div>
+      <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 15 }}>Destaques da equipe</div>
       {insights.length === 0 ? (
         <div style={{ fontSize: 12.5, color: 'var(--text-faint)' }}>Sem destaques ainda.</div>
       ) : (
@@ -281,13 +281,13 @@ function DestaquesDoTime({ insights }: { insights: string[] }) {
   );
 }
 
-export function TeamDashboard() {
+export function EquipePainel() {
   const navigate = useNavigate();
-  const { team, teamDashboard: data, teamDashboardError: error, teamDashboardLoading: loading, loadTeamDashboard } = useOutletContext<OutletContext>();
+  const { equipe, equipePainel: data, equipePainelError: error, equipePainelLoading: loading, loadEquipePainel } = useOutletContext<OutletContext>();
 
   useEffect(() => {
-    if (data === null && !loading) loadTeamDashboard();
-  }, [data, loading, loadTeamDashboard]);
+    if (data === null && !loading) loadEquipePainel();
+  }, [data, loading, loadEquipePainel]);
 
   // Maior taxa de vitória, sem piso de amostra — mapWinrates já vem
   // ordenado desc por winratePercent, então é só pegar o primeiro (mesmo
@@ -329,9 +329,9 @@ export function TeamDashboard() {
 
   const insights: string[] = [];
   if (data) {
-    if (data.acsRanking[0]) insights.push(`${data.acsRanking[0].name} lidera o ranking de ACS do time, com ${data.acsRanking[0].value} de média.`);
+    if (data.acsRanking[0]) insights.push(`${data.acsRanking[0].name} lidera o ranking de ACS da equipe, com ${data.acsRanking[0].value} de média.`);
     if (data.mvpRanking[0] && data.mvpRanking[0].value > 0) {
-      insights.push(`${data.mvpRanking[0].name} foi MVP em ${plural(data.mvpRanking[0].value, 'partida')} do time.`);
+      insights.push(`${data.mvpRanking[0].name} foi MVP em ${plural(data.mvpRanking[0].value, 'partida')} da equipe.`);
     }
     if (data.assistRanking[0]) insights.push(`${data.assistRanking[0].name} lidera em assistências, com ${data.assistRanking[0].value} no total.`);
     if (data.clutchRanking[0] && data.clutchRanking[0].clutchesWon > 0) {
@@ -348,20 +348,20 @@ export function TeamDashboard() {
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
         <div>
           <button
-            onClick={() => navigate('/time')}
+            onClick={() => navigate('/equipe')}
             style={{ display: 'flex', alignItems: 'center', gap: 7, background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 12.5, cursor: 'pointer', padding: 0, marginBottom: 10 }}
           >
             <ArrowLeft size={14} strokeWidth={1.75} />
-            Voltar pro time
+            Voltar pra equipe
           </button>
-          <h1 style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 700, fontSize: 32, letterSpacing: '-.025em', margin: 0 }}>Painel do time</h1>
+          <h1 style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 700, fontSize: 32, letterSpacing: '-.025em', margin: 0 }}>Painel da equipe</h1>
           <div style={{ fontSize: 14, color: 'var(--text-muted)', marginTop: 6 }}>
             {data
               ? `${plural(data.qualifyingMatchCount, 'partida')} juntos · ${data.wins}V–${data.losses}D · ${data.winratePercent}%`
-              : `${team ? team.name : ''} · partidas com pelo menos ${MIN_TEAM_MATCH_PLAYERS} membros do time juntos`}
+              : `${equipe ? equipe.name : ''} · partidas com pelo menos ${MIN_TEAM_MATCH_PLAYERS} membros da equipe juntos`}
           </div>
         </div>
-        <button className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: 9 }} onClick={() => navigate('/time/partidas')}>
+        <button className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: 9 }} onClick={() => navigate('/equipe/partidas')}>
           <History size={15} strokeWidth={1.75} />
           Histórico de partidas
         </button>
@@ -370,7 +370,7 @@ export function TeamDashboard() {
       {error ? (
         <div style={{ ...cardStyle, padding: 22, display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'flex-start' }}>
           <div style={{ fontSize: 14, color: 'var(--text-3)' }}>{error}</div>
-          <button className="btn-secondary" onClick={loadTeamDashboard}>
+          <button className="btn-secondary" onClick={loadEquipePainel}>
             Tentar de novo
           </button>
         </div>
@@ -378,7 +378,7 @@ export function TeamDashboard() {
         <LoadingFill />
       ) : data.qualifyingMatchCount === 0 ? (
         <div style={{ ...cardStyle, padding: 40, textAlign: 'center', color: 'var(--text-muted)', fontSize: 14 }}>
-          Nenhuma partida ainda com {MIN_TEAM_MATCH_PLAYERS}+ membros do time juntos.
+          Nenhuma partida ainda com {MIN_TEAM_MATCH_PLAYERS}+ membros da equipe juntos.
         </div>
       ) : (
         <>
@@ -402,24 +402,24 @@ export function TeamDashboard() {
             <LineupVariations combos={data.lineupCombos} />
             <BestAgentsTable agents={data.bestAgents} />
             <RateBlock
-              title="Em quais mapas o time ganha"
+              title="Em quais mapas a equipe ganha"
               sub="% de partidas vencidas em cada mapa"
               rows={data.mapWinrates.map((m) => ({ key: m.map, name: m.map, wins: m.wins, total: m.total }))}
               colorFor={rateBarColor}
               maxHeight={MEDIUM_CARD_HEIGHT}
             />
-            <DestaquesDoTime insights={insights} />
+            <DestaquesDaEquipe insights={insights} />
           </div>
 
           {/* 8 cards pequenos, 4 colunas x 2 linhas */}
           <div className="grid-responsive-4">
-            <RankingBlock title="Ranking de ACS" sub="Média de ACS nas partidas do time" rows={acsRows} />
-            <RankingBlock title="Ranking de MVP" sub="Maior ACS do time na partida" rows={mvpRows} />
-            <RankingBlock title="Ranking de assistências" sub="Total de assistências nas partidas do time" rows={assistRows} />
+            <RankingBlock title="Ranking de ACS" sub="Média de ACS nas partidas da equipe" rows={acsRows} />
+            <RankingBlock title="Ranking de MVP" sub="Maior ACS da equipe na partida" rows={mvpRows} />
+            <RankingBlock title="Ranking de assistências" sub="Total de assistências nas partidas da equipe" rows={assistRows} />
             <RankingBlock title="Ranking de clutches" sub="Rounds ganhos sozinho contra a vantagem numérica" rows={clutchRows} />
             <RankingBlock title="Ranking de first bloods" sub="Primeira eliminação do round" rows={firstBloodRows} />
             <RankingBlock title="Ranking de primeira morte" sub="Primeiro a morrer no round" rows={firstDeathRows} />
-            <RankingBlock title="Agentes mais pickados" sub="Em todas as partidas do time" rows={agentRows} />
+            <RankingBlock title="Agentes mais pickados" sub="Em todas as partidas da equipe" rows={agentRows} />
             <div style={{ ...cardStyle, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 14 }}>
               <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 15 }}>Destaques de placar</div>
               <div>

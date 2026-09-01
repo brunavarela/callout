@@ -112,7 +112,7 @@ async function persistMatch(match: MatchV4Data, selfPuuid: string, selfRr: numbe
   // partida inteira, não zero — `roundCount || 1` nunca protegia disso.
   // `stats.score` é a pontuação total da partida, então dividir por esse
   // "round" único inflava o ACS pra milhares. countsTowardStats (mesma
-  // allowlist usada em dashboard.ts/team.ts) evita gravar esse número sem
+  // allowlist usada em dashboard.ts/equipe.ts) evita gravar esse número sem
   // sentido já na sincronização — só Competitivo/Sem classificação/Premier
   // ganham ACS de verdade, o resto fica 0.
   const map = await ensureMapAsset(match.metadata.map.name);

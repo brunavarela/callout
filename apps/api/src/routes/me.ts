@@ -3,7 +3,7 @@ import { z } from "zod";
 import { THEME_MODES, THEME_PALETTE } from "@callout/shared";
 import { requireAuth } from "../lib/session.js";
 import { toSessionUser } from "../lib/dto.js";
-import { getUserTeam } from "../lib/team.js";
+import { getUserEquipe } from "../lib/equipe.js";
 import { prisma } from "../lib/prisma.js";
 
 // Cor principal também colore valores positivos; cor negativa é
@@ -33,6 +33,6 @@ export async function meRoutes(app: FastifyInstance) {
       },
     });
 
-    return toSessionUser(user, await getUserTeam(user.id));
+    return toSessionUser(user, await getUserEquipe(user.id));
   });
 }

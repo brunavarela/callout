@@ -17,7 +17,7 @@ export function LoginStep2() {
   useEffect(() => {
     if (loading) return;
     if (!user) navigate('/login', { replace: true });
-    else if (!user.team) navigate('/login/time', { replace: true });
+    else if (!user.equipe) navigate('/login/equipe', { replace: true });
   }, [loading, user, navigate]);
 
   async function handleSubmit() {

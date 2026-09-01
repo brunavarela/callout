@@ -1,4 +1,4 @@
-import type { BestAgentComposition, LineupComboMatch, MatchV4Data, TeamAgentPerformance, TeamAgentPick, TeamDashboardSummary, TeamStandoutMatch } from "@callout/shared";
+import type { BestAgentComposition, LineupComboMatch, MatchV4Data, EquipeAgentePerformance, EquipeAgentePick, EquipePainelSummary, EquipePartidaDestaque } from "@callout/shared";
 import { MIN_TEAM_MATCH_PLAYERS } from "@callout/shared";
 import { prisma } from "./prisma.js";
 import { loadAgentColorsByName } from "./assets.js";
@@ -9,7 +9,7 @@ import { replayMatchStats } from "./matchReplay.js";
 const round0 = (n: number) => Math.round(n);
 const round1 = (n: number) => Math.round(n * 10) / 10;
 
-const EMPTY_SUMMARY: TeamDashboardSummary = {
+const EMPTY_SUMMARY: EquipePainelSummary = {
   qualifyingMatchCount: 0,
   wins: 0,
   losses: 0,
@@ -32,7 +32,7 @@ const EMPTY_SUMMARY: TeamDashboardSummary = {
   closestMatch: null,
 };
 
-function computeStreaks(resultsOldToNew: boolean[]): { current: TeamDashboardSummary["currentStreak"]; bestWinStreak: number } {
+function computeStreaks(resultsOldToNew: boolean[]): { current: EquipePainelSummary["currentStreak"]; bestWinStreak: number } {
   if (resultsOldToNew.length === 0) return { current: { type: null, count: 0 }, bestWinStreak: 0 };
 
   const last = resultsOldToNew[resultsOldToNew.length - 1]!;
@@ -52,26 +52,27 @@ function computeStreaks(resultsOldToNew: boolean[]): { current: TeamDashboardSum
   return { current: { type: last ? "V" : "D", count }, bestWinStreak };
 }
 
-// Painel do time: agregado sobre as mesmas "partidas do time" do histórico
-// em grupo (buildTeamMatches) — >=MIN_TEAM_MATCH_PLAYERS membros rastreados
-// juntos —, com uma exigência a mais: todo mundo do MESMO lado (teamId).
-// buildTeamMatches não checa isso porque não precisa (só lista partidas);
+// Painel da equipe: agregado sobre as mesmas "partidas da equipe" do
+// histórico em grupo (buildEquipeMatches) — >=MIN_TEAM_MATCH_PLAYERS
+// membros rastreados juntos —, com uma exigência a mais: todo mundo do
+// MESMO lado (MatchPlayer.teamId, Red/Blue — não é o id da nossa Equipe).
+// buildEquipeMatches não checa isso porque não precisa (só lista partidas);
 // aqui precisa, senão as variações de formação não fariam sentido se o
 // grupo tivesse caído dividido nos dois lados por acaso.
-export async function buildTeamDashboard(teamId: string): Promise<TeamDashboardSummary | null> {
-  const team = await prisma.team.findUnique({ where: { id: teamId }, include: { members: { include: { user: true } } } });
-  if (!team) return null;
+export async function buildEquipePainel(equipeId: string): Promise<EquipePainelSummary | null> {
+  const equipe = await prisma.equipe.findUnique({ where: { id: equipeId }, include: { membros: { include: { user: true } } } });
+  if (!equipe) return null;
 
-  const trackedMembers = team.members.filter((m) => m.user.riotPuuid);
+  const trackedMembers = equipe.membros.filter((m) => m.user.riotPuuid);
   if (trackedMembers.length === 0) return EMPTY_SUMMARY;
 
   const memberByPuuid = new Map(trackedMembers.map((m) => [m.user.riotPuuid as string, m]));
-  const nameByUserId = new Map(team.members.map((m) => [m.userId, m.user.riotName ?? m.user.discordUsername]));
+  const nameByUserId = new Map(equipe.membros.map((m) => [m.userId, m.user.riotName ?? m.user.discordUsername]));
   const puuids = [...memberByPuuid.keys()];
 
   // Sem `include: { match: true }` — puxaria o rawJson da partida (~400KB
   // em média) uma vez por jogador rastreado nela, não uma vez por partida.
-  // Sem recorte de data (histórico é tudo, igual buildTeamMatches), isso é
+  // Sem recorte de data (histórico é tudo, igual buildEquipeMatches), isso é
   // exatamente o padrão que estourou a memória em produção. Busca os campos
   // do jogador + só o `modo` do match primeiro, decide quais partidas
   // qualificam, e só então busca o rawJson dessas partidas — uma vez cada.
@@ -79,14 +80,14 @@ export async function buildTeamDashboard(teamId: string): Promise<TeamDashboardS
   // Só Competitivo/Sem classificação/Premier — os rankings (ACS, MVP etc.)
   // não podem ser contaminados por Deathmatch (ACS não é comparável, não
   // tem round pra ganhar/perder) ou outros modos fora desse conjunto,
-  // mesmo que o histórico bruto do time (buildTeamMatches) mostre todo mundo.
+  // mesmo que o histórico bruto da equipe (buildEquipeMatches) mostre todo mundo.
   const rows = (
     await prisma.matchPlayer.findMany({
       where: { puuid: { in: puuids } },
       select: {
         matchId: true,
         puuid: true,
-        teamId: true,
+        teamId: true, // lado Red/Blue bruto da HenrikDev — não é o id da nossa Equipe
         won: true,
         agentName: true,
         acs: true,
@@ -154,11 +155,11 @@ export async function buildTeamDashboard(teamId: string): Promise<TeamDashboardS
   const agentPickCounts = new Map<string, number>();
   const agentPerfAgg = new Map<string, { kills: number; assists: number; firstBloods: number; acsSum: number; count: number }>();
 
-  let biggestWin: TeamStandoutMatch | null = null;
+  let biggestWin: EquipePartidaDestaque | null = null;
   let biggestWinMargin = -Infinity;
-  let worstLoss: TeamStandoutMatch | null = null;
+  let worstLoss: EquipePartidaDestaque | null = null;
   let worstLossMargin = Infinity; // mais negativo = derrota mais dura
-  let closestMatch: TeamStandoutMatch | null = null;
+  let closestMatch: EquipePartidaDestaque | null = null;
   let closestMatchMargin = Infinity;
 
   for (const { match, list } of qualifying) {
@@ -259,7 +260,7 @@ export async function buildTeamDashboard(teamId: string): Promise<TeamDashboardS
       agentPerfAgg.set(r.agentName, perfEntry);
     }
 
-    const standout: TeamStandoutMatch = {
+    const standout: EquipePartidaDestaque = {
       matchId: match.id,
       map,
       score: `${score.own}—${score.opponent}`,
@@ -285,7 +286,7 @@ export async function buildTeamDashboard(teamId: string): Promise<TeamDashboardS
     .sort((a, b) => b.winratePercent - a.winratePercent);
 
   // Ordenado por quantas vezes essa formação jogou, não por winrate —
-  // "variações de time" é sobre o que aconteceu, não um ranking de qual
+  // "variações de equipe" é sobre o que aconteceu, não um ranking de qual
   // formação é "melhor" (isso soa mal apontando pra quem ficou de fora).
   const lineupCombos = [...byCombo.entries()]
     .map(([comboKey, s]) => {
@@ -310,7 +311,7 @@ export async function buildTeamDashboard(teamId: string): Promise<TeamDashboardS
     .sort((a, b) => b.total - a.total);
 
   // Composição de 5 agentes com mais vitórias repetidas; sem nenhuma
-  // repetição de peso (>1 vitória), cai pra "a última vez que o time
+  // repetição de peso (>1 vitória), cai pra "a última vez que a equipe
   // ganhou", que é sempre uma composição válida (não uma "melhor" de
   // verdade, só a mais recente que funcionou).
   const bestCompoEntry = [...byAgentCompo.values()].sort((a, b) => b.wins - a.wins)[0];
@@ -361,7 +362,7 @@ export async function buildTeamDashboard(teamId: string): Promise<TeamDashboardS
     .sort((a, b) => b.value - a.value);
 
   const agentColors = await loadAgentColorsByName();
-  const mostPickedAgents: TeamAgentPick[] = [...agentPickCounts.entries()]
+  const mostPickedAgents: EquipeAgentePick[] = [...agentPickCounts.entries()]
     .map(([agent, count]) => ({ agent, color: agentColors.get(agent) ?? "#9A9DA1", count }))
     .sort((a, b) => b.count - a.count)
     .slice(0, 6);
@@ -391,7 +392,7 @@ export async function buildTeamDashboard(teamId: string): Promise<TeamDashboardS
   const assistsNorm = normalize(perAgent.map((a) => a.assists));
   const fbNorm = normalize(perAgent.map((a) => a.firstBloods));
   const impactNorm = normalize(perAgent.map((a) => a.impact));
-  const bestAgents: TeamAgentPerformance[] = perAgent
+  const bestAgents: EquipeAgentePerformance[] = perAgent
     .map((a) => ({ ...a, score: (killsNorm(a.kills) + assistsNorm(a.assists) + fbNorm(a.firstBloods) + impactNorm(a.impact)) / 4 }))
     .sort((a, b) => b.score - a.score)
     .map(({ score: _score, ...rest }) => rest);

@@ -7,7 +7,7 @@ import { ThemeSettings } from './ThemeSettings';
 
 const BASE_NAV_ITEMS = [
   { to: '/', label: 'Painel', icon: LayoutDashboard, match: (p: string) => p === '/' },
-  { to: '/time', label: 'Time', icon: Users, match: (p: string) => p.startsWith('/time') },
+  { to: '/equipe', label: 'Equipe', icon: Users, match: (p: string) => p.startsWith('/equipe') },
   { to: '/board', label: 'Estratégia', icon: PenTool, match: (p: string) => p.startsWith('/board') },
   { to: '/spots', label: 'Spots', icon: MapPin, match: (p: string) => p === '/spots' },
   { to: '/competicoes', label: 'Competições', icon: Trophy, match: (p: string) => p.startsWith('/competicoes') },
@@ -149,7 +149,7 @@ export function AppShell() {
   const navigate = useNavigate();
   const { user, loading } = useSession();
   const appData = useAppData(user);
-  const { team } = appData;
+  const { equipe } = appData;
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(() => {
     try {
@@ -173,7 +173,7 @@ export function AppShell() {
 
   if (loading) return null;
   if (!user) return <Navigate to="/login" replace />;
-  if (!user.team) return <Navigate to="/login/time" replace />;
+  if (!user.equipe) return <Navigate to="/login/equipe" replace />;
   if (!user.riotId) return <Navigate to="/login/vincular" replace />;
 
   const navItems = [
@@ -206,7 +206,7 @@ export function AppShell() {
               callout<span style={{ color: 'var(--acc, #EF4958)' }}>.</span>
             </div>
             <div style={{ fontSize: 10, letterSpacing: '.12em', color: 'var(--text-muted)', marginTop: 3, whiteSpace: 'nowrap' }}>
-              {team ? `${team.name.toUpperCase()} · ${team.memberCount} MEMBRO${team.memberCount === 1 ? '' : 'S'}` : '…'}
+              {equipe ? `${equipe.name.toUpperCase()} · ${equipe.memberCount} MEMBRO${equipe.memberCount === 1 ? '' : 'S'}` : '…'}
             </div>
           </div>
           {/* Mesma marca do favicon.svg, sem o retângulo de fundo preto — só
@@ -286,7 +286,7 @@ export function AppShell() {
               <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 15 }}>
                 Já revisou o painel
                 <br />
-                do time?
+                da equipe?
               </div>
               <div style={{ fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.5, marginTop: 6 }}>
                 Dá uma olhada nas estatísticas da equipe e o impacto que você causa.
@@ -294,9 +294,9 @@ export function AppShell() {
               <button
                 className="btn-primary"
                 style={{ width: '100%', marginTop: 14, padding: 9, fontSize: 13, justifyContent: 'center' }}
-                onClick={() => navigate('/time/painel')}
+                onClick={() => navigate('/equipe/painel')}
               >
-                Painel do time
+                Painel da equipe
               </button>
             </div>
           </div>

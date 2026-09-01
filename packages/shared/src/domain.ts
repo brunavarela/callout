@@ -73,7 +73,7 @@ export interface SessionUser {
   discordUsername: string;
   discordAvatarUrl: string | null;
   riotId: { name: string; tag: string; puuid: string } | null;
-  team: { id: string; name: string } | null;
+  equipe: { id: string; name: string } | null;
   theme: ThemePreferences;
   isAdmin: boolean;
 }
@@ -251,7 +251,7 @@ export interface MainAgent {
   name: string;
 }
 
-export interface TeamMemberCard {
+export interface MembroEquipeCard {
   userId: string;
   name: string;
   rankLabel: string;
@@ -265,36 +265,37 @@ export interface TeamMemberCard {
   hasRiotLinked: boolean; // Riot ID vinculado — só esses membros têm painel individual pra ver
 }
 
-export interface TeamOverview {
+export interface EquipeOverview {
   id: string;
   name: string;
-  ownerId: string;
-  // Código de convite (POST /teams/join) — visível pra qualquer membro do
-  // time, mesmo espírito de "recado social" e função serem editáveis por
-  // todo mundo (README do handoff: bagunça de amigos, sem controle de
+  donoId: string;
+  // Código de convite (POST /equipes/entrar) — visível pra qualquer membro
+  // da equipe, mesmo espírito de "recado social" e função serem editáveis
+  // por todo mundo (README do handoff: bagunça de amigos, sem controle de
   // permissão fino aqui).
-  inviteCode: string;
+  codigoConvite: string;
   memberCount: number;
   matchesTogether30d: number;
   groupWinratePercent: number;
-  members: TeamMemberCard[];
+  members: MembroEquipeCard[];
 }
 
-// Body do PATCH /team/members/:userId/settings — igual "nota", qualquer
-// membro do time pode editar de qualquer outro (ver README do handoff).
-export interface TeamMemberSettingsInput {
+// Body do PATCH /equipe/membros/:userId/configuracoes — igual "nota",
+// qualquer membro da equipe pode editar de qualquer outro (ver README do
+// handoff).
+export interface ConfiguracoesMembroInput {
   funcoes: Funcao[]; // até MAX_FUNCOES
   mainAgentUuids: string[]; // até MAX_MAIN_AGENTS
 }
 export const MAX_FUNCOES = 2;
 export const MAX_MAIN_AGENTS = 3;
 
-// --- Histórico de partidas do time (GET /team/matches) ---
-// Só entram partidas com pelo menos MIN_TEAM_MATCH_PLAYERS membros do time
-// juntos — "meus números" vira uma lista, um item por membro que jogou.
+// --- Histórico de partidas da equipe (GET /equipe/partidas) ---
+// Só entram partidas com pelo menos MIN_TEAM_MATCH_PLAYERS membros da
+// equipe juntos — "meus números" vira uma lista, um item por membro que jogou.
 export const MIN_TEAM_MATCH_PLAYERS = 5;
 
-export interface TeamMatchParticipant {
+export interface ParticipanteEquipeMatch {
   userId: string;
   name: string;
   agent: string;
@@ -307,16 +308,16 @@ export interface TeamMatchParticipant {
   result: "V" | "D" | "E";
 }
 
-export interface TeamMatchSummary {
+export interface PartidaEquipeSummary {
   id: string;
   map: string;
   score: string;
   playedAtLabel: string;
-  participants: TeamMatchParticipant[];
+  participants: ParticipanteEquipeMatch[];
 }
 
-// --- Painel do time (GET /team/dashboard) ---
-// Agregado sobre as mesmas partidas "do time" do histórico em grupo
+// --- Painel da equipe (GET /equipe/painel) ---
+// Agregado sobre as mesmas partidas "da equipe" do histórico em grupo
 // (>=MIN_TEAM_MATCH_PLAYERS membros rastreados juntos, do mesmo lado).
 
 // Forma genérica pra qualquer ranking "nome + valor" — ACS médio,
@@ -367,7 +368,7 @@ export interface LineupCombo {
   matches: LineupComboMatch[]; // mais recente primeiro
 }
 
-export interface TeamAgentPick {
+export interface EquipeAgentePick {
   agent: string;
   color: string;
   count: number;
@@ -377,7 +378,7 @@ export interface TeamAgentPick {
 // média por partida jogada com aquele agente (mesma base do "impacto", que
 // é o ACS médio — misturar total com média deixaria agente pouco jogado
 // injustamente baixo ou um agente muito jogado inflado só por volume).
-export interface TeamAgentPerformance {
+export interface EquipeAgentePerformance {
   agent: string;
   color: string;
   picks: number;
@@ -399,7 +400,7 @@ export interface BestAgentComposition {
   playedAtLabel: string | null;
 }
 
-export interface TeamStandoutMatch {
+export interface EquipePartidaDestaque {
   matchId: string;
   map: string;
   score: string;
@@ -407,7 +408,7 @@ export interface TeamStandoutMatch {
   playedAtLabel: string;
 }
 
-export interface TeamDashboardSummary {
+export interface EquipePainelSummary {
   qualifyingMatchCount: number;
   wins: number;
   losses: number;
@@ -417,17 +418,17 @@ export interface TeamDashboardSummary {
   mapWinrates: MapWinrate[];
   lineupCombos: LineupCombo[];
   bestAgentComposition: BestAgentComposition | null;
-  bestAgents: TeamAgentPerformance[];
+  bestAgents: EquipeAgentePerformance[];
   acsRanking: MemberStatRow[];
   assistRanking: MemberStatRow[];
   mvpRanking: MemberStatRow[];
   clutchRanking: MemberClutchRow[];
   firstBloodRanking: MemberStatRow[];
   firstDeathRanking: MemberStatRow[];
-  mostPickedAgents: TeamAgentPick[];
-  biggestWin: TeamStandoutMatch | null;
-  worstLoss: TeamStandoutMatch | null;
-  closestMatch: TeamStandoutMatch | null;
+  mostPickedAgents: EquipeAgentePick[];
+  biggestWin: EquipePartidaDestaque | null;
+  worstLoss: EquipePartidaDestaque | null;
+  closestMatch: EquipePartidaDestaque | null;
 }
 
 // --- Board de estratégia ---
@@ -447,7 +448,7 @@ export interface StratItem {
 
 export interface Strategy {
   id: string;
-  teamId: string;
+  equipeId: string;
   mapId: string;
   mapName: string;
   mapDisplayIcon: string | null;

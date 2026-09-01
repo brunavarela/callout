@@ -10,11 +10,6 @@ export const currentUser = {
   rank: 'Ascendente 1',
 };
 
-export const team = {
-  name: 'Os boys',
-  memberCount: 7,
-};
-
 export const rankHistory = ['V', 'V', 'D', 'V', 'D', 'D', 'V', 'V', 'V', 'D', 'V', 'D', 'V', 'V'] as const;
 
 export const stats = [
@@ -41,30 +36,6 @@ export const byAgent = [
   { name: 'Brimstone', wr: 47, color: '#7B3FA8' },
   { name: 'Jett', wr: 42, color: '#7FD3DB' },
   { name: 'Omen', wr: 33, color: '#4F5258' },
-];
-
-export interface TeamMember {
-  name: string;
-  role: 'CONTROLADOR' | 'DUELISTA' | 'INICIADOR' | 'SENTINELA';
-  rank: string;
-  note: string;
-  kda: string;
-  kdaW: number;
-  acs: string;
-  acsW: number;
-  wr: string;
-  wrW: number;
-  highlight: boolean;
-}
-
-export const teamMembers: TeamMember[] = [
-  { name: 'thiago', role: 'CONTROLADOR', rank: 'Ascendente 1', note: 'Segura o mapa inteiro sozinho e reclama depois.', kda: '1,40', kdaW: 58, acs: '248', acsW: 66, wr: '61%', wrW: 61, highlight: true },
-  { name: 'lucas', role: 'DUELISTA', rank: 'Ascendente 2', note: 'Entry mais agressivo do grupo. 61% de first blood.', kda: '1,31', kdaW: 53, acs: '234', acsW: 60, wr: '58%', wrW: 58, highlight: false },
-  { name: 'bento', role: 'INICIADOR', rank: 'Platina 3', note: 'Flashes limpas, mas morre no reposicionamento.', kda: '1,22', kdaW: 48, acs: '220', acsW: 54, wr: '55%', wrW: 55, highlight: false },
-  { name: 'nando', role: 'CONTROLADOR', rank: 'Platina 2', note: 'Smoke no tempo certo. Mira em construção.', kda: '1,13', kdaW: 43, acs: '206', acsW: 48, wr: '52%', wrW: 52, highlight: false },
-  { name: 'pipoca', role: 'DUELISTA', rank: 'Ouro 3', note: 'Alta variância. Ou carrega ou desaparece.', kda: '1,04', kdaW: 38, acs: '192', acsW: 42, wr: '49%', wrW: 49, highlight: false },
-  { name: 'dedé', role: 'SENTINELA', rank: 'Platina 1', note: 'Melhor winrate defensivo do time.', kda: '0,95', kdaW: 33, acs: '178', acsW: 36, wr: '46%', wrW: 46, highlight: false },
-  { name: 'jow', role: 'INICIADOR', rank: 'Ouro 2', note: 'Voltou depois de 6 meses fora.', kda: '0,86', kdaW: 28, acs: '164', acsW: 30, wr: '43%', wrW: 43, highlight: false },
 ];
 
 export const boardCallouts = [

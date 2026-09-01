@@ -3,7 +3,7 @@ import { z } from "zod";
 import { requireAuth } from "../lib/session.js";
 import { prisma } from "../lib/prisma.js";
 import { ensureMapAsset, loadUsageStats, toStrategyDTO } from "../lib/strategy.js";
-import { getUserTeamId } from "../lib/team.js";
+import { getUserEquipeId } from "../lib/equipe.js";
 
 const STRATEGY_INCLUDE = { items: true, map: true, criadoPor: true } as const;
 
@@ -32,11 +32,11 @@ const updateBodySchema = z.object({
 
 export async function strategiesRoutes(app: FastifyInstance) {
   app.get("/strategies", { preHandler: requireAuth }, async (request, reply) => {
-    const teamId = await getUserTeamId(request.user!.id);
-    if (!teamId) return reply.code(404).send({ error: "Nenhum time encontrado." });
+    const equipeId = await getUserEquipeId(request.user!.id);
+    if (!equipeId) return reply.code(404).send({ error: "Você ainda não tem uma equipe." });
 
     const strategies = await prisma.strategy.findMany({
-      where: { teamId },
+      where: { equipeId },
       include: STRATEGY_INCLUDE,
       orderBy: { updatedAt: "desc" },
     });
@@ -46,10 +46,10 @@ export async function strategiesRoutes(app: FastifyInstance) {
 
   app.get("/strategies/:id", { preHandler: requireAuth }, async (request, reply) => {
     const { id } = request.params as { id: string };
-    const teamId = await getUserTeamId(request.user!.id);
-    if (!teamId) return reply.code(404).send({ error: "Nenhum time encontrado." });
+    const equipeId = await getUserEquipeId(request.user!.id);
+    if (!equipeId) return reply.code(404).send({ error: "Você ainda não tem uma equipe." });
 
-    const strategy = await prisma.strategy.findFirst({ where: { id, teamId }, include: STRATEGY_INCLUDE });
+    const strategy = await prisma.strategy.findFirst({ where: { id, equipeId }, include: STRATEGY_INCLUDE });
     if (!strategy) return reply.code(404).send({ error: "Estratégia não encontrada." });
     const usage = (await loadUsageStats([strategy.id])).get(strategy.id);
     return toStrategyDTO(strategy, usage);
@@ -61,14 +61,14 @@ export async function strategiesRoutes(app: FastifyInstance) {
       return reply.code(400).send({ error: parsed.error.issues[0]?.message ?? "Dados inválidos" });
     }
 
-    const teamId = await getUserTeamId(request.user!.id);
-    if (!teamId) return reply.code(404).send({ error: "Nenhum time encontrado." });
+    const equipeId = await getUserEquipeId(request.user!.id);
+    if (!equipeId) return reply.code(404).send({ error: "Você ainda não tem uma equipe." });
 
     const map = await ensureMapAsset(parsed.data.mapName);
 
     const strategy = await prisma.strategy.create({
       data: {
-        teamId,
+        equipeId,
         mapId: map.id,
         lado: parsed.data.side,
         titulo: parsed.data.title,
@@ -88,10 +88,10 @@ export async function strategiesRoutes(app: FastifyInstance) {
       return reply.code(400).send({ error: parsed.error.issues[0]?.message ?? "Dados inválidos" });
     }
 
-    const teamId = await getUserTeamId(request.user!.id);
-    if (!teamId) return reply.code(404).send({ error: "Nenhum time encontrado." });
+    const equipeId = await getUserEquipeId(request.user!.id);
+    if (!equipeId) return reply.code(404).send({ error: "Você ainda não tem uma equipe." });
 
-    const existing = await prisma.strategy.findFirst({ where: { id, teamId } });
+    const existing = await prisma.strategy.findFirst({ where: { id, equipeId } });
     if (!existing) return reply.code(404).send({ error: "Estratégia não encontrada." });
 
     const { items, ...fields } = parsed.data;
@@ -131,10 +131,10 @@ export async function strategiesRoutes(app: FastifyInstance) {
   // limpa os dois, sem precisar de transação manual aqui.
   app.delete("/strategies/:id", { preHandler: requireAuth }, async (request, reply) => {
     const { id } = request.params as { id: string };
-    const teamId = await getUserTeamId(request.user!.id);
-    if (!teamId) return reply.code(404).send({ error: "Nenhum time encontrado." });
+    const equipeId = await getUserEquipeId(request.user!.id);
+    if (!equipeId) return reply.code(404).send({ error: "Você ainda não tem uma equipe." });
 
-    const existing = await prisma.strategy.findFirst({ where: { id, teamId } });
+    const existing = await prisma.strategy.findFirst({ where: { id, equipeId } });
     if (!existing) return reply.code(404).send({ error: "Estratégia não encontrada." });
 
     await prisma.strategy.delete({ where: { id } });

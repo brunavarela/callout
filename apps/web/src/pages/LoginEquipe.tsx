@@ -6,7 +6,7 @@ import { apiFetch, ApiError } from '../lib/api';
 
 type Mode = 'criar' | 'entrar';
 
-export function LoginTeam() {
+export function LoginEquipe() {
   const navigate = useNavigate();
   const { user, loading, logout, refresh } = useSession();
   const [mode, setMode] = useState<Mode>('criar');
@@ -21,8 +21,8 @@ export function LoginTeam() {
       navigate('/login', { replace: true });
       return;
     }
-    // Já tem time (voltou pra essa URL à toa) — segue o fluxo normal.
-    if (user.team) navigate(user.riotId ? '/' : '/login/vincular', { replace: true });
+    // Já tem equipe (voltou pra essa URL à toa) — segue o fluxo normal.
+    if (user.equipe) navigate(user.riotId ? '/' : '/login/vincular', { replace: true });
   }, [loading, user, navigate]);
 
   function switchMode(next: Mode) {
@@ -32,7 +32,7 @@ export function LoginTeam() {
 
   async function handleSubmit() {
     if (mode === 'criar' && !nome.trim()) {
-      setError('Dá um nome pro time.');
+      setError('Dá um nome pra equipe.');
       return;
     }
     if (mode === 'entrar' && !code.trim()) {
@@ -43,9 +43,9 @@ export function LoginTeam() {
     setSubmitting(true);
     try {
       if (mode === 'criar') {
-        await apiFetch('/teams', { method: 'POST', body: JSON.stringify({ nome: nome.trim() }) });
+        await apiFetch('/equipes', { method: 'POST', body: JSON.stringify({ nome: nome.trim() }) });
       } else {
-        await apiFetch('/teams/join', { method: 'POST', body: JSON.stringify({ code: code.trim() }) });
+        await apiFetch('/equipes/entrar', { method: 'POST', body: JSON.stringify({ code: code.trim() }) });
       }
       await refresh();
       navigate('/login/vincular');
@@ -68,10 +68,10 @@ export function LoginTeam() {
       <h1 className="login-heading" style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 700, lineHeight: 1.06, letterSpacing: '-.03em', margin: '0 0 16px' }}>
         Monte
         <br />
-        seu time.
+        sua equipe.
       </h1>
       <p style={{ fontSize: 16, lineHeight: 1.6, color: 'var(--text-muted)', margin: '0 0 24px', maxWidth: '38ch' }}>
-        Crie um time novo ou entre num que já existe com o código de convite.
+        Crie uma equipe nova ou entre numa que já existe com o código de convite.
       </p>
 
       <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
@@ -82,7 +82,7 @@ export function LoginTeam() {
           onClick={() => switchMode('criar')}
           disabled={submitting}
         >
-          Criar time
+          Criar equipe
         </button>
         <button
           type="button"
@@ -101,7 +101,7 @@ export function LoginTeam() {
             className="input-field"
             value={nome}
             onChange={(e) => setNome(e.target.value)}
-            placeholder="Nome do time"
+            placeholder="Nome da equipe"
             disabled={submitting}
           />
         ) : (

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { MAX_FUNCOES, MAX_MAIN_AGENTS, PLACEHOLDER_AGENTS, type AgentAsset, type Funcao, type MainAgent, type TeamMemberCard } from '@callout/shared';
+import { MAX_FUNCOES, MAX_MAIN_AGENTS, PLACEHOLDER_AGENTS, type AgentAsset, type Funcao, type MainAgent, type MembroEquipeCard } from '@callout/shared';
 import { agentImageUrl } from '../lib/agentImages';
 import { apiFetch } from '../lib/api';
 
@@ -17,13 +17,13 @@ interface AgentOption {
   color: string;
 }
 
-export function TeamSettingsModal({
+export function MembroConfiguracoesModal({
   member,
   agents,
   onClose,
   onSaved,
 }: {
-  member: TeamMemberCard;
+  member: MembroEquipeCard;
   agents: AgentAsset[] | null;
   onClose: () => void;
   onSaved: (roles: Funcao[], mainAgents: MainAgent[]) => void;
@@ -62,7 +62,7 @@ export function TeamSettingsModal({
     setSaving(true);
     setError(null);
     try {
-      await apiFetch(`/team/members/${member.userId}/settings`, {
+      await apiFetch(`/equipe/membros/${member.userId}/configuracoes`, {
         method: 'PATCH',
         body: JSON.stringify({ funcoes: roles, mainAgentUuids: selectedUuids }),
       });

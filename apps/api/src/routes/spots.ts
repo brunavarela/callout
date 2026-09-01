@@ -4,7 +4,7 @@ import { requireAuth } from "../lib/session.js";
 import { prisma } from "../lib/prisma.js";
 import { toSpotDTO } from "../lib/spots.js";
 import { loadAgentsByUuid } from "../lib/assets.js";
-import { getUserTeamId } from "../lib/team.js";
+import { getUserEquipeId } from "../lib/equipe.js";
 
 const SPOT_INCLUDE = { map: true, criadoPor: true } as const;
 
@@ -37,15 +37,15 @@ const createBodySchema = z.object({
 });
 
 export async function spotsRoutes(app: FastifyInstance) {
-  // Spot é escopado por time desde a migration team_multi_tenancy_1 — antes
-  // era global (PROGRESS.md, Fase 4), qualquer usuário logado via/apagava
-  // spot de qualquer time.
+  // Spot é escopado por equipe desde a migration team_multi_tenancy_1 —
+  // antes era global (PROGRESS.md, Fase 4), qualquer usuário logado
+  // via/apagava spot de qualquer equipe.
   app.get("/spots", { preHandler: requireAuth }, async (request, reply) => {
-    const teamId = await getUserTeamId(request.user!.id);
-    if (!teamId) return reply.code(404).send({ error: "Você ainda não tem um time." });
+    const equipeId = await getUserEquipeId(request.user!.id);
+    if (!equipeId) return reply.code(404).send({ error: "Você ainda não tem uma equipe." });
 
     const [spots, agentsByUuid] = await Promise.all([
-      prisma.spot.findMany({ where: { teamId }, include: SPOT_INCLUDE, orderBy: { createdAt: "desc" } }),
+      prisma.spot.findMany({ where: { equipeId }, include: SPOT_INCLUDE, orderBy: { createdAt: "desc" } }),
       loadAgentsByUuid(),
     ]);
     return spots.map((spot) => toSpotDTO(spot, agentsByUuid));
@@ -57,15 +57,15 @@ export async function spotsRoutes(app: FastifyInstance) {
       return reply.code(400).send({ error: parsed.error.issues[0]?.message ?? "Dados inválidos" });
     }
 
-    const teamId = await getUserTeamId(request.user!.id);
-    if (!teamId) return reply.code(404).send({ error: "Você ainda não tem um time." });
+    const equipeId = await getUserEquipeId(request.user!.id);
+    if (!equipeId) return reply.code(404).send({ error: "Você ainda não tem uma equipe." });
 
     const map = await prisma.mapAsset.findUnique({ where: { id: parsed.data.mapId } });
     if (!map) return reply.code(400).send({ error: "Mapa inválido." });
 
     const spot = await prisma.spot.create({
       data: {
-        teamId,
+        equipeId,
         mapId: map.id,
         agentUuid: parsed.data.agentId,
         side: parsed.data.side,
@@ -83,10 +83,10 @@ export async function spotsRoutes(app: FastifyInstance) {
 
   app.delete("/spots/:id", { preHandler: requireAuth }, async (request, reply) => {
     const { id } = request.params as { id: string };
-    const teamId = await getUserTeamId(request.user!.id);
-    if (!teamId) return reply.code(404).send({ error: "Você ainda não tem um time." });
+    const equipeId = await getUserEquipeId(request.user!.id);
+    if (!equipeId) return reply.code(404).send({ error: "Você ainda não tem uma equipe." });
 
-    const existing = await prisma.spot.findFirst({ where: { id, teamId } });
+    const existing = await prisma.spot.findFirst({ where: { id, equipeId } });
     if (!existing) return reply.code(404).send({ error: "Spot não encontrado." });
 
     await prisma.spot.delete({ where: { id } });
