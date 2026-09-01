@@ -28,7 +28,7 @@ export function LoginShell({ children }: { children: ReactNode }) {
             }}
           />
           <div style={{ position: 'relative', display: 'flex', alignItems: 'center', color: 'var(--text)' }}>
-            <Logo height={24} />
+            <Logo height={38} />
           </div>
 
           <div style={{ position: 'relative', maxWidth: 460 }}>{children}</div>

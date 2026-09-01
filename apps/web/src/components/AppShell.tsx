@@ -203,7 +203,7 @@ export function AppShell() {
         </div>
         <div className="app-sidebar-header" style={{ position: 'relative', padding: '24px 16px 16px' }}>
           <div className="sidebar-fade sidebar-fade--col" style={{ minWidth: 0, color: 'var(--text)' }}>
-            <Logo height={20} />
+            <Logo height={28} />
             <div style={{ fontSize: 10, letterSpacing: '.12em', color: 'var(--text-muted)', marginTop: 5, whiteSpace: 'nowrap' }}>
               {equipe ? `${equipe.name.toUpperCase()} · ${equipe.memberCount} MEMBRO${equipe.memberCount === 1 ? '' : 'S'}` : '…'}
             </div>
@@ -212,7 +212,7 @@ export function AppShell() {
               sidebar recolhida (fade cruzado via CSS, cor herdada de
               .sidebar-brand-mark). */}
           <div className="sidebar-brand-mark">
-            <LogoMark size={20} />
+            <LogoMark size={26} />
           </div>
         </div>
 

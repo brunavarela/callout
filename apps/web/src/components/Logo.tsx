@@ -28,16 +28,24 @@ const WORD_PATHS = [
   'M353.773 48.856V74.584C353.773 76.376 354.189 77.688 355.021 78.52C355.917 79.288 357.389 79.672 359.437 79.672H365.677V91H357.229C345.901 91 340.237 85.496 340.237 74.488V48.856H333.901V37.816H340.237V24.664H353.773V37.816H365.677V48.856H353.773Z',
 ] as const;
 
+// `weight` engrossa o traço por cima do preenchimento (stroke centrado na
+// borda do path) — os desenhos originais só vieram numa espessura só, essa
+// é a forma de "encorpar" sem redesenhar cada letra/mira à mão. 0 = como
+// veio do arquivo original.
+const STROKE_PROPS = (weight: number) =>
+  weight > 0 ? { stroke: 'currentColor' as const, strokeWidth: weight, strokeLinejoin: 'round' as const } : {};
+
 // Wordmark completo — sidebar expandida, telas de login.
-export function Logo({ height = 22 }: { height?: number }) {
+export function Logo({ height = 22, weight = 3 }: { height?: number; weight?: number }) {
   const width = (height * 366) / 114;
+  const strokeProps = STROKE_PROPS(weight);
   return (
     <svg width={width} height={height} viewBox="0 0 366 114" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="callout">
       {WORD_PATHS.map((d, i) => (
-        <path key={i} d={d} fill="currentColor" />
+        <path key={i} d={d} fill="currentColor" {...strokeProps} />
       ))}
       {MARK_PATHS.map((d, i) => (
-        <path key={i} d={d} fill="currentColor" />
+        <path key={i} d={d} fill="currentColor" {...strokeProps} />
       ))}
       <path d={MARK_DOT} fill="var(--acc, #EF4958)" />
     </svg>
@@ -46,11 +54,12 @@ export function Logo({ height = 22 }: { height?: number }) {
 
 // Só a mira — sidebar recolhida, qualquer lugar que precise de um ícone
 // quadrado em vez do wordmark inteiro.
-export function LogoMark({ size = 20 }: { size?: number }) {
+export function LogoMark({ size = 20, weight = 3 }: { size?: number; weight?: number }) {
+  const strokeProps = STROKE_PROPS(weight);
   return (
     <svg width={size} height={size} viewBox="158.832 0 114 114" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="callout">
       {MARK_PATHS.map((d, i) => (
-        <path key={i} d={d} fill="currentColor" />
+        <path key={i} d={d} fill="currentColor" {...strokeProps} />
       ))}
       <path d={MARK_DOT} fill="var(--acc, #EF4958)" />
     </svg>

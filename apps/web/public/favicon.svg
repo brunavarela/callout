@@ -1,8 +1,8 @@
 <svg width="114" height="114" viewBox="158.832 0 114 114" xmlns="http://www.w3.org/2000/svg">
   <style>
-    .cl-mark { fill: #0F0F10; }
+    .cl-mark { fill: #0F0F10; stroke: #0F0F10; stroke-width: 3px; stroke-linejoin: round; }
     @media (prefers-color-scheme: dark) {
-      .cl-mark { fill: #F5F5F5; }
+      .cl-mark { fill: #F5F5F5; stroke: #F5F5F5; }
     }
   </style>
   <path class="cl-mark" d="M166.744 50.5268C170.628 16.4347 197.132 6.47319 209.898 5.75394V23.3754C191.054 26.5401 184.185 42.795 183.106 50.5268H166.744Z"/>
