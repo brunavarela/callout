@@ -69,6 +69,8 @@ export function Equipe() {
     );
   }
 
+  const isAdmin = equipe.members.find((m) => m.isSelf)?.isAdmin ?? false;
+
   return (
     <div style={{ padding: 26, display: 'flex', flexDirection: 'column', gap: 20 }}>
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 20, flexWrap: 'wrap' }}>
@@ -81,13 +83,15 @@ export function Equipe() {
         <div style={{ flex: 1, minWidth: 220 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <h1 style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 700, fontSize: 32, letterSpacing: '-.025em', margin: 0 }}>{equipe.name}</h1>
-            <button
-              onClick={() => navigate('/equipe/configuracoes')}
-              title="Configurações da equipe"
-              style={{ background: 'none', border: 'none', color: 'var(--text-faint)', cursor: 'pointer', padding: 4, display: 'flex' }}
-            >
-              <Settings size={18} strokeWidth={1.75} />
-            </button>
+            {isAdmin && (
+              <button
+                onClick={() => navigate('/equipe/configuracoes')}
+                title="Configurações da equipe"
+                style={{ background: 'none', border: 'none', color: 'var(--text-faint)', cursor: 'pointer', padding: 4, display: 'flex' }}
+              >
+                <Settings size={18} strokeWidth={1.75} />
+              </button>
+            )}
           </div>
           <div style={{ fontSize: 14, color: 'var(--text-muted)', marginTop: 4, lineHeight: 1.5 }}>{equipe.descricao || 'Sem descrição ainda.'}</div>
           <div style={{ fontSize: 13, color: 'var(--text-dim)', marginTop: 8 }}>
