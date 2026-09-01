@@ -3,6 +3,8 @@ import { Settings, History, BarChart3 } from 'lucide-react';
 import type { MembroEquipeCard } from '@callout/shared';
 import type { OutletContext } from '../components/AppShell';
 import { LoadingFill } from '../components/Spinner';
+import { MainAgentIcons } from '../components/MainAgentIcons';
+import { CARGO_LABEL } from '../lib/cargo';
 
 const cardStyle: React.CSSProperties = { borderRadius: 'var(--radius-lg)', background: 'var(--surface)', border: '1px solid var(--surface-border)' };
 
@@ -10,11 +12,10 @@ function initialsOf(name: string) {
   return name.slice(0, 2).toUpperCase();
 }
 
-const ROW_COLUMNS = '36px minmax(140px,1fr) 90px 90px 70px';
+// Mesmas colunas da tabela de Membros em /equipe/configuracoes, só sem os
+// 3 pontinhos — aqui é só retrato da equipe, nada clicável/editável.
+const ROW_COLUMNS = '36px minmax(120px,1.2fr) 96px minmax(100px,1fr) 150px minmax(140px,1.2fr) 90px';
 
-// Linha de resumo, sem interação nenhuma — a tela inicial da equipe é só
-// um retrato do time; editar (nome/função/cargo/etc.) mora inteiramente em
-// /equipe/configuracoes.
 function MemberRow({ member }: { member: MembroEquipeCard }) {
   return (
     <div style={{ display: 'grid', gridTemplateColumns: ROW_COLUMNS, gap: 14, alignItems: 'center', padding: '10px 0', borderTop: '1px solid var(--divider)', fontSize: 13 }}>
@@ -24,12 +25,16 @@ function MemberRow({ member }: { member: MembroEquipeCard }) {
         {member.avatarUrl ? <img src={member.avatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : initialsOf(member.name)}
       </div>
       <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-        {member.riotIdLabel ?? member.name}
+        {member.name}
         {member.isSelf && <span style={{ marginLeft: 6, fontSize: 10.5, color: 'var(--text-faint)' }}>(você)</span>}
       </span>
-      <span style={{ color: 'var(--text-2)', textAlign: 'right' }}>{member.kda.toFixed(2).replace('.', ',')}</span>
-      <span style={{ color: 'var(--text-2)', textAlign: 'right' }}>{member.acs}</span>
-      <span style={{ color: 'var(--text-2)', textAlign: 'right' }}>{member.hsPercent}%</span>
+      <MainAgentIcons agents={member.mainAgents} />
+      <span style={{ color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{member.riotIdLabel ?? '—'}</span>
+      <span style={{ color: 'var(--text-muted)' }}>{CARGO_LABEL[member.cargo]}</span>
+      <span style={{ color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        {member.roles.length ? member.roles.map((r) => r[0]!.toUpperCase() + r.slice(1)).join(', ') : '—'}
+      </span>
+      <span style={{ color: 'var(--text-dim)', fontSize: 12 }}>{member.joinedAtLabel}</span>
     </div>
   );
 }
@@ -101,18 +106,22 @@ export function Equipe() {
         {equipe.members.length === 0 ? (
           <div style={{ padding: 20, textAlign: 'center', color: 'var(--text-muted)', fontSize: 14 }}>Ninguém na equipe ainda.</div>
         ) : (
-          <>
-            <div style={{ display: 'grid', gridTemplateColumns: ROW_COLUMNS, gap: 14, padding: '0 0 8px', fontSize: 9.5, letterSpacing: '.08em', color: 'var(--text-faint)' }}>
-              <span />
-              <span>APELIDO</span>
-              <span style={{ textAlign: 'right' }}>KDA</span>
-              <span style={{ textAlign: 'right' }}>ACS</span>
-              <span style={{ textAlign: 'right' }}>HS%</span>
+          <div className="scroll-x-mobile">
+            <div style={{ minWidth: 780 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: ROW_COLUMNS, gap: 14, padding: '0 0 8px', fontSize: 9.5, letterSpacing: '.08em', color: 'var(--text-faint)' }}>
+                <span />
+                <span>NOME</span>
+                <span>AGENTES</span>
+                <span>APELIDO</span>
+                <span>CARGO</span>
+                <span>FUNÇÃO</span>
+                <span>ENTROU EM</span>
+              </div>
+              {equipe.members.map((m) => (
+                <MemberRow key={m.userId} member={m} />
+              ))}
             </div>
-            {equipe.members.map((m) => (
-              <MemberRow key={m.userId} member={m} />
-            ))}
-          </>
+          </div>
         )}
       </div>
     </div>

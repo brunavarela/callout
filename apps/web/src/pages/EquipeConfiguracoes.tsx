@@ -9,16 +9,10 @@ import { LoadingFill } from '../components/Spinner';
 import { ConfirmModal } from '../components/ConfirmModal';
 import { MembroConfiguracoesModal } from '../components/MembroConfiguracoesModal';
 import { compressImageToDataUrl } from '../lib/imageCompress';
-import { agentImageUrl } from '../lib/agentImages';
+import { CARGO_LABEL, CARGO_OPTIONS } from '../lib/cargo';
+import { MainAgentIcons } from '../components/MainAgentIcons';
 
 const cardStyle: React.CSSProperties = { borderRadius: 'var(--radius-lg)', background: 'var(--surface)', border: '1px solid var(--surface-border)' };
-
-const CARGO_LABEL: Record<Cargo, string> = {
-  jogador: 'Jogador',
-  treinador_principal: 'Treinador principal',
-  treinador_assistente: 'Treinador assistente',
-};
-const CARGO_OPTIONS: Cargo[] = ['jogador', 'treinador_principal', 'treinador_assistente'];
 
 function initialsOf(name: string) {
   return name.slice(0, 2).toUpperCase();
@@ -187,41 +181,6 @@ function MemberMenu({
 }
 
 const ROW_COLUMNS = '36px minmax(120px,1.2fr) 96px minmax(100px,1fr) 150px minmax(140px,1.2fr) 90px 32px';
-
-// Carinhas dos agentes principais (selecionados no modal de Função) — até
-// MAX_MAIN_AGENTS, mesmo ícone usado no resto do app (agentImageUrl).
-function MainAgentIcons({ agents }: { agents: MembroEquipeCard['mainAgents'] }) {
-  if (agents.length === 0) return <span style={{ color: 'var(--text-faint)' }}>—</span>;
-  return (
-    <div style={{ display: 'flex', gap: 4 }}>
-      {agents.map((a) => {
-        const imageUrl = agentImageUrl(a.name);
-        return (
-          <div
-            key={a.uuid}
-            title={a.name}
-            style={{
-              width: 22,
-              height: 22,
-              borderRadius: 7,
-              overflow: 'hidden',
-              flex: 'none',
-              background: imageUrl ? '#141415' : 'var(--avatar-bg)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: 7,
-              fontWeight: 700,
-              color: 'var(--text-muted)',
-            }}
-          >
-            {imageUrl ? <img src={imageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : a.name.slice(0, 2).toUpperCase()}
-          </div>
-        );
-      })}
-    </div>
-  );
-}
 
 export function EquipeConfiguracoes() {
   const navigate = useNavigate();
