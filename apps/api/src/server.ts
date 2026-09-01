@@ -1,7 +1,13 @@
 import Fastify from "fastify";
 import cors from "@fastify/cors";
 import cookie from "@fastify/cookie";
+import * as Sentry from "@sentry/node";
 import { env } from "./lib/env.js";
+
+// Sem SENTRY_DSN isso é um no-op (Sentry.init aceita dsn undefined e não
+// captura nada) — LAUNCH.md §5 item 4, tier gratuito. Precisa rodar antes
+// de qualquer outra coisa pra capturar erro de boot também.
+Sentry.init({ dsn: env.SENTRY_DSN, sendDefaultPii: false });
 import { authRoutes } from "./routes/auth.js";
 import { dashboardRoutes } from "./routes/dashboard.js";
 import { syncRoutes } from "./routes/sync.js";
@@ -18,6 +24,7 @@ import { competicoesRoutes } from "./routes/competicoes.js";
 // Default do Fastify é 1MB — spots levam até 3 imagens comprimidas em
 // base64 (data URL), que sozinhas já passam disso.
 const app = Fastify({ logger: true, bodyLimit: 10 * 1024 * 1024 });
+Sentry.setupFastifyErrorHandler(app);
 
 await app.register(cors, {
   origin: env.WEB_ORIGIN,

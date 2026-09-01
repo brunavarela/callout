@@ -9,6 +9,11 @@ const envSchema = z.object({
   SESSION_SECRET: z.string().min(16),
   PORT: z.coerce.number().default(3333),
   WEB_ORIGIN: z.string().min(1),
+  // Error tracking (Sentry, tier gratuito) — opcional de propósito. Sem
+  // DSN, Sentry.init() vira no-op (ver server.ts) em vez de quebrar o
+  // boot; só liga de verdade quando alguém criar o projeto no Sentry e
+  // colar o DSN aqui.
+  SENTRY_DSN: z.string().optional(),
 });
 
 const parsed = envSchema.safeParse(process.env);
