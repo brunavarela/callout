@@ -175,11 +175,10 @@ uma vez.
 
 Ordem sugerida — cada item destrava o próximo:
 
-1. **Multi-tenancy real de time**: criar time deixa de ser automático no
-   primeiro login; usuário cria um time ou entra via convite (código/link).
-   `Spot` ganha `teamId` (migration); `GET /spots` filtra por time do
-   usuário logado. Revisar todo `team.findFirst()`/padrão equivalente em
-   `sync.ts`/`match-result.ts`.
+1. ✅ **Multi-tenancy real de time** (feito 2026-09-01) — criar time deixou
+   de ser automático no primeiro login; usuário cria um time ou entra via
+   convite (código). `Spot` ganhou `teamId`. Todo `team.findFirst()` foi
+   substituído por resolução via `TeamMember` do usuário logado.
 2. **Auth aberta**: tirar `findGuildMembership()` do fluxo obrigatório, ou
    virar allowlist opcional por time (dono do time restringe quem entra no
    *time dele*, não mais controle de acesso da plataforma inteira).
@@ -192,6 +191,67 @@ Ordem sugerida — cada item destrava o próximo:
 5. **Paywall técnico** (só depois de 1–4 de pé): campo de plano/assinatura
    no usuário ou tabela `subscriptions` (status, `currentPeriodEnd`,
    gateway, `externalId`); guard nas rotas de `team`/`strategies`/`spots`.
+6. **Login sem depender do Discord** — ver §5.1 abaixo. Especificado,
+   ainda não implementado (RSO está bloqueado pela Riot; e-mail é decisão
+   em aberto).
+
+### 5.1 Login sem Discord — spec pronta pra quando decidirmos tocar
+
+Discutido em 2026-09-01: Discord como único jeito de entrar exclui gente que
+joga sério, tem time, mas nunca abriu conta lá. Dois caminhos, não
+excludentes:
+
+**a) E-mail + código de uso único** (curto prazo, não depende de ninguém
+externo). Quem autentica de verdade é o e-mail — o código só prova posse da
+caixa de entrada. Riot ID continua vinculado depois exatamente como hoje
+(campo `nome#tag`, validado na HenrikDev). Custo real de implementar:
+provedor de e-mail transacional (Resend/Postmark), configurar domínio/DKIM
+pra não cair em spam, rate-limit no envio do código pra evitar abuso.
+
+**b) "Entrar com a Riot" (RSO)** — o pedido desta conversa. RSO é o OAuth2
+oficial da Riot: resolve login **e** o opt-in de compartilhamento de dado
+que a política exige (§3.1) na mesma tela, sem precisar do passo manual de
+"digite seu Riot ID" — a Riot devolve a identidade já verificada.
+
+- **Bloqueio real, sem jeito de contornar**: diferente do Discord (app
+  próprio, self-service, client_id na hora), a Riot só entrega
+  `client_id`/`client_secret` e registra o `redirect_uri` do RSO **depois**
+  de aprovar o produto no Developer Portal (mesmo processo de §3.1). Não dá
+  pra construir nem testar o fluxo de verdade antes disso — não é falta de
+  tempo, é falta de credencial. Por isso "deixar pronto" aqui significa
+  **especificação completa**, não código funcionando.
+- **Fluxo previsto** (espelha o Discord OAuth já implementado em
+  `apps/api/src/lib/discord.ts` + `routes/auth.ts`, adaptável quando a
+  credencial sair):
+  1. `GET /auth/riot` — redireciona pra authorize URL da Riot
+     (`client_id`, `redirect_uri`, `scope`, `state` em cookie httpOnly,
+     mesmo padrão do `STATE_COOKIE` de hoje).
+  2. `GET /auth/riot/callback` — troca `code` por token; a Riot devolve a
+     identidade do jogador (puuid) já autenticada — substitui, só nesse
+     ponto, a chamada não-autenticada de hoje pra HenrikDev
+     (`getAccountByRiotId` em `auth.ts`, rota `POST /auth/riot`).
+  3. Existe `User` com esse puuid → loga. Não existe → cria — aqui esbarra
+     no ponto de schema abaixo.
+- **Decisão de modelo de dado a tomar só na hora de implementar** (não
+  antecipar agora — a forma exata do que o RSO devolve só fica clara
+  quando a Riot aprovar e a doc de RSO abrir de verdade): hoje
+  `User.discordId` é obrigatório e único, o que por si só impede qualquer
+  login que não seja Discord (RSO ou e-mail). Duas rotas possíveis quando
+  chegar a hora:
+  - Tornar `discordId`/`discordUsername` opcionais em `User` e adicionar os
+    campos do provedor novo direto nele — mexe pouco, mas cada provedor
+    novo vira mais uma constraint única ad-hoc nessa tabela.
+  - Tabela separada `AuthIdentity` (`provider`, `providerId`, `userId`) —
+    padrão usado por bibliotecas tipo Auth.js/NextAuth. Mais peça nova, mas
+    isola login de perfil e escala melhor pra 3 provedores (Discord, RSO,
+    e-mail) sem remexer `User` a cada um. **Recomendação**: essa segunda
+    opção, quando for a hora.
+  Não fiz essa migration agora de propósito — mudar o schema hoje pra um
+  formato que pode não bater com o que a Riot realmente devolver seria
+  código morto e não-testável até a aprovação sair.
+
+Fontes: mesmas de §3.1 ([Riot Games Developer Policies](https://developer.riotgames.com/policies/general),
+[VALORANT — Riot Developer Portal](https://developer.riotgames.com/docs/valorant)).
 
 ---
 
