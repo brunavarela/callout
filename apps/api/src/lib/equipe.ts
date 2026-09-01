@@ -36,7 +36,7 @@ export async function criarEquipe(userId: string, nome: string): Promise<Equipe>
   for (let attempt = 0; attempt < 5; attempt++) {
     try {
       return await prisma.equipe.create({
-        data: { nome, donoId: userId, codigoConvite: gerarCodigoConvite(), membros: { create: { userId } } },
+        data: { nome, donoId: userId, codigoConvite: gerarCodigoConvite(), membros: { create: { userId, isAdmin: true } } },
       });
     } catch (err) {
       if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") continue;

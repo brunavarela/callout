@@ -23,6 +23,14 @@ model User {
   funcaoPreferida  String?
   createdAt        DateTime @default(now())
 
+  // Perfil editável pelo próprio dono, em qualquer lugar do app que mostre
+  // esse usuário (não é por-equipe — v1 é 1 equipe por usuário, então dá no
+  // mesmo, ver LAUNCH.md/decisão de 01/09/2026). `null` cai no fallback de
+  // sempre: displayName ?? riotName ?? discordUsername (nome),
+  // avatarUrl ?? discordAvatarUrl (imagem).
+  displayName String?
+  avatarUrl   String? // upload próprio, data URL comprimida no navegador — mesmo padrão de Spot.imagens
+
   // Tema v2 — customizável em runtime (ver design_handoff_callout v2). Cor de
   // ação também colore valores positivos (vitória etc); cor negativa é
   // independente disso, só pra derrotas/valores negativos — se fossem a
@@ -32,9 +40,10 @@ model User {
   themeGlow     Int    @default(70) // 0-100
   themeMode     String @default("dark") // "dark" | "light" — ver ThemeMode em @callout/shared
 
-  // Só quem tem isso true vê o switch de Administrador e pode editar
-  // placar de competição. Setado direto no banco, não tem UI pra virar
-  // admin sozinho.
+  // Admin da PLATAFORMA (não da equipe — ver MembroEquipe.isAdmin pra
+  // isso). Só quem tem isso true vê o switch de Administrador e pode
+  // editar placar de competição. Setado direto no banco, não tem UI pra
+  // virar admin sozinho.
   isAdmin Boolean @default(false)
 
   membrosEquipe    MembroEquipe[]
@@ -139,7 +148,9 @@ model Equipe {
   // Gerado na criação (ver gerarCodigoConvite em lib/equipe.ts) — Prisma não
   // tem default de string aleatória, então é responsabilidade do código de
   // aplicação, com retry em colisão (P2002).
-  codigoConvite String @unique @map("inviteCode")
+  codigoConvite String  @unique @map("inviteCode")
+  imagemUrl     String? // logo/imagem da equipe — data URL comprimida no navegador, mesmo padrão de Spot.imagens
+  descricao     String? // texto livre, editável só por admin (ver routes/equipe.ts)
 
   membros    MembroEquipe[]
   strategies Strategy[]
@@ -160,6 +171,19 @@ model MembroEquipe {
   funcoes         String[] @default([]) // até 2 — controlador | duelista | iniciador | sentinela | flex
   nota            String?  // recado social do card ("Segura o mapa inteiro sozinho..."), editável pelo grupo
   mainAgentUuids  String[] @default([]) // até 3, uuid do AgentAsset — editável pelo grupo, igual funcoes/nota
+  // "jogador" | "treinador_principal" | "treinador_assistente" — validado
+  // via Zod na rota, não aqui (mesmo padrão de side/lado/tipo no resto do
+  // schema). Só jogador tem sentido ter Riot ID vinculado/estatística.
+  cargo   String  @default("jogador")
+  // Dono da equipe (Equipe.donoId) é sempre admin, de forma permanente — não
+  // é removível nem rebaixável (decisão de 01/09/2026, v1: sem transferência
+  // de posse ainda). isAdmin aqui cobre os admins ALÉM do dono, que o dono
+  // pode promover via PATCH /equipe/membros/:userId/admin.
+  isAdmin Boolean @default(false)
+  // "Data de entrada na equipe" — não existia antes desse campo, então
+  // membros anteriores a 01/09/2026 mostram a data da migration, não a
+  // entrada real (não tem como recuperar isso, nunca foi registrado).
+  createdAt DateTime @default(now())
 
   @@unique([equipeId, userId])
   @@map("team_members")
