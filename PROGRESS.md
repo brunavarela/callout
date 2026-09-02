@@ -2,7 +2,7 @@
 
 > Documento de handoff de **implementação** (o que já existe, como rodar,
 > o que falta). Para o briefing de produto/arquitetura, ver [CONTEXT.md](CONTEXT.md).
-> Última atualização: 2026-09-01.
+> Última atualização: 2026-09-02.
 
 ---
 
@@ -176,7 +176,15 @@ pra sair de "zero interação" pra "usável". `boardArrows`/`boardCallouts`
 do mock continuam só como fallback decorativo pros poucos mapas sem
 `mapDisplayIcon` real.
 
-### Fase 4 — Spots + comentários — ✅ completa
+### Fase 4 — Spots + comentários — ✅ completa (comentários removidos depois, ver nota)
+
+> ⚠️ **A UI de comentários foi removida depois** (`d1820f9 feat: reformula a
+> seção de Partidas — lista de 7, spinner, sem comentários/estratégia`) —
+> decisão de produto de 02/09/2026 de não ter isso no lançamento público.
+> O texto abaixo descreve o que foi construído nessa fase, não o estado
+> atual da tela. Endpoint `POST /comments` continua existindo no backend
+> (inofensivo, sem UI ligada nele), Spots continua real e completo.
+
 - ✅ Comentários (2026-08-22): `POST /comments` (`apps/api/src/routes/comments.ts`
   + `apps/api/src/lib/comments.ts`) — polimórfico (`entidadeTipo` +
   `entidadeId`), valida que a entidade (match/strategy/spot) existe antes
@@ -211,7 +219,14 @@ do mock continuam só como fallback decorativo pros poucos mapas sem
   upload de imagem real (nunca teve, nem no mock: o card sempre foi um
   placeholder "PRINT DA MIRA").
 
-### Fase 5 — Heatmap — ✅ completa
+### Fase 5 — Heatmap — ✅ completa, depois removida por inteiro
+
+> ⚠️ **Removida depois, back e front** (`ed76b40 feat: remove Heatmap do
+> app`) — decisão de produto de 02/09/2026 de não ter isso no lançamento
+> público. Diferente de comentários, aqui não sobrou nem endpoint: sem
+> `routes/heatmap.ts`, sem `lib/heatmap.ts`, sem `pages/Heatmap.tsx`. O
+> texto abaixo é só registro histórico do que já existiu.
+
 `GET /heatmap?map=&kind=kills|deaths` (`apps/api/src/routes/heatmap.ts` +
 `apps/api/src/lib/heatmap.ts`) + tela nova `apps/web/src/pages/Heatmap.tsx`
 (nav item novo, rota `/heatmap`). Chips de mapa vêm de
@@ -255,11 +270,11 @@ funciona e é o mesmo padrão do resto do código).
 |---|---|
 | Login (2 etapas) | ✅ real |
 | Dashboard | ✅ real |
-| Time | ✅ real |
+| Equipe | ✅ real |
 | Detalhe de partida | ✅ real (2026-08-22) — `GET /matches/:id`, ver abaixo |
 | Board | ✅ real — carrega/arrasta/adiciona/apaga/salva de verdade, incluindo setas/linhas (ver Fase 3) |
 | Spots | ✅ real (2026-08-22) — lista/filtra/cria com picker no mapa (ver Fase 4) |
-| Heatmap | ✅ real (2026-08-22) — tela nova, `GET /heatmap` (ver Fase 5) |
+| Heatmap | ❌ removida (02/09/2026) — ver nota na Fase 5 |
 
 `MatchDetail.tsx` agora busca `GET /matches/:id` (`apps/api/src/routes/matches.ts`
 + `apps/api/src/lib/matches.ts`) direto na página via `useParams` — não
