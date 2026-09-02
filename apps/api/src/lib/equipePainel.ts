@@ -1,5 +1,5 @@
 import type { BestAgentComposition, LineupComboMatch, MatchV4Data, EquipeAgentePerformance, EquipeAgentePick, EquipePainelSummary, EquipePartidaDestaque } from "@callout/shared";
-import { MIN_TEAM_MATCH_PLAYERS } from "@callout/shared";
+import { MIN_TEAM_MATCH_PLAYERS, MAX_EQUIPE_MATCHES } from "@callout/shared";
 import { prisma } from "./prisma.js";
 import { loadAgentColorsByName } from "./assets.js";
 import { mapNameFrom, scoreFor, formatPlayedAt } from "./dashboard.js";
@@ -72,10 +72,9 @@ export async function buildEquipePainel(equipeId: string): Promise<EquipePainelS
 
   // Sem `include: { match: true }` — puxaria o rawJson da partida (~400KB
   // em média) uma vez por jogador rastreado nela, não uma vez por partida.
-  // Sem recorte de data (histórico é tudo, igual buildEquipeMatches), isso é
-  // exatamente o padrão que estourou a memória em produção. Busca os campos
-  // do jogador + só o `modo` do match primeiro, decide quais partidas
-  // qualificam, e só então busca o rawJson dessas partidas — uma vez cada.
+  // Busca os campos do jogador + só o `modo` do match primeiro, decide
+  // quais partidas qualificam, e só então busca o rawJson das mais
+  // recentes (até MAX_EQUIPE_MATCHES, ver comentário lá) — uma vez cada.
   //
   // Só Competitivo/Sem classificação/Premier — os rankings (ACS, MVP etc.)
   // não podem ser contaminados por Deathmatch (ACS não é comparável, não
@@ -110,12 +109,27 @@ export async function buildEquipePainel(equipeId: string): Promise<EquipePainelS
   );
   if (qualifyingLists.length === 0) return EMPTY_SUMMARY;
 
+  // Teto em duas etapas (ver MAX_EQUIPE_MATCHES): descobre a data de cada
+  // partida qualificada SEM o rawJson, pega só as mais recentes, e só busca
+  // o rawJson de verdade (~400KB cada) pras que sobreviverem ao corte.
+  const qualifyingIds = qualifyingLists.map((list) => list[0]!.matchId);
+  const recentIds = (
+    await prisma.match.findMany({
+      where: { id: { in: qualifyingIds } },
+      select: { id: true },
+      orderBy: { startedAt: "desc" },
+      take: MAX_EQUIPE_MATCHES,
+    })
+  ).map((m) => m.id);
+  const recentIdSet = new Set(recentIds);
+  const cappedQualifyingLists = qualifyingLists.filter((list) => recentIdSet.has(list[0]!.matchId));
+
   const matches = await prisma.match.findMany({
-    where: { id: { in: qualifyingLists.map((list) => list[0]!.matchId) } },
+    where: { id: { in: recentIds } },
     orderBy: { startedAt: "asc" },
   });
   const matchById = new Map(matches.map((m) => [m.id, m]));
-  const qualifying = qualifyingLists
+  const qualifying = cappedQualifyingLists
     .map((list) => ({ match: matchById.get(list[0]!.matchId), list }))
     .filter((x): x is { match: (typeof matches)[number]; list: typeof rows } => x.match !== undefined)
     .sort((a, b) => a.match.startedAt.getTime() - b.match.startedAt.getTime());

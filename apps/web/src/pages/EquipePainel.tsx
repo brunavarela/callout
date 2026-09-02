@@ -419,7 +419,7 @@ export function EquipePainel() {
             <RankingBlock title="Ranking de clutches" sub="Rounds ganhos sozinho contra a vantagem numérica" rows={clutchRows} />
             <RankingBlock title="Ranking de first bloods" sub="Primeira eliminação do round" rows={firstBloodRows} />
             <RankingBlock title="Ranking de primeira morte" sub="Primeiro a morrer no round" rows={firstDeathRows} />
-            <RankingBlock title="Agentes mais pickados" sub="Em todas as partidas da equipe" rows={agentRows} />
+            <RankingBlock title="Agentes mais pickados" sub="Nas últimas partidas da equipe" rows={agentRows} />
             <div style={{ ...cardStyle, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 14 }}>
               <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 15 }}>Destaques de placar</div>
               <div>

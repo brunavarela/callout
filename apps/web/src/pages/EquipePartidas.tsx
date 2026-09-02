@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useOutletContext } from 'react-router-dom';
 import { ArrowLeft, BarChart3, ChevronRight } from 'lucide-react';
 import type { ParticipanteEquipeMatch, PartidaEquipeSummary } from '@callout/shared';
-import { MIN_TEAM_MATCH_PLAYERS } from '@callout/shared';
+import { MIN_TEAM_MATCH_PLAYERS, MAX_EQUIPE_MATCHES } from '@callout/shared';
 import type { OutletContext } from '../components/AppShell';
 import { LoadingFill } from '../components/Spinner';
 import { AgentAvatar } from '../components/AgentAvatar';
@@ -146,7 +146,7 @@ export function EquipePartidas() {
           </button>
           <h1 style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 700, fontSize: 32, letterSpacing: '-.025em', margin: 0 }}>Histórico de partidas da equipe</h1>
           <div style={{ fontSize: 14, color: 'var(--text-muted)', marginTop: 6 }}>
-            Só partidas com pelo menos {MIN_TEAM_MATCH_PLAYERS} membros da equipe juntos — os números de cada um aparecem separados.
+            Últimas {MAX_EQUIPE_MATCHES} partidas com pelo menos {MIN_TEAM_MATCH_PLAYERS} membros da equipe juntos — os números de cada um aparecem separados.
           </div>
         </div>
         <button className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: 9 }} onClick={() => navigate('/equipe/painel')}>

@@ -2,7 +2,7 @@ import type { User, Equipe } from "@prisma/client";
 import { randomBytes } from "node:crypto";
 import { Prisma } from "@prisma/client";
 import type { PartidaEquipeSummary, EquipeOverview } from "@callout/shared";
-import { MIN_TEAM_MATCH_PLAYERS } from "@callout/shared";
+import { MIN_TEAM_MATCH_PLAYERS, MAX_EQUIPE_MATCHES } from "@callout/shared";
 import { prisma } from "./prisma.js";
 import { getMmr } from "./henrikdev.js";
 import { loadAgentsByUuid } from "./assets.js";
@@ -202,8 +202,9 @@ export async function isEquipeAdmin(userId: string, equipeId: string): Promise<b
 }
 
 // Histórico de partidas com pelo menos MIN_TEAM_MATCH_PLAYERS membros da
-// equipe juntos (sem recorte de 30 dias — "histórico" é tudo, diferente do
-// resumo do card da equipe). Como um time de Valorant só tem 5 vagas, exigir
+// equipe juntos, até as MAX_EQUIPE_MATCHES mais recentes (sem recorte de 30
+// dias como o resumo do card da equipe — mas não é "todo o histórico" mais,
+// ver MAX_EQUIPE_MATCHES). Como um time de Valorant só tem 5 vagas, exigir
 // >=5 dos nossos jogados na mesma partida já significa que a equipe inteira
 // daquela partida é gente rastreada — não sobra vaga pra ninguém de fora,
 // então dá pra calcular MVP só entre os `list`, sem query extra dos 10.
@@ -251,9 +252,25 @@ export async function buildEquipeMatches(equipeId: string): Promise<PartidaEquip
   const qualifyingLists = [...byMatch.values()].filter((list) => new Set(list.map((r) => r.puuid)).size >= MIN_TEAM_MATCH_PLAYERS);
   if (qualifyingLists.length === 0) return [];
 
-  const matches = await prisma.match.findMany({ where: { id: { in: qualifyingLists.map((list) => list[0]!.matchId) } } });
+  // Teto em duas etapas (ver MAX_EQUIPE_MATCHES): primeiro descobre a data
+  // de cada partida qualificada SEM o rawJson (~400KB cada), pra decidir
+  // quais são as mais recentes; só busca o rawJson de verdade pras que
+  // sobreviverem ao corte — nunca das outras.
+  const qualifyingIds = qualifyingLists.map((list) => list[0]!.matchId);
+  const recentIds = (
+    await prisma.match.findMany({
+      where: { id: { in: qualifyingIds } },
+      select: { id: true },
+      orderBy: { startedAt: "desc" },
+      take: MAX_EQUIPE_MATCHES,
+    })
+  ).map((m) => m.id);
+  const recentIdSet = new Set(recentIds);
+  const cappedQualifyingLists = qualifyingLists.filter((list) => recentIdSet.has(list[0]!.matchId));
+
+  const matches = await prisma.match.findMany({ where: { id: { in: recentIds } } });
   const matchById = new Map(matches.map((m) => [m.id, m]));
-  const qualifying = qualifyingLists
+  const qualifying = cappedQualifyingLists
     .map((list) => ({ match: matchById.get(list[0]!.matchId), list }))
     .filter((x): x is { match: (typeof matches)[number]; list: typeof rows } => x.match !== undefined)
     .sort((a, b) => b.match.startedAt.getTime() - a.match.startedAt.getTime());

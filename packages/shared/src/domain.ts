@@ -318,6 +318,17 @@ export const MAX_MAIN_AGENTS = 3;
 // equipe juntos — "meus números" vira uma lista, um item por membro que jogou.
 export const MIN_TEAM_MATCH_PLAYERS = 5;
 
+// Teto de quantas partidas qualificadas (>=MIN_TEAM_MATCH_PLAYERS juntos)
+// entram no histórico/painel da equipe — as mais recentes primeiro.
+// Existe por causa de um crash real em produção (02/09/2026): sem teto,
+// buildEquipeMatches/buildEquipePainel buscavam o rawJson (~400KB cada) de
+// TODO o histórico qualificado de uma vez, o que estourou a memória do
+// processo assim que uma equipe acumulou meses de partidas juntas.
+// Deliberadamente conservador (20, não um número maior) — decisão de
+// 02/09/2026 pra não precisar upgradar o plano do Railway antes da hora;
+// revisitar quando a chave oficial da Riot sair e/ou o plano for maior.
+export const MAX_EQUIPE_MATCHES = 20;
+
 export interface ParticipanteEquipeMatch {
   userId: string;
   name: string;
