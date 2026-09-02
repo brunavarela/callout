@@ -166,8 +166,12 @@ uma vez.
 - **Grátis, pra sempre**: dashboard individual (KPIs, histórico, evolução
   de rank, winrate por mapa/agente).
 - **PRO (R$ 19,90/mês, referência)**: Time, Estratégia (Board), Spots.
-- **Em aberto** (ver §10): Heatmap e Comentários entram no grátis (junto do
-  individual) ou no PRO (junto do time)? Preço final ou placeholder?
+- ✅ **Resolvido (02/09/2026):** Heatmap e Comentários **não fazem parte do
+  lançamento** — já tinham sido removidos do produto antes (histórico,
+  ver PROGRESS.md), decisão reconfirmada agora. Não entram nem no grátis
+  nem no PRO por ora; questão de escopo PRO fica só entre Equipe/
+  Estratégia/Spots.
+- **Em aberto** (ver §11): preço final (R$19,90) ou placeholder?
 
 ---
 
@@ -332,10 +336,8 @@ Fontes: mesmas de §3.1 ([Riot Games Developer Policies](https://developer.riotg
 2. **Já existe CNPJ/MEI utilizável, ou abre um novo?** Não bloqueia o
    desenvolvimento (Fase A/B/C), mas precisa estar resolvido **antes** da
    Fase D — vale já direcionar com um contador em paralelo, sem pressa.
-3. **Heatmap e Comentários ficam grátis (com o individual) ou entram no
-   PRO (com Time/Estratégia/Spots)?** Bloqueia o desenho final do paywall
-   técnico (§5 item 5) — precisa estar decidido antes de implementar o
-   guard nas rotas.
+3. ~~Heatmap e Comentários ficam grátis ou PRO?~~ Resolvido (§4) — não
+   fazem parte do lançamento, ponto final.
 4. **Meta de usuários pra soft launch (Fase B) antes de abrir geral (Fase
    C)?** Ajuda a dimensionar infra (Railway/Neon) e o volume esperado pra
    pedir tier de chave (HenrikDev, enquanto a oficial não sai).
