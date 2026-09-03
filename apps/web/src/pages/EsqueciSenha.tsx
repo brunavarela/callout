@@ -2,8 +2,11 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import type { SessionUser } from '@callout/shared';
 import { LoginShell } from '../components/LoginShell';
+import { PasswordField } from '../components/PasswordField';
+import { PasswordRequirements } from '../components/PasswordRequirements';
 import { useSession } from '../lib/session';
 import { apiFetch, ApiError } from '../lib/api';
+import { senhaValida } from '../lib/senha';
 import { routeForStep } from '../lib/onboarding';
 
 export function EsqueciSenha() {
@@ -50,7 +53,7 @@ export function EsqueciSenha() {
   async function handleConfirmar(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-    if (novaSenha.length < 8) return setError('A senha precisa ter pelo menos 8 caracteres.');
+    if (!senhaValida(novaSenha)) return setError('Sua senha ainda não atende todos os requisitos abaixo.');
     if (novaSenha !== confirmarNovaSenha) return setError('As senhas não coincidem.');
 
     setSubmitting(true);
@@ -113,20 +116,11 @@ export function EsqueciSenha() {
               autoFocus
               style={{ letterSpacing: '.3em', textAlign: 'center', fontSize: 20 }}
             />
-            <input
-              className="input-field"
-              type="password"
-              value={novaSenha}
-              onChange={(e) => setNovaSenha(e.target.value)}
-              placeholder="Senha nova (mín. 8 caracteres)"
-              disabled={submitting}
-              autoComplete="new-password"
-            />
-            <input
-              className="input-field"
-              type="password"
+            <PasswordField value={novaSenha} onChange={setNovaSenha} placeholder="Senha nova" disabled={submitting} autoComplete="new-password" />
+            <PasswordRequirements senha={novaSenha} />
+            <PasswordField
               value={confirmarNovaSenha}
-              onChange={(e) => setConfirmarNovaSenha(e.target.value)}
+              onChange={setConfirmarNovaSenha}
               placeholder="Confirmar senha nova"
               disabled={submitting}
               autoComplete="new-password"

@@ -5,6 +5,9 @@ import { LoginShell } from '../components/LoginShell';
 import { AuthTabs } from '../components/AuthTabs';
 import { AuthStepFrame } from '../components/AuthStepFrame';
 import { DataNascimentoField } from '../components/DataNascimentoField';
+import { PasswordField } from '../components/PasswordField';
+import { PasswordRequirements } from '../components/PasswordRequirements';
+import { senhaValida } from '../lib/senha';
 import { apiFetch, ApiError } from '../lib/api';
 
 const RIOT_ID_PATTERN = /^[^#]{3,16}#[A-Za-z0-9]{3,5}$/;
@@ -46,7 +49,7 @@ export function Cadastro() {
       if (!EMAIL_PATTERN.test(email)) return setError('Email inválido.');
       setStep(2);
     } else if (step === 2) {
-      if (senha.length < 8) return setError('A senha precisa ter pelo menos 8 caracteres.');
+      if (!senhaValida(senha)) return setError('Sua senha ainda não atende todos os requisitos abaixo.');
       if (senha !== confirmarSenha) return setError('As senhas não coincidem.');
       setStep(3);
     }
@@ -119,23 +122,9 @@ export function Cadastro() {
 
         {step === 2 && (
           <form onSubmit={handleAvancar} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <input
-              className="input-field"
-              type="password"
-              value={senha}
-              onChange={(e) => setSenha(e.target.value)}
-              placeholder="Senha (mín. 8 caracteres)"
-              autoComplete="new-password"
-              autoFocus
-            />
-            <input
-              className="input-field"
-              type="password"
-              value={confirmarSenha}
-              onChange={(e) => setConfirmarSenha(e.target.value)}
-              placeholder="Confirmar senha"
-              autoComplete="new-password"
-            />
+            <PasswordField value={senha} onChange={setSenha} placeholder="Senha" autoComplete="new-password" autoFocus />
+            <PasswordRequirements senha={senha} />
+            <PasswordField value={confirmarSenha} onChange={setConfirmarSenha} placeholder="Confirmar senha" autoComplete="new-password" />
             {error && <div style={{ fontSize: 13, color: 'var(--acc, #EF4958)' }}>{error}</div>}
             <div style={{ display: 'flex', gap: 10 }}>
               <button type="button" className="btn-secondary" onClick={goBack}>

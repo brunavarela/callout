@@ -4,6 +4,7 @@ import type { SessionUser } from '@callout/shared';
 import { LoginShell } from '../components/LoginShell';
 import { AuthTabs } from '../components/AuthTabs';
 import { AuthStepFrame } from '../components/AuthStepFrame';
+import { PasswordField } from '../components/PasswordField';
 import { useSession } from '../lib/session';
 import { apiFetch, ApiError } from '../lib/api';
 import { routeForStep } from '../lib/onboarding';
@@ -61,15 +62,7 @@ export function Login() {
             disabled={submitting}
             autoComplete="username"
           />
-          <input
-            className="input-field"
-            type="password"
-            value={senha}
-            onChange={(e) => setSenha(e.target.value)}
-            placeholder="Senha"
-            disabled={submitting}
-            autoComplete="current-password"
-          />
+          <PasswordField value={senha} onChange={setSenha} placeholder="Senha" disabled={submitting} autoComplete="current-password" />
           {error && <div style={{ fontSize: 13, color: 'var(--acc, #EF4958)' }}>{error}</div>}
           <button className="btn-primary" style={{ width: '100%', justifyContent: 'space-between' }} disabled={submitting} type="submit">
             <span>{submitting ? 'Entrando…' : 'Entrar'}</span>

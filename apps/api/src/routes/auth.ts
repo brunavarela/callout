@@ -36,12 +36,24 @@ async function enviarCodigoEmail(userId: string, email: string): Promise<void> {
   await sendCodigoEmail(email, codigo);
 }
 
+// Mesmas regras validadas no front (apps/web/src/lib/senha.ts,
+// SENHA_REQUISITOS) — duplicado de propósito: o front dá feedback ao
+// digitar, o back é a fonte de verdade (nunca confia só na validação do
+// cliente).
+const senhaSchema = z
+  .string()
+  .min(8, "A senha precisa ter pelo menos 8 caracteres.")
+  .max(72)
+  .regex(/[A-Z]/, "A senha precisa ter pelo menos uma letra maiúscula.")
+  .regex(/[0-9]/, "A senha precisa ter pelo menos um número.")
+  .regex(/[^A-Za-z0-9]/, "A senha precisa ter pelo menos um caractere especial.");
+
 const cadastroBodySchema = z
   .object({
     nome: z.string().trim().min(2, "Nome muito curto.").max(60),
     dataNascimento: z.coerce.date({ errorMap: () => ({ message: "Data de nascimento inválida." }) }),
     email: z.string().trim().toLowerCase().email("Email inválido."),
-    senha: z.string().min(8, "A senha precisa ter pelo menos 8 caracteres.").max(72),
+    senha: senhaSchema,
     confirmarSenha: z.string(),
     riotId: z.string().regex(RIOT_ID_REGEX, "Formato inválido. Use nome#tag."),
     intuitos: z.array(z.enum(INTUITOS)).min(1, "Escolhe pelo menos uma opção em \"pra que você vai usar\"."),
@@ -70,7 +82,7 @@ const redefinirSenhaBodySchema = z
   .object({
     email: z.string().trim().toLowerCase().email(),
     codigo: z.string().length(6),
-    novaSenha: z.string().min(8, "A senha precisa ter pelo menos 8 caracteres.").max(72),
+    novaSenha: senhaSchema,
     confirmarNovaSenha: z.string(),
   })
   .refine((data) => data.novaSenha === data.confirmarNovaSenha, { message: "As senhas não coincidem.", path: ["confirmarNovaSenha"] });
