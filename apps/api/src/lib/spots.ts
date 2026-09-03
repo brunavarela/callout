@@ -1,6 +1,7 @@
 import type { Lado, Spot as SpotDTO } from "@callout/shared";
 import { PLACEHOLDER_AGENTS } from "@callout/shared";
 import type { MapAsset, Spot, User } from "@prisma/client";
+import { resolveDisplayName } from "./dto.js";
 
 type SpotWithRelations = Spot & { map: MapAsset; criadoPor: User };
 
@@ -21,7 +22,7 @@ export function toSpotDTO(spot: SpotWithRelations, agentsByUuid: Map<string, { n
     descricao: spot.descricao,
     imagens: spot.imagens,
     link: spot.link,
-    author: spot.criadoPor.riotName ?? spot.criadoPor.discordUsername,
+    author: resolveDisplayName(spot.criadoPor),
     side: spot.side as Lado,
   };
 }

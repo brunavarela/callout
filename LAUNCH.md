@@ -207,22 +207,28 @@ Ordem sugerida — cada item destrava o próximo:
 5. **Paywall técnico** (só depois de 1–4 de pé): campo de plano/assinatura
    no usuário ou tabela `subscriptions` (status, `currentPeriodEnd`,
    gateway, `externalId`); guard nas rotas de `team`/`strategies`/`spots`.
-6. **Login sem depender do Discord** — ver §5.1 abaixo. Especificado,
-   ainda não implementado (RSO está bloqueado pela Riot; e-mail é decisão
-   em aberto).
+6. ✅ **Feito (2026-09-03):** Login sem depender do Discord — ver §5.1
+   abaixo. Implementada a opção (a); (b) segue bloqueada pela Riot.
 
-### 5.1 Login sem Discord — spec pronta pra quando decidirmos tocar
+### 5.1 Login sem Discord
 
 Discutido em 2026-09-01: Discord como único jeito de entrar exclui gente que
 joga sério, tem time, mas nunca abriu conta lá. Dois caminhos, não
 excludentes:
 
-**a) E-mail + código de uso único** (curto prazo, não depende de ninguém
-externo). Quem autentica de verdade é o e-mail — o código só prova posse da
-caixa de entrada. Riot ID continua vinculado depois exatamente como hoje
-(campo `nome#tag`, validado na HenrikDev). Custo real de implementar:
-provedor de e-mail transacional (Resend/Postmark), configurar domínio/DKIM
-pra não cair em spam, rate-limit no envio do código pra evitar abuso.
+**a) E-mail + código de uso único — ✅ implementado em 2026-09-03**
+(`apps/api/src/routes/auth.ts`). Quem autentica de verdade é o e-mail — o
+código só prova posse da caixa de entrada (Resend, tier gratuito). Diferente
+do que a spec original previa, o RiotID deixou de ser um passo separado
+opcional depois do login: agora é coletado já no cadastro (junto com nome,
+data de nascimento, senha) e sua posse é verificada de verdade — a pessoa
+troca temporariamente a tag da conta Riot pro código que a API gera
+(`POST /auth/riot/gerar-codigo` / `/auth/riot/confirmar`), já que só quem
+tem acesso à conta consegue fazer essa troca. Contas antigas (só Discord, do
+grupo fechado) migram fazendo esse cadastro de novo com o mesmo RiotID — a
+API reconhece o `riotPuuid` já vinculado e reaproveita a linha (equipe/spots/
+estratégias preservados), sem repetir a verificação de tag (grupo já
+confiável).
 
 **b) "Entrar com a Riot" (RSO)** — o pedido desta conversa. RSO é o OAuth2
 oficial da Riot: resolve login **e** o opt-in de compartilhamento de dado
@@ -236,35 +242,29 @@ que a política exige (§3.1) na mesma tela, sem precisar do passo manual de
   pra construir nem testar o fluxo de verdade antes disso — não é falta de
   tempo, é falta de credencial. Por isso "deixar pronto" aqui significa
   **especificação completa**, não código funcionando.
-- **Fluxo previsto** (espelha o Discord OAuth já implementado em
-  `apps/api/src/lib/discord.ts` + `routes/auth.ts`, adaptável quando a
-  credencial sair):
+- **Fluxo previsto** (adaptável quando a credencial sair; o Discord OAuth
+  que servia de referência aqui foi removido em 03/09/2026 junto com a
+  opção (a) — ver `apps/api/src/routes/auth.ts` pro padrão de cookie/estado
+  de sessão atual):
   1. `GET /auth/riot` — redireciona pra authorize URL da Riot
      (`client_id`, `redirect_uri`, `scope`, `state` em cookie httpOnly,
-     mesmo padrão do `STATE_COOKIE` de hoje).
+     mesmo padrão do `STATE_COOKIE` usado no Discord OAuth antigo).
   2. `GET /auth/riot/callback` — troca `code` por token; a Riot devolve a
-     identidade do jogador (puuid) já autenticada — substitui, só nesse
-     ponto, a chamada não-autenticada de hoje pra HenrikDev
-     (`getAccountByRiotId` em `auth.ts`, rota `POST /auth/riot`).
-  3. Existe `User` com esse puuid → loga. Não existe → cria — aqui esbarra
-     no ponto de schema abaixo.
-- **Decisão de modelo de dado a tomar só na hora de implementar** (não
-  antecipar agora — a forma exata do que o RSO devolve só fica clara
-  quando a Riot aprovar e a doc de RSO abrir de verdade): hoje
-  `User.discordId` é obrigatório e único, o que por si só impede qualquer
-  login que não seja Discord (RSO ou e-mail). Duas rotas possíveis quando
-  chegar a hora:
-  - Tornar `discordId`/`discordUsername` opcionais em `User` e adicionar os
-    campos do provedor novo direto nele — mexe pouco, mas cada provedor
-    novo vira mais uma constraint única ad-hoc nessa tabela.
-  - Tabela separada `AuthIdentity` (`provider`, `providerId`, `userId`) —
-    padrão usado por bibliotecas tipo Auth.js/NextAuth. Mais peça nova, mas
-    isola login de perfil e escala melhor pra 3 provedores (Discord, RSO,
-    e-mail) sem remexer `User` a cada um. **Recomendação**: essa segunda
-    opção, quando for a hora.
-  Não fiz essa migration agora de propósito — mudar o schema hoje pra um
-  formato que pode não bater com o que a Riot realmente devolver seria
-  código morto e não-testável até a aprovação sair.
+     identidade do jogador (puuid) já autenticada — dispensaria, só nesse
+     caso, o passo de verificação por troca de tag que a opção (a) usa hoje
+     (`POST /auth/riot/gerar-codigo` / `/auth/riot/confirmar` em `auth.ts`).
+  3. Existe `User` com esse puuid → loga. Não existe → cadastro incompleto
+     (mesmo tratamento de hoje pra `riotPuuid` já vinculado sem senha, ver
+     migração de conta legada em `POST /auth/cadastro`).
+- **Decisão de modelo de dado**: já resolvida pela implementação de
+  03/09/2026 — `User.discordId` é `nullable` (não trava mais nenhum
+  provedor) e o e-mail+senha vivem direto nos campos novos de `User`
+  (`email`, `senhaHash`, `emailVerificado`). Quando o RSO sair, os campos
+  do RSO (token/id específico, se a Riot devolver algo além do puuid que já
+  temos) entram do mesmo jeito, direto em `User` — não foi criada uma
+  tabela `AuthIdentity` separada porque só existe um provedor de fato hoje
+  (e-mail+senha); reavaliar essa decisão só se um terceiro provedor
+  aparecer de verdade.
 
 Fontes: mesmas de §3.1 ([Riot Games Developer Policies](https://developer.riotgames.com/policies/general),
 [VALORANT — Riot Developer Portal](https://developer.riotgames.com/docs/valorant)).
@@ -366,6 +366,15 @@ público e não assume compromisso com terceiros:
 - ✅ **Feito (2026-09-01):** Allowlist de servidor Discord saiu do login —
       controle de acesso agora é por código de convite da equipe. Ver §5
       item 2.
+- ✅ **Feito (2026-09-03):** Login sem depender do Discord — §5 item 6 /
+      §5.1. Implementada a opção (a) (email + código de uso único), não a
+      (b) (RSO segue bloqueado pela aprovação da Riot). Discord OAuth2 saiu
+      de vez do login; cadastro próprio (nome, data de nascimento, RiotID,
+      email, senha), login por email+senha ou RiotID+senha. RiotID virou
+      obrigatório no cadastro (antes era etapa separada opcional) e ganhou
+      verificação de posse real — troca temporária de tag da conta Riot pro
+      código gerado pela API, não fazia parte da spec original. Ver
+      `apps/api/src/routes/auth.ts`.
 - [ ] Modelagem técnica do paywall (schema `subscriptions`) — só a
       estrutura de dado, sem integrar nenhum gateway ainda.
 - ✅ **Feito (2026-09-01):** Observabilidade — error tracking com Sentry

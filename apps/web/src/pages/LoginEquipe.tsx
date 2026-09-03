@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { LoginShell } from '../components/LoginShell';
 import { useSession } from '../lib/session';
 import { apiFetch, ApiError } from '../lib/api';
+import { routeForStep } from '../lib/onboarding';
 
 type Mode = 'criar' | 'entrar';
 
@@ -22,7 +23,7 @@ export function LoginEquipe() {
       return;
     }
     // Já tem equipe (voltou pra essa URL à toa) — segue o fluxo normal.
-    if (user.equipe) navigate(user.riotId ? '/' : '/login/vincular', { replace: true });
+    if (user.equipe) navigate(routeForStep(user.proximoPasso), { replace: true });
   }, [loading, user, navigate]);
 
   function switchMode(next: Mode) {
@@ -48,7 +49,7 @@ export function LoginEquipe() {
         await apiFetch('/equipes/entrar', { method: 'POST', body: JSON.stringify({ code: code.trim() }) });
       }
       await refresh();
-      navigate('/login/vincular');
+      navigate('/');
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Falha ao continuar. Tenta de novo.');
     } finally {
@@ -64,7 +65,7 @@ export function LoginEquipe() {
 
   return (
     <LoginShell>
-      <div style={{ fontSize: 11, letterSpacing: '.14em', color: 'var(--acc, #EF4958)', marginBottom: 18 }}>ETAPA 2 DE 3</div>
+      <div style={{ fontSize: 11, letterSpacing: '.14em', color: 'var(--acc, #EF4958)', marginBottom: 18 }}>ETAPA 4 DE 4</div>
       <h1 className="login-heading" style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 700, lineHeight: 1.06, letterSpacing: '-.03em', margin: '0 0 16px' }}>
         Monte
         <br />
@@ -121,7 +122,7 @@ export function LoginEquipe() {
       </div>
 
       <div style={{ marginTop: 16, fontSize: 13, color: 'var(--text-dim)' }}>
-        Entrou como <span style={{ color: 'var(--text-muted)' }}>@{user?.discordUsername ?? '…'}</span> ·{' '}
+        Entrou como <span style={{ color: 'var(--text-muted)' }}>{user?.nome ?? '…'}</span> ·{' '}
         <a href="#" onClick={handleTrocar}>
           trocar
         </a>

@@ -13,19 +13,40 @@ datasource db {
 
 model User {
   id               String   @id @default(cuid())
-  discordId        String   @unique
-  discordUsername  String
+  // Legado — login por Discord foi removido em 03/09/2026 (trocado por
+  // email+senha, ver LAUNCH.md). Fica nullable só pra não perder o histórico
+  // de quem entrou por ali antes da troca; nenhuma rota usa mais isso.
+  discordId        String?  @unique
+  discordUsername  String?
   discordAvatarUrl String?
   riotPuuid        String?  @unique
   riotName         String?
   riotTag          String?
   riotRegion       String? // affinity retornada pela HenrikDev (na/eu/ap/kr/latam/br) — necessária pro sync
+  // Verificado = a pessoa provou posse trocando a tag da Riot ID pro código
+  // que a gente gerou (só o dono da conta consegue fazer isso). Contas
+  // migradas do login antigo por Discord entram já como true (grupo
+  // fechado/confiável) — ver rota POST /auth/cadastro.
+  riotVerificado   Boolean  @default(false)
   funcaoPreferida  String?
   createdAt        DateTime @default(now())
 
-  // Perfil editável pelo próprio dono, em qualquer lugar do app que mostre
-  // esse usuário (não é por-equipe — v1 é 1 equipe por usuário, então dá no
-  // mesmo, ver LAUNCH.md/decisão de 01/09/2026). `null` cai no fallback de
+  // Cadastro próprio (email+senha), desde 03/09/2026. `email` fica nullable
+  // só pelas contas legadas que ainda não migraram — toda conta criada pela
+  // rota nova sempre tem os três preenchidos juntos.
+  email            String?  @unique
+  senhaHash        String?
+  emailVerificado  Boolean  @default(false)
+  dataNascimento   DateTime?
+  // Resposta (múltipla escolha) de "pra qual intuito você vai usar o
+  // Callout?" no cadastro — dado de produto, não trava nada no app.
+  intuitos         String[] @default([])
+  authCodes        AuthCode[]
+
+  // Nome preenchido no cadastro (campo "Nome"), editável depois pelo próprio
+  // dono em qualquer lugar do app que mostre esse usuário (não é por-equipe
+  // — v1 é 1 equipe por usuário, então dá no mesmo, ver LAUNCH.md/decisão de
+  // 01/09/2026). `null` só em conta legada pré-migração — fallback de
   // sempre: displayName ?? riotName ?? discordUsername (nome),
   // avatarUrl ?? discordAvatarUrl (imagem).
   displayName String?
@@ -335,4 +356,22 @@ model Comment {
 
   @@index([entidadeTipo, entidadeId])
   @@map("comments")
+}
+
+// Código de uso único pra cadastro (email+senha, desde 03/09/2026). Dois
+// usos com o mesmo mecanismo: confirmar posse do email (tipo "email") e
+// confirmar posse do RiotID via troca temporária de tag (tipo "riot_tag").
+// `tentativas` existe pra travar brute-force de um código de 6 dígitos —
+// ver POST /auth/verificar-email em routes/auth.ts.
+model AuthCode {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tipo       String // "email" | "riot_tag"
+  codigo     String
+  tentativas Int      @default(0)
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+
+  @@map("auth_codes")
 }

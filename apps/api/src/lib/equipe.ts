@@ -8,6 +8,7 @@ import { getMmr } from "./henrikdev.js";
 import { loadAgentsByUuid } from "./assets.js";
 import { mapNameFrom, scoreFor, hasAce, formatPlayedAt } from "./dashboard.js";
 import { matchResult, countsTowardStats } from "./match-result.js";
+import { resolveDisplayName, resolveAvatarUrl } from "./dto.js";
 
 // Multi-tenancy real (LAUNCH.md §5) — um usuário pertence a no máximo uma
 // equipe (MembroEquipe.userId é @unique). "Qual é a minha equipe" sempre se
@@ -153,8 +154,8 @@ export async function buildEquipeOverview(equipeId: string): Promise<EquipeOverv
 
       return {
         userId: m.userId,
-        name: m.user.displayName ?? m.user.riotName ?? m.user.discordUsername,
-        avatarUrl: m.user.avatarUrl ?? m.user.discordAvatarUrl,
+        name: resolveDisplayName(m.user),
+        avatarUrl: resolveAvatarUrl(m.user),
         riotIdLabel: m.user.riotName && m.user.riotTag ? `${m.user.riotName}#${m.user.riotTag}` : null,
         rankLabel,
         roles: (m.funcoes.length > 0 ? m.funcoes : [m.user.funcaoPreferida ?? "iniciador"]) as EquipeOverview["members"][number]["roles"],
@@ -291,7 +292,7 @@ export async function buildEquipeMatches(equipeId: string): Promise<PartidaEquip
         const shotsTotal = r.headshots + r.bodyshots + r.legshots;
         return {
           userId: member.userId,
-          name: member.user.riotName ?? member.user.discordUsername,
+          name: resolveDisplayName(member.user),
           agent: r.agentName,
           kda: `${r.kills}/${r.deaths}/${r.assists}`,
           acs: r.acs,

@@ -198,7 +198,7 @@ export function ThemeSettings({ onClose, className }: { onClose: () => void; cla
           >
             <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 16 }}>Sair da conta?</div>
             <div style={{ fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.5, marginTop: 8 }}>
-              Você vai precisar entrar de novo com o Discord pra acessar o callout.
+              Você vai precisar entrar de novo pra acessar o callout.
             </div>
             <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
               <button

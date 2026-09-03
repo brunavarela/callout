@@ -5,6 +5,7 @@ import { loadAgentColorsByName } from "./assets.js";
 import { mapNameFrom, scoreFor, formatPlayedAt } from "./dashboard.js";
 import { countsTowardStats, matchResult } from "./match-result.js";
 import { replayMatchStats } from "./matchReplay.js";
+import { resolveDisplayName } from "./dto.js";
 
 const round0 = (n: number) => Math.round(n);
 const round1 = (n: number) => Math.round(n * 10) / 10;
@@ -67,7 +68,7 @@ export async function buildEquipePainel(equipeId: string): Promise<EquipePainelS
   if (trackedMembers.length === 0) return EMPTY_SUMMARY;
 
   const memberByPuuid = new Map(trackedMembers.map((m) => [m.user.riotPuuid as string, m]));
-  const nameByUserId = new Map(equipe.membros.map((m) => [m.userId, m.user.riotName ?? m.user.discordUsername]));
+  const nameByUserId = new Map(equipe.membros.map((m) => [m.userId, resolveDisplayName(m.user)]));
   const puuids = [...memberByPuuid.keys()];
 
   // Sem `include: { match: true }` — puxaria o rawJson da partida (~400KB

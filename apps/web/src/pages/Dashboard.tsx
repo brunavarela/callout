@@ -143,7 +143,7 @@ function RrLineChart({ points }: { points: RrHistoryPoint[] }) {
 }
 
 function firstName(user: SessionUser | null): string {
-  return user?.riotId?.name ?? user?.discordUsername ?? '';
+  return user?.riotId?.name ?? user?.nome ?? '';
 }
 
 // Altura fixa de 40px pra bater com .btn-secondary/.btn-primary ao lado

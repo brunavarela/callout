@@ -2,7 +2,7 @@ import { LegalPageShell, LegalSection } from '../components/LegalPageShell';
 
 export function Privacidade() {
   return (
-    <LegalPageShell title="Política de Privacidade" updatedAtLabel="01/09/2026 (rascunho)">
+    <LegalPageShell title="Política de Privacidade" updatedAtLabel="03/09/2026 (rascunho)">
       <LegalSection title="1. Quem controla seus dados">
         <p>
           O callout é operado por [razão social / CNPJ a definir — ver LAUNCH.md §3.3]. Enquanto essa estrutura não
@@ -12,9 +12,9 @@ export function Privacidade() {
 
       <LegalSection title="2. Quais dados coletamos">
         <ul style={{ margin: 0, paddingLeft: 20, display: 'flex', flexDirection: 'column', gap: 6 }}>
-          <li><strong>Do Discord</strong> (no login): ID, nome de usuário e foto de avatar.</li>
-          <li><strong>Da Riot</strong> (se você vincular, opt-in — §4 dos Termos): Riot ID (nome#tag), puuid, região, histórico de partidas e estatísticas.</li>
-          <li><strong>Que você mesmo cria</strong>: nome de exibição e foto de perfil opcionais, estratégias, spots, imagens enviadas, recados, preferências de tema.</li>
+          <li><strong>Do cadastro</strong>: nome, data de nascimento, email e senha (guardada de forma criptografada, nunca em texto puro).</li>
+          <li><strong>Da Riot</strong> (informado e verificado no cadastro — §4 dos Termos): Riot ID (nome#tag), puuid, região, histórico de partidas e estatísticas.</li>
+          <li><strong>Que você mesmo cria</strong>: foto de perfil opcional, respostas sobre pra que você usa o callout, estratégias, spots, imagens enviadas, recados, preferências de tema.</li>
           <li><strong>Técnicos</strong>: endereço IP e dados de acesso em log do servidor, cookie de sessão.</li>
         </ul>
       </LegalSection>
@@ -22,8 +22,8 @@ export function Privacidade() {
       <LegalSection title="3. Por que coletamos e usamos">
         <p>
           Pra viabilizar o serviço em si (mostrar seu histórico, montar sua equipe, salvar suas estratégias) e pra
-          manter a conta seguem (sessão de login, controle de acesso por equipe). O vínculo de conta Riot é sempre
-          opt-in explícito.
+          manter a conta segura (autenticação, sessão de login, controle de acesso por equipe). O email é usado
+          também pra confirmar o cadastro (código de verificação).
         </p>
       </LegalSection>
 
@@ -35,7 +35,7 @@ export function Privacidade() {
         </p>
         <p>Usamos os seguintes prestadores técnicos pra operar o serviço, cada um com acesso só ao que precisa pra sua função:</p>
         <ul style={{ margin: 0, paddingLeft: 20, display: 'flex', flexDirection: 'column', gap: 6 }}>
-          <li><strong>Discord</strong> — autenticação (login);</li>
+          <li><strong>Resend</strong> — envio do código de verificação de cadastro por email;</li>
           <li><strong>HenrikDev API</strong> — fonte não-oficial do histórico de partidas da Riot;</li>
           <li><strong>Neon</strong> — hospedagem do banco de dados;</li>
           <li><strong>Railway</strong> — hospedagem da aplicação;</li>
@@ -56,7 +56,7 @@ export function Privacidade() {
           <li>Anonimização, bloqueio ou eliminação de dado desnecessário ou tratado fora do previsto aqui;</li>
           <li>Portabilidade dos seus dados pra outro serviço;</li>
           <li>Informação sobre com quem compartilhamos seus dados (§4);</li>
-          <li>Revogação do consentimento — por exemplo, desvincular sua conta Riot a qualquer momento.</li>
+          <li>Revogação do consentimento — o que, pro callout, significa pedir a exclusão da conta (o vínculo com a Riot é essencial ao funcionamento do serviço, não dá pra desvincular e continuar usando).</li>
         </ul>
       </LegalSection>
 

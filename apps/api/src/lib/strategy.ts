@@ -2,6 +2,7 @@ import type { Strategy as StrategyDTO, StratItem as StratItemDTO, StratItemKind,
 import type { Strategy, StratItem, MapAsset, User } from "@prisma/client";
 import { Prisma } from "@prisma/client";
 import { prisma } from "./prisma.js";
+import { resolveDisplayName } from "./dto.js";
 
 // Garante que uma estratégia/spot sempre tenha um MapAsset pra referenciar.
 // Casa por `nome` primeiro — depois do seed (Fase 0 item 4, `npm run
@@ -108,7 +109,7 @@ export function toStrategyDTO(strategy: StrategyWithRelations, usage?: UsageStat
     side: strategy.lado as Lado,
     title: strategy.titulo,
     description: strategy.descricao,
-    createdBy: strategy.criadoPor.riotName ?? strategy.criadoPor.discordUsername,
+    createdBy: resolveDisplayName(strategy.criadoPor),
     updatedAtLabel: formatUpdatedAt(strategy.updatedAt),
     usageCount: usage?.count ?? 0,
     winratePercent: usage && usage.count > 0 ? Math.round((usage.wins / usage.count) * 100) : 0,

@@ -18,15 +18,34 @@ export type Lado = "ATK" | "DEF";
 
 export interface User {
   id: string;
-  discordId: string;
-  discordUsername: string;
+  discordId: string | null;
+  discordUsername: string | null;
   discordAvatarUrl: string | null;
   riotPuuid: string | null;
   riotName: string | null;
   riotTag: string | null;
+  riotVerificado: boolean;
   funcaoPreferida: Funcao | null;
   createdAt: string;
 }
+
+// --- Cadastro (email+senha, desde 03/09/2026) ---
+
+// "Pra qual intuito você vai usar o Callout?" — pergunta de múltipla escolha
+// no cadastro, dado de produto pro roadmap do PRO (não trava nada no app).
+export const INTUITOS = ["stats_individuais", "administrar_equipe", "criar_spots", "criar_estrategias"] as const;
+export type Intuito = (typeof INTUITOS)[number];
+
+export const INTUITO_LABELS: Record<Intuito, string> = {
+  stats_individuais: "Stats individuais",
+  administrar_equipe: "Administrar uma equipe",
+  criar_spots: "Criar e salvar spots",
+  criar_estrategias: "Criar estratégias individuais/equipe",
+};
+
+// Ordem fixa do funil pós-cadastro — devolvida pela API em
+// SessionUser.proximoPasso pra front saber sempre pra onde mandar a pessoa.
+export type OnboardingStep = "verificar-email" | "verificar-riot" | "intuito" | "equipe" | "completo";
 
 export interface MapAsset {
   id: string;
@@ -69,13 +88,18 @@ export interface ThemePreferences {
 // --- Sessão ---
 
 export interface SessionUser {
-  discordId: string;
-  discordUsername: string;
-  discordAvatarUrl: string | null;
+  nome: string;
+  avatarUrl: string | null;
+  email: string | null;
+  emailVerificado: boolean;
+  riotVerificado: boolean;
+  dataNascimento: string | null;
+  intuitos: Intuito[];
   riotId: { name: string; tag: string; puuid: string } | null;
   equipe: { id: string; name: string } | null;
   theme: ThemePreferences;
   isAdmin: boolean;
+  proximoPasso: OnboardingStep;
 }
 
 // --- Progressão de RR ---

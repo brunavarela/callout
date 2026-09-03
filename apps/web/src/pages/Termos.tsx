@@ -2,7 +2,7 @@ import { LegalPageShell, LegalSection } from '../components/LegalPageShell';
 
 export function Termos() {
   return (
-    <LegalPageShell title="Termos de Uso" updatedAtLabel="01/09/2026 (rascunho)">
+    <LegalPageShell title="Termos de Uso" updatedAtLabel="03/09/2026 (rascunho)">
       <LegalSection title="1. O que é o callout">
         <p>
           O callout é uma ferramenta independente de análise de desempenho e planejamento de estratégia pra times de
@@ -22,23 +22,27 @@ export function Termos() {
 
       <LegalSection title="3. Cadastro e conta">
         <p>
-          Login é feito via Discord OAuth2 (não usamos senha própria). Cada conta pertence a uma única equipe por vez
-          — você entra criando uma equipe nova ou usando um código de convite de uma equipe existente.
+          O cadastro é feito com nome, data de nascimento, RiotID, email e senha. Login é feito por email+senha ou
+          RiotID+senha — o callout nunca usa nem guarda sua senha da Riot ou de qualquer outro serviço, só a sua
+          senha própria (armazenada de forma criptografada). Cada conta pertence a uma única equipe por vez — você
+          entra criando uma equipe nova ou usando um código de convite de uma equipe existente.
         </p>
-        <p>Você é responsável por manter sua conta do Discord segura — qualquer atividade feita a partir dela é considerada sua.</p>
+        <p>Você é responsável por manter sua senha em sigilo — qualquer atividade feita a partir da sua conta é considerada sua.</p>
       </LegalSection>
 
       <LegalSection title="4. Vínculo com sua conta Riot">
         <p>
-          <strong>O callout nunca pede seu usuário e senha da Riot.</strong> O vínculo é feito informando seu Riot ID
-          (formato nome#tag) — a partir daí buscamos e exibimos seu histórico de partidas.
+          <strong>O callout nunca pede seu usuário e senha da Riot.</strong> O RiotID (formato nome#tag) é informado
+          no cadastro, e a posse dele é confirmada pedindo que você troque temporariamente a tag da sua conta Riot
+          pro código que a gente gerar — só quem tem acesso à conta consegue fazer essa troca. A partir daí buscamos
+          e exibimos seu histórico de partidas.
         </p>
         <p>
           Esse dado vem de uma API pública não-oficial (HenrikDev), sem afiliação com a Riot Games. Ela pode
           apresentar instabilidade, atraso na sincronização ou parar de funcionar sem aviso prévio — não garantimos
           disponibilidade nem exatidão total desse dado.
         </p>
-        <p>Vincular sua conta Riot é opcional e é um opt-in explícito: ao vincular, você concorda que seus dados de partida fiquem visíveis pros demais membros da sua equipe dentro da ferramenta.</p>
+        <p>Ao concluir o cadastro, você concorda que seus dados de partida fiquem visíveis pros demais membros da sua equipe dentro da ferramenta.</p>
       </LegalSection>
 
       <LegalSection title="5. Uso aceitável">

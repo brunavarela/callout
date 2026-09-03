@@ -1,6 +1,7 @@
 import type { CommentDTO } from "@callout/shared";
 import type { Comment, User } from "@prisma/client";
 import { prisma } from "./prisma.js";
+import { resolveDisplayName, resolveAvatarUrl } from "./dto.js";
 
 function formatCreatedAt(date: Date, now: Date): string {
   const diffMin = Math.round((now.getTime() - date.getTime()) / 60_000);
@@ -16,8 +17,8 @@ export function toCommentDTO(comment: Comment & { user: User }): CommentDTO {
     id: comment.id,
     entidadeTipo: comment.entidadeTipo as CommentDTO["entidadeTipo"],
     entidadeId: comment.entidadeId,
-    authorName: comment.user.riotName ?? comment.user.discordUsername,
-    authorAvatarUrl: comment.user.discordAvatarUrl ?? null,
+    authorName: resolveDisplayName(comment.user),
+    authorAvatarUrl: resolveAvatarUrl(comment.user),
     createdAtLabel: formatCreatedAt(comment.createdAt, new Date()),
     text: comment.texto,
   };

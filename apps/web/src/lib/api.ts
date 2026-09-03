@@ -2,11 +2,13 @@ export const API_URL = import.meta.env.VITE_API_URL as string;
 
 export class ApiError extends Error {
   status: number;
+  body: unknown;
 
-  constructor(message: string, status: number) {
+  constructor(message: string, status: number, body?: unknown) {
     super(message);
     this.name = "ApiError";
     this.status = status;
+    this.body = body;
   }
 }
 
@@ -19,13 +21,14 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
 
   if (!res.ok) {
     let message = `Erro ${res.status}`;
+    let body: unknown;
     try {
-      const body = await res.json();
-      if (body?.error) message = body.error;
+      body = await res.json();
+      if ((body as { error?: string })?.error) message = (body as { error: string }).error;
     } catch {
       // resposta sem corpo JSON — mantém a mensagem genérica
     }
-    throw new ApiError(message, res.status);
+    throw new ApiError(message, res.status, body);
   }
 
   if (res.status === 204) return undefined as T;

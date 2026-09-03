@@ -1,8 +1,11 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { AppShell } from './components/AppShell';
-import { LoginStep1 } from './pages/LoginStep1';
+import { Login } from './pages/Login';
+import { Cadastro } from './pages/Cadastro';
+import { VerificarEmail } from './pages/VerificarEmail';
+import { VerificarRiotId } from './pages/VerificarRiotId';
+import { Intuito } from './pages/Intuito';
 import { LoginEquipe } from './pages/LoginEquipe';
-import { LoginStep2 } from './pages/LoginStep2';
 import { Dashboard } from './pages/Dashboard';
 import { Matches } from './pages/Matches';
 import { MatchDetail } from './pages/MatchDetail';
@@ -19,9 +22,12 @@ import { Privacidade } from './pages/Privacidade';
 function App() {
   return (
     <Routes>
-      <Route path="/login" element={<LoginStep1 />} />
+      <Route path="/login" element={<Login />} />
+      <Route path="/cadastro" element={<Cadastro />} />
+      <Route path="/cadastro/verificar-email" element={<VerificarEmail />} />
+      <Route path="/cadastro/verificar-riot" element={<VerificarRiotId />} />
+      <Route path="/cadastro/intuito" element={<Intuito />} />
       <Route path="/login/equipe" element={<LoginEquipe />} />
-      <Route path="/login/vincular" element={<LoginStep2 />} />
       <Route path="/termos" element={<Termos />} />
       <Route path="/privacidade" element={<Privacidade />} />
 

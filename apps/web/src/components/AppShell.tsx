@@ -3,6 +3,7 @@ import { Navigate, NavLink, Outlet, useLocation, useNavigate } from 'react-route
 import { LayoutDashboard, Swords, Users, PenTool, MapPin, Trophy, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useSession } from '../lib/session';
 import { useAppData, type AppData } from '../lib/appData';
+import { routeForStep } from '../lib/onboarding';
 import { ThemeSettings } from './ThemeSettings';
 import { Logo, LogoMark } from './Logo';
 import { Footer } from './Footer';
@@ -175,8 +176,8 @@ export function AppShell() {
 
   if (loading) return null;
   if (!user) return <Navigate to="/login" replace />;
-  if (!user.equipe) return <Navigate to="/login/equipe" replace />;
-  if (!user.riotId) return <Navigate to="/login/vincular" replace />;
+  if (user.proximoPasso !== 'completo' || !user.riotId) return <Navigate to={routeForStep(user.proximoPasso)} replace />;
+  const riotId = user.riotId;
 
   const navItems = [
     BASE_NAV_ITEMS[0]!,
@@ -317,8 +318,8 @@ export function AppShell() {
                 cursor: 'pointer',
               }}
             >
-              {user.discordAvatarUrl ? (
-                <img src={user.discordAvatarUrl} alt="" style={{ width: 32, height: 32, borderRadius: 9, flex: 'none' }} />
+              {user.avatarUrl ? (
+                <img src={user.avatarUrl} alt="" style={{ width: 32, height: 32, borderRadius: 9, flex: 'none' }} />
               ) : (
                 <div
                   style={{
@@ -335,14 +336,14 @@ export function AppShell() {
                     color: 'var(--text-muted)',
                   }}
                 >
-                  {initialsOf(user.discordUsername)}
+                  {initialsOf(user.nome)}
                 </div>
               )}
               <div className="header-profile-text" style={{ minWidth: 0, textAlign: 'left' }}>
                 <div style={{ fontSize: 12.5, fontWeight: 500 }}>
-                  {user.riotId.name}#{user.riotId.tag}
+                  {riotId.name}#{riotId.tag}
                 </div>
-                <div style={{ fontSize: 10.5, color: 'var(--text-dim)' }}>{user.discordUsername}</div>
+                <div style={{ fontSize: 10.5, color: 'var(--text-dim)' }}>{user.nome}</div>
               </div>
               <span className="header-profile-text" style={{ color: 'var(--text-faint)' }}>
                 ›

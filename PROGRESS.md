@@ -2,7 +2,7 @@
 
 > Documento de handoff de **implementação** (o que já existe, como rodar,
 > o que falta). Para o briefing de produto/arquitetura, ver [CONTEXT.md](CONTEXT.md).
-> Última atualização: 2026-09-02.
+> Última atualização: 2026-09-03.
 
 ---
 
@@ -17,8 +17,10 @@ cd apps/web && npm run dev    # http://localhost:5290
 
 Ou da raiz: `npm run dev:api` / `npm run dev:web`.
 
-O `.env` na raiz já tem tudo preenchido (Neon, Discord OAuth2, chave da
-HenrikDev) — não precisa reconfigurar nada pra continuar o trabalho.
+O `.env` na raiz já tem tudo preenchido (Neon, chave da HenrikDev) — não
+precisa reconfigurar nada pra continuar o trabalho, **exceto `RESEND_API_KEY`**,
+que está com um placeholder até a Bruna criar a conta na Resend (sem isso o
+servidor sobe normal, mas o envio do código de verificação por email falha).
 `apps/api/.env` é uma cópia só do `DATABASE_URL`, só pro Prisma CLI achar;
 a fonte de verdade é o `.env` da raiz.
 
@@ -103,6 +105,16 @@ projetos nesta máquina (`iexfy_app_back-end` e `sg-super-web-frontend`).
   ficava sem RR na tabela mesmo com o histórico de partidas funcionando
   sozinho. Separado em dois `try/catch` independentes
   (`apps/api/src/lib/dashboard.ts`, `apps/api/src/lib/insights.ts`).
+
+  > ⚠️ **Login por Discord OAuth2 removido em 03/09/2026** — trocado por
+  > cadastro próprio (nome, data de nascimento, RiotID, email, senha) com
+  > login por email+senha ou RiotID+senha. Implementa a opção (a) do
+  > LAUNCH.md §5.1. RiotID passou a ser obrigatório no cadastro (não mais
+  > uma etapa separada opcional) e sua posse é verificada pedindo pra
+  > trocar temporariamente a tag da conta Riot pro código gerado pela API
+  > (não fazia parte da spec original — RSO oficial, opção (b) do §5.1,
+  > continua bloqueada pela aprovação da Riot). Ver `apps/api/src/routes/
+  > auth.ts`, `apps/api/src/lib/{password,email,onboarding}.ts`.
 
 ### Fase 2 — Time — ✅ completa
 - `GET /team` — membros com KDA/ACS/winrate reais (30d), rank, partidas
