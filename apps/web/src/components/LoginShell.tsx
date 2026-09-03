@@ -34,7 +34,7 @@ export function LoginShell({ children }: { children: ReactNode }) {
 
           <div style={{ position: 'relative', maxWidth: 460 }}>{children}</div>
 
-          <div style={{ position: 'relative', fontSize: 11, color: 'var(--text-faint)', maxWidth: '60ch', lineHeight: 1.6 }}>
+          <div style={{ fontSize: 11, color: 'var(--text-faint)', maxWidth: '60ch', lineHeight: 1.6 }}>
             Ferramenta independente feita por um grupo de amigos. Sem vínculo com a Riot Games. Dados de partida
             vindos de API pública não-oficial.
           </div>

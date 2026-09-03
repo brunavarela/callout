@@ -264,7 +264,7 @@ button {
 
 .select-panel {
   position: absolute;
-  z-index: 50;
+  z-index: 500;
   top: calc(100% + 6px);
   left: 0;
   min-width: 100%;
@@ -272,7 +272,8 @@ button {
   max-width: min(360px, 90vw);
   max-height: 280px;
   overflow-y: auto;
-  background: var(--surface);
+  background: var(--bg);
+  isolation: isolate;
   border: 1px solid var(--surface-border);
   border-radius: var(--radius-md);
   padding: 6px;
