@@ -2,16 +2,14 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import type { SessionUser } from '@callout/shared';
 import { LoginShell } from '../components/LoginShell';
+import { AuthTabs } from '../components/AuthTabs';
 import { useSession } from '../lib/session';
 import { apiFetch, ApiError } from '../lib/api';
 import { routeForStep } from '../lib/onboarding';
 
-type Modo = 'email' | 'riotId';
-
 export function Login() {
   const navigate = useNavigate();
   const { refresh } = useSession();
-  const [modo, setModo] = useState<Modo>('email');
   const [identificador, setIdentificador] = useState('');
   const [senha, setSenha] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -42,6 +40,7 @@ export function Login() {
 
   return (
     <LoginShell>
+      <AuthTabs active="entrar" />
       <h1 className="login-heading" style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 700, lineHeight: 1.06, letterSpacing: '-.03em', margin: '0 0 16px' }}>
         O que a memória
         <br />
@@ -51,38 +50,14 @@ export function Login() {
         Suas últimas partidas e as estratégias que sua equipe desenhou.
       </p>
 
-      <div style={{ display: 'flex', gap: 6, marginBottom: 16, background: 'var(--surface)', border: '1px solid var(--surface-border)', borderRadius: 'var(--radius-md, 10px)', padding: 4 }}>
-        {(['email', 'riotId'] as const).map((m) => (
-          <button
-            key={m}
-            type="button"
-            onClick={() => setModo(m)}
-            style={{
-              flex: 1,
-              padding: '8px 0',
-              borderRadius: 8,
-              border: 'none',
-              cursor: 'pointer',
-              fontSize: 13,
-              fontWeight: 600,
-              background: modo === m ? 'var(--acc, #EF4958)' : 'transparent',
-              color: modo === m ? '#fff' : 'var(--text-muted)',
-              transition: 'background .15s ease, color .15s ease',
-            }}
-          >
-            {m === 'email' ? 'Email' : 'RiotID'}
-          </button>
-        ))}
-      </div>
-
       <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         <input
           className="input-field"
           value={identificador}
           onChange={(e) => setIdentificador(e.target.value)}
-          placeholder={modo === 'email' ? 'voce@email.com' : 'nome#tag'}
+          placeholder="Email ou RiotID"
           disabled={submitting}
-          autoComplete={modo === 'email' ? 'email' : 'username'}
+          autoComplete="username"
         />
         <input
           className="input-field"
@@ -101,7 +76,7 @@ export function Login() {
       </form>
 
       <div style={{ marginTop: 16, fontSize: 13, color: 'var(--text-dim)' }}>
-        Ainda não tem conta? <Link to="/cadastro">Criar conta</Link>
+        <Link to="/esqueci-senha">Esqueceu a senha?</Link>
       </div>
     </LoginShell>
   );

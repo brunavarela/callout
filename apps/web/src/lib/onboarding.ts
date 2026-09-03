@@ -9,8 +9,6 @@ export function routeForStep(step: OnboardingStep): string {
       return '/cadastro/verificar-email';
     case 'verificar-riot':
       return '/cadastro/verificar-riot';
-    case 'intuito':
-      return '/cadastro/intuito';
     case 'equipe':
       return '/login/equipe';
     case 'completo':

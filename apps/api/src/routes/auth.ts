@@ -5,7 +5,7 @@ import { INTUITOS } from "@callout/shared";
 import { prisma } from "../lib/prisma.js";
 import { getAccountByRiotId, HenrikDevError } from "../lib/henrikdev.js";
 import { hashPassword, verifyPassword } from "../lib/password.js";
-import { sendCodigoEmail } from "../lib/email.js";
+import { sendCodigoEmail, sendCodigoRedefinicaoSenha } from "../lib/email.js";
 import { setSessionCookie, clearSessionCookie, requireAuth, getSessionUser } from "../lib/session.js";
 import { getUserEquipe } from "../lib/equipe.js";
 import { toSessionUser } from "../lib/dto.js";
@@ -44,6 +44,7 @@ const cadastroBodySchema = z
     senha: z.string().min(8, "A senha precisa ter pelo menos 8 caracteres.").max(72),
     confirmarSenha: z.string(),
     riotId: z.string().regex(RIOT_ID_REGEX, "Formato inválido. Use nome#tag."),
+    intuitos: z.array(z.enum(INTUITOS)).min(1, "Escolhe pelo menos uma opção em \"pra que você vai usar\"."),
   })
   .refine((data) => data.senha === data.confirmarSenha, { message: "As senhas não coincidem.", path: ["confirmarSenha"] });
 
@@ -65,13 +66,22 @@ const loginBodySchema = z.object({
   senha: z.string().min(1),
 });
 
+const redefinirSenhaBodySchema = z
+  .object({
+    email: z.string().trim().toLowerCase().email(),
+    codigo: z.string().length(6),
+    novaSenha: z.string().min(8, "A senha precisa ter pelo menos 8 caracteres.").max(72),
+    confirmarNovaSenha: z.string(),
+  })
+  .refine((data) => data.novaSenha === data.confirmarNovaSenha, { message: "As senhas não coincidem.", path: ["confirmarNovaSenha"] });
+
 export async function authRoutes(app: FastifyInstance) {
   app.post("/auth/cadastro", async (request, reply) => {
     const parsed = cadastroBodySchema.safeParse(request.body);
     if (!parsed.success) {
       return reply.code(400).send({ error: parsed.error.issues[0]?.message ?? "Dado inválido" });
     }
-    const { nome, dataNascimento, email, senha, riotId } = parsed.data;
+    const { nome, dataNascimento, email, senha, riotId, intuitos } = parsed.data;
     const [riotName, riotTag] = riotId.split("#") as [string, string];
 
     const emailExistente = await prisma.user.findUnique({ where: { email } });
@@ -102,7 +112,7 @@ export async function authRoutes(app: FastifyInstance) {
       // Já era do grupo fechado/confiável, então entra verificada direto.
       user = await prisma.user.update({
         where: { id: contaLegada.id },
-        data: { displayName: nome, dataNascimento, email, senhaHash, riotVerificado: true },
+        data: { displayName: nome, dataNascimento, email, senhaHash, riotVerificado: true, intuitos },
       });
     } else if (emailExistente) {
       // Cadastro anterior com esse email nunca confirmou o código — reusa a
@@ -118,6 +128,7 @@ export async function authRoutes(app: FastifyInstance) {
           riotTag: account.tag,
           riotRegion: account.region,
           riotVerificado: false,
+          intuitos,
         },
       });
     } else {
@@ -131,6 +142,7 @@ export async function authRoutes(app: FastifyInstance) {
           riotName: account.name,
           riotTag: account.tag,
           riotRegion: account.region,
+          intuitos,
           riotVerificado: false,
         },
       });
@@ -269,6 +281,63 @@ export async function authRoutes(app: FastifyInstance) {
 
     setSessionCookie(reply, user.id);
     return toSessionUser(user, await getUserEquipe(user.id));
+  });
+
+  app.post("/auth/recuperar-senha", async (request, reply) => {
+    const parsed = reenviarCodigoBodySchema.safeParse(request.body);
+    if (!parsed.success) return reply.code(400).send({ error: "Email inválido" });
+
+    const user = await prisma.user.findUnique({ where: { email: parsed.data.email } });
+    if (!user) return reply.code(404).send({ error: "Não achamos esse cadastro." });
+    if (!user.senhaHash) {
+      return reply.code(400).send({ error: "Essa conta ainda não tem senha — complete o cadastro primeiro." });
+    }
+
+    const ultimo = await prisma.authCode.findFirst({
+      where: { userId: user.id, tipo: "reset_senha" },
+      orderBy: { createdAt: "desc" },
+    });
+    if (ultimo && Date.now() - ultimo.createdAt.getTime() < REENVIO_COOLDOWN_MS) {
+      return reply.code(429).send({ error: "Espera um instante antes de pedir outro código." });
+    }
+
+    const codigo = gerarCodigoEmail();
+    await prisma.authCode.deleteMany({ where: { userId: user.id, tipo: "reset_senha" } });
+    await prisma.authCode.create({
+      data: { userId: user.id, tipo: "reset_senha", codigo, expiresAt: new Date(Date.now() + CODIGO_EXPIRA_MS) },
+    });
+    await sendCodigoRedefinicaoSenha(user.email!, codigo);
+    return { ok: true };
+  });
+
+  app.post("/auth/redefinir-senha", async (request, reply) => {
+    const parsed = redefinirSenhaBodySchema.safeParse(request.body);
+    if (!parsed.success) {
+      return reply.code(400).send({ error: parsed.error.issues[0]?.message ?? "Dado inválido" });
+    }
+
+    const user = await prisma.user.findUnique({ where: { email: parsed.data.email } });
+    if (!user) return reply.code(404).send({ error: "Não achamos esse cadastro." });
+
+    const authCode = await prisma.authCode.findFirst({
+      where: { userId: user.id, tipo: "reset_senha" },
+      orderBy: { createdAt: "desc" },
+    });
+    if (!authCode || authCode.expiresAt < new Date()) {
+      return reply.code(400).send({ error: "Código expirado. Pede um novo." });
+    }
+    if (authCode.tentativas >= 5) {
+      return reply.code(429).send({ error: "Muitas tentativas erradas. Pede um novo código." });
+    }
+    if (authCode.codigo !== parsed.data.codigo) {
+      await prisma.authCode.update({ where: { id: authCode.id }, data: { tentativas: { increment: 1 } } });
+      return reply.code(400).send({ error: "Código incorreto." });
+    }
+
+    await prisma.authCode.delete({ where: { id: authCode.id } });
+    const updated = await prisma.user.update({ where: { id: user.id }, data: { senhaHash: hashPassword(parsed.data.novaSenha) } });
+    setSessionCookie(reply, updated.id);
+    return toSessionUser(updated, await getUserEquipe(updated.id));
   });
 
   app.get("/auth/me", async (request, reply) => {

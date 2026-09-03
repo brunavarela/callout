@@ -45,7 +45,9 @@ export const INTUITO_LABELS: Record<Intuito, string> = {
 
 // Ordem fixa do funil pós-cadastro — devolvida pela API em
 // SessionUser.proximoPasso pra front saber sempre pra onde mandar a pessoa.
-export type OnboardingStep = "verificar-email" | "verificar-riot" | "intuito" | "equipe" | "completo";
+// `intuitos` é coletado junto com o resto do formulário de cadastro (não é
+// mais uma etapa separada), então não entra aqui.
+export type OnboardingStep = "verificar-email" | "verificar-riot" | "equipe" | "completo";
 
 export interface MapAsset {
   id: string;

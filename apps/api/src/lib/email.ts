@@ -39,3 +39,15 @@ export function sendCodigoEmail(to: string, codigo: string): Promise<void> {
     </div>`,
   );
 }
+
+export function sendCodigoRedefinicaoSenha(to: string, codigo: string): Promise<void> {
+  return sendEmail(
+    to,
+    "Redefinir sua senha — Callout",
+    `<div style="font-family:sans-serif;font-size:15px;color:#111">
+      <p>Alguém (esperamos que você) pediu pra redefinir a senha da sua conta. Seu código é:</p>
+      <p style="font-size:28px;font-weight:700;letter-spacing:.08em">${codigo}</p>
+      <p style="color:#666">Ele expira em 15 minutos. Se não foi você, ignore este email — sua senha continua a mesma.</p>
+    </div>`,
+  );
+}
