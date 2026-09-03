@@ -8,6 +8,7 @@ import { DataNascimentoField } from '../components/DataNascimentoField';
 import { PasswordField } from '../components/PasswordField';
 import { PasswordRequirements } from '../components/PasswordRequirements';
 import { senhaValida } from '../lib/senha';
+import { SnakeSpinner } from '../components/Spinner';
 import { apiFetch, ApiError } from '../lib/api';
 
 const RIOT_ID_PATTERN = /^[^#]{3,16}#[A-Za-z0-9]{3,5}$/;
@@ -191,9 +192,15 @@ export function Cadastro() {
               <button type="button" className="btn-secondary" onClick={goBack} disabled={submitting}>
                 ← Voltar
               </button>
-              <button className="btn-primary" style={{ flex: 1, justifyContent: 'space-between' }} disabled={submitting} type="submit">
-                <span>{submitting ? 'Criando conta…' : 'Cadastrar'}</span>
-                <span>→</span>
+              <button className="btn-primary" style={{ flex: 1, justifyContent: submitting ? 'center' : 'space-between' }} disabled={submitting} type="submit">
+                {submitting ? (
+                  <SnakeSpinner size={16} color="currentColor" />
+                ) : (
+                  <>
+                    <span>Cadastrar</span>
+                    <span>→</span>
+                  </>
+                )}
               </button>
             </div>
           </form>

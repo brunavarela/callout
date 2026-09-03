@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { SessionUser } from '@callout/shared';
 import { LoginShell } from '../components/LoginShell';
+import { SnakeSpinner } from '../components/Spinner';
 import { useSession } from '../lib/session';
 import { apiFetch, ApiError } from '../lib/api';
 import { routeForStep } from '../lib/onboarding';
@@ -97,12 +98,18 @@ export function VerificarRiotId() {
       {error && <div style={{ fontSize: 13, color: 'var(--acc, #EF4958)', marginBottom: 12 }}>{error}</div>}
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-        <button className="btn-primary" style={{ justifyContent: 'space-between' }} onClick={handleConfirmar} disabled={confirmando || !codigo}>
-          <span>{confirmando ? 'Confirmando…' : 'Já troquei, confirmar'}</span>
-          <span>→</span>
+        <button className="btn-primary" style={{ justifyContent: confirmando ? 'center' : 'space-between' }} onClick={handleConfirmar} disabled={confirmando || !codigo}>
+          {confirmando ? (
+            <SnakeSpinner size={16} color="currentColor" />
+          ) : (
+            <>
+              <span>Já troquei, confirmar</span>
+              <span>→</span>
+            </>
+          )}
         </button>
-        <button className="btn-secondary" onClick={gerarCodigo} disabled={gerando}>
-          {gerando ? 'Gerando…' : 'Gerar código novo'}
+        <button className="btn-secondary" onClick={gerarCodigo} disabled={gerando} style={{ display: 'flex', justifyContent: 'center' }}>
+          {gerando ? <SnakeSpinner size={14} color="currentColor" /> : 'Gerar código novo'}
         </button>
       </div>
 

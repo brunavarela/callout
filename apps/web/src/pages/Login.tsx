@@ -5,6 +5,7 @@ import { LoginShell } from '../components/LoginShell';
 import { AuthTabs } from '../components/AuthTabs';
 import { AuthStepFrame } from '../components/AuthStepFrame';
 import { PasswordField } from '../components/PasswordField';
+import { SnakeSpinner } from '../components/Spinner';
 import { useSession } from '../lib/session';
 import { apiFetch, ApiError } from '../lib/api';
 import { routeForStep } from '../lib/onboarding';
@@ -64,9 +65,15 @@ export function Login() {
           />
           <PasswordField value={senha} onChange={setSenha} placeholder="Senha" disabled={submitting} autoComplete="current-password" />
           {error && <div style={{ fontSize: 13, color: 'var(--acc, #EF4958)' }}>{error}</div>}
-          <button className="btn-primary" style={{ width: '100%', justifyContent: 'space-between' }} disabled={submitting} type="submit">
-            <span>{submitting ? 'Entrando…' : 'Entrar'}</span>
-            <span>→</span>
+          <button className="btn-primary" style={{ width: '100%', justifyContent: submitting ? 'center' : 'space-between' }} disabled={submitting} type="submit">
+            {submitting ? (
+              <SnakeSpinner size={16} color="currentColor" />
+            ) : (
+              <>
+                <span>Entrar</span>
+                <span>→</span>
+              </>
+            )}
           </button>
           <div style={{ fontSize: 13, color: 'var(--text-dim)' }}>
             <Link to="/esqueci-senha">Esqueceu a senha?</Link>

@@ -4,6 +4,7 @@ import type { SessionUser } from '@callout/shared';
 import { LoginShell } from '../components/LoginShell';
 import { PasswordField } from '../components/PasswordField';
 import { PasswordRequirements } from '../components/PasswordRequirements';
+import { SnakeSpinner } from '../components/Spinner';
 import { useSession } from '../lib/session';
 import { apiFetch, ApiError } from '../lib/api';
 import { senhaValida } from '../lib/senha';
@@ -96,9 +97,21 @@ export function EsqueciSenha() {
         />
 
         {!codigoEnviado ? (
-          <button className="btn-primary" style={{ width: '100%', justifyContent: 'space-between' }} onClick={handleEnviar} disabled={enviando || !email} type="button">
-            <span>{enviando ? 'Enviando…' : 'Enviar código'}</span>
-            <span>→</span>
+          <button
+            className="btn-primary"
+            style={{ width: '100%', justifyContent: enviando ? 'center' : 'space-between' }}
+            onClick={handleEnviar}
+            disabled={enviando || !email}
+            type="button"
+          >
+            {enviando ? (
+              <SnakeSpinner size={16} color="currentColor" />
+            ) : (
+              <>
+                <span>Enviar código</span>
+                <span>→</span>
+              </>
+            )}
           </button>
         ) : (
           <form onSubmit={handleConfirmar} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -125,12 +138,18 @@ export function EsqueciSenha() {
               disabled={submitting}
               autoComplete="new-password"
             />
-            <button className="btn-primary" style={{ width: '100%', justifyContent: 'space-between' }} disabled={submitting || codigo.length !== 6} type="submit">
-              <span>{submitting ? 'Redefinindo…' : 'Redefinir senha'}</span>
-              <span>→</span>
+            <button className="btn-primary" style={{ width: '100%', justifyContent: submitting ? 'center' : 'space-between' }} disabled={submitting || codigo.length !== 6} type="submit">
+              {submitting ? (
+                <SnakeSpinner size={16} color="currentColor" />
+              ) : (
+                <>
+                  <span>Redefinir senha</span>
+                  <span>→</span>
+                </>
+              )}
             </button>
-            <button className="btn-secondary" type="button" onClick={handleEnviar} disabled={cooldown > 0 || enviando}>
-              {cooldown > 0 ? `Reenviar código (${cooldown}s)` : enviando ? 'Reenviando…' : 'Reenviar código'}
+            <button className="btn-secondary" type="button" onClick={handleEnviar} disabled={cooldown > 0 || enviando} style={{ display: 'flex', justifyContent: 'center' }}>
+              {enviando ? <SnakeSpinner size={14} color="currentColor" /> : cooldown > 0 ? `Reenviar código (${cooldown}s)` : 'Reenviar código'}
             </button>
           </form>
         )}

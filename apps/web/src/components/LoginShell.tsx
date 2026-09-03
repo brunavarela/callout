@@ -34,10 +34,11 @@ export function LoginShell({ children }: { children: ReactNode }) {
 
           <div style={{ position: 'relative', maxWidth: 460 }}>{children}</div>
 
-          <div style={{ fontSize: 11, color: 'var(--text-faint)', maxWidth: '60ch', lineHeight: 1.6 }}>
-            Ferramenta independente feita por um grupo de amigos. Sem vínculo com a Riot Games. Dados de partida
-            vindos de API pública não-oficial.
-          </div>
+          {/* Espaçador — o aviso que ficava aqui agora vive só no <Footer>,
+              que já aparece embaixo desta tela (evita duplicar o texto e
+              tira o link pros Termos/Privacidade daqui pra lá). Mantém a
+              proporção do space-between sem repetir o texto. */}
+          <div aria-hidden style={{ height: 1 }} />
         </div>
 
         <div style={{ position: 'relative', overflow: 'hidden' }}>
