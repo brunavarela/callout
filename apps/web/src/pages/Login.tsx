@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import type { SessionUser } from '@callout/shared';
 import { LoginShell } from '../components/LoginShell';
 import { AuthTabs } from '../components/AuthTabs';
+import { AuthStepFrame } from '../components/AuthStepFrame';
 import { useSession } from '../lib/session';
 import { apiFetch, ApiError } from '../lib/api';
 import { routeForStep } from '../lib/onboarding';
@@ -50,34 +51,35 @@ export function Login() {
         Suas últimas partidas e as estratégias que sua equipe desenhou.
       </p>
 
-      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-        <input
-          className="input-field"
-          value={identificador}
-          onChange={(e) => setIdentificador(e.target.value)}
-          placeholder="Email ou RiotID"
-          disabled={submitting}
-          autoComplete="username"
-        />
-        <input
-          className="input-field"
-          type="password"
-          value={senha}
-          onChange={(e) => setSenha(e.target.value)}
-          placeholder="Senha"
-          disabled={submitting}
-          autoComplete="current-password"
-        />
-        {error && <div style={{ fontSize: 13, color: 'var(--acc, #EF4958)' }}>{error}</div>}
-        <button className="btn-primary" style={{ width: '100%', justifyContent: 'space-between' }} disabled={submitting} type="submit">
-          <span>{submitting ? 'Entrando…' : 'Entrar'}</span>
-          <span>→</span>
-        </button>
-      </form>
-
-      <div style={{ marginTop: 16, fontSize: 13, color: 'var(--text-dim)' }}>
-        <Link to="/esqueci-senha">Esqueceu a senha?</Link>
-      </div>
+      <AuthStepFrame animKey="entrar">
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <input
+            className="input-field"
+            value={identificador}
+            onChange={(e) => setIdentificador(e.target.value)}
+            placeholder="Email ou RiotID"
+            disabled={submitting}
+            autoComplete="username"
+          />
+          <input
+            className="input-field"
+            type="password"
+            value={senha}
+            onChange={(e) => setSenha(e.target.value)}
+            placeholder="Senha"
+            disabled={submitting}
+            autoComplete="current-password"
+          />
+          {error && <div style={{ fontSize: 13, color: 'var(--acc, #EF4958)' }}>{error}</div>}
+          <button className="btn-primary" style={{ width: '100%', justifyContent: 'space-between' }} disabled={submitting} type="submit">
+            <span>{submitting ? 'Entrando…' : 'Entrar'}</span>
+            <span>→</span>
+          </button>
+          <div style={{ fontSize: 13, color: 'var(--text-dim)' }}>
+            <Link to="/esqueci-senha">Esqueceu a senha?</Link>
+          </div>
+        </form>
+      </AuthStepFrame>
     </LoginShell>
   );
 }
