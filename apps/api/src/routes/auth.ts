@@ -283,8 +283,11 @@ export async function authRoutes(app: FastifyInstance) {
         })()
       : await prisma.user.findUnique({ where: { email: identificador.toLowerCase() } });
 
-    if (!user || !user.senhaHash || !verifyPassword(senha, user.senhaHash)) {
-      return reply.code(401).send({ error: "Email/RiotID ou senha incorretos." });
+    if (!user || !user.senhaHash) {
+      return reply.code(404).send({ error: "Não achamos conta com esse email/RiotID. Confere ou cria uma conta nova." });
+    }
+    if (!verifyPassword(senha, user.senhaHash)) {
+      return reply.code(401).send({ error: "Senha incorreta." });
     }
 
     if (!user.emailVerificado) {

@@ -69,6 +69,11 @@ export function Cadastro() {
       });
       navigate('/cadastro/verificar-email', { state: { email, codigoJaEnviado: true } });
     } catch (err) {
+      // Email/RiotID já cadastrado, conta Riot não encontrada etc. — tudo
+      // que o back rejeita nessa chamada é sobre os campos do passo 2
+      // (RiotID/email), não sobre o intuito — volta pra lá pra pessoa ver
+      // o erro perto do campo que precisa corrigir.
+      setStep(1);
       setError(err instanceof ApiError ? err.message : 'Falha ao criar conta. Tenta de novo.');
     } finally {
       setSubmitting(false);
