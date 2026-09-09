@@ -20,7 +20,7 @@ export async function commentsRoutes(app: FastifyInstance) {
 
     const exists =
       entidadeTipo === "match"
-        ? await prisma.match.findUnique({ where: { id: entidadeId } })
+        ? await prisma.match.findUnique({ where: { id: entidadeId }, select: { id: true } })
         : entidadeTipo === "strategy"
           ? await prisma.strategy.findUnique({ where: { id: entidadeId } })
           : await prisma.spot.findUnique({ where: { id: entidadeId } });

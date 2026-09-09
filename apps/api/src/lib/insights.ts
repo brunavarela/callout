@@ -156,15 +156,38 @@ function computeMatchSides(match: MatchV4Data, teamId: string): { attack: [numbe
   return result;
 }
 
+// Teto pro breakdown de lados (30 dias) — sem isso, um jogador ativo
+// (deathmatch/unrated somados facilmente passam de 100-300 partidas em 30
+// dias) trazia o rawJson (~400-600KB cada) de TODAS elas de uma vez via
+// `include: { match: true }` sem `take`, o que já causou mais de um OOM em
+// produção (mesma classe de bug já corrigida em buildEquipeMatches/
+// buildDashboardSummary — essa função ficou de fora dos dois fixes
+// anteriores). 60 partidas em 30 dias já é uma amostra generosa pra uma
+// estatística de winrate por lado.
+const MAX_SIDES_MATCHES = 60;
+
 export async function buildSidesBreakdown(puuid: string, modoFilter?: "Competitive" | "Unrated", mapIdFilter?: string): Promise<SidesBreakdown> {
   const windowStart = new Date(Date.now() - 30 * 86_400_000);
-  const rows = await prisma.matchPlayer.findMany({
+
+  // Duas etapas: primeiro só os ids (sem rawJson), depois o rawJson só das
+  // que sobreviverem ao corte.
+  const candidates = await prisma.matchPlayer.findMany({
     where: {
       puuid,
       match: { startedAt: { gte: windowStart }, ...(modoFilter ? { modo: modoFilter } : {}), ...(mapIdFilter ? { mapId: mapIdFilter } : {}) },
     },
-    include: { match: true },
+    select: { matchId: true },
+    orderBy: { match: { startedAt: "desc" } },
+    take: MAX_SIDES_MATCHES,
   });
+
+  const rows =
+    candidates.length > 0
+      ? await prisma.matchPlayer.findMany({
+          where: { puuid, matchId: { in: candidates.map((c) => c.matchId) } },
+          include: { match: true },
+        })
+      : [];
 
   let attackWins = 0,
     attackTotal = 0,
