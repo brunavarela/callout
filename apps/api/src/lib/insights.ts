@@ -162,9 +162,10 @@ function computeMatchSides(match: MatchV4Data, teamId: string): { attack: [numbe
 // `include: { match: true }` sem `take`, o que já causou mais de um OOM em
 // produção (mesma classe de bug já corrigida em buildEquipeMatches/
 // buildDashboardSummary — essa função ficou de fora dos dois fixes
-// anteriores). 60 partidas em 30 dias já é uma amostra generosa pra uma
-// estatística de winrate por lado.
-const MAX_SIDES_MATCHES = 60;
+// anteriores). Mesmo valor de MAX_EQUIPE_MATCHES (150) — ver o comentário
+// lá pra conta de memória; com o plano Hobby do Railway + limite de
+// memória do serviço em 2GB, isso fica bem dentro da margem segura.
+const MAX_SIDES_MATCHES = 150;
 
 export async function buildSidesBreakdown(puuid: string, modoFilter?: "Competitive" | "Unrated", mapIdFilter?: string): Promise<SidesBreakdown> {
   const windowStart = new Date(Date.now() - 30 * 86_400_000);

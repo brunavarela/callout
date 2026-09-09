@@ -286,9 +286,19 @@ Fontes: mesmas de §3.1 ([Riot Games Developer Policies](https://developer.riotg
 ## 7. Infra e deploy
 
 - Hoje: Railway (produção) + Neon Postgres (branch `production` separado
-  do `dev`, ver memória do projeto sobre a cota de agosto/2026). Confirmar
-  se o plano atual do Railway aguenta tráfego público antes da divulgação
-  ampla (Fase C).
+  do `dev`, ver memória do projeto sobre a cota de agosto/2026).
+- ✅ **Feito (09/09/2026):** Plano do Railway subido pra **Hobby** ($5/mês
+  mínimo, RAM configurável até 8GB/serviço) — o plano anterior (trial) tinha
+  um teto de memória baixo demais e o processo da API morria (SIGKILL/OOM)
+  toda vez que uma query buscava `rawJson` de partida demais de uma vez.
+  Limite de memória do serviço da API subido pra **2GB** nas Resource
+  Limits do Railway (Settings → Deploy → Replica Limits) — é só um teto de
+  segurança, a Railway cobra pelo uso real, não pela reserva. Junto com
+  isso, os tetos de quantidade de partida no código (que existiam pra
+  evitar precisar desse upgrade antes da hora) subiram de 20/60 pra **150**
+  (`MAX_EQUIPE_MATCHES` em `packages/shared/src/domain.ts`,
+  `MAX_SIDES_MATCHES` em `apps/api/src/lib/insights.ts`) — ver o comentário
+  em `MAX_EQUIPE_MATCHES` pra conta de memória por requisição.
 - Domínio: comprar (checar disponibilidade + ausência de conflito de marca
   no INPI antes de registrar) e apontar DNS.
 - Trabalho desta frente inteiro na branch `dev` até validado.
