@@ -25,12 +25,14 @@ export function formatPlaytime(ms: number): string {
   return `${fmtNum(hours, hours < 10 ? 1 : 0)}h`;
 }
 
-// "?" ao lado do título de cada stat — passa o mouse pra ver a legenda
-// (title nativo, mesmo padrão já usado no resto do app pra tooltip).
+// "?" ao lado do título de cada stat — passa o mouse (ou foca via teclado)
+// pra ver a legenda numa bolha no estilo do resto do app, em vez do
+// tooltip nativo do navegador.
 function InfoDot({ text }: { text: string }) {
   return (
-    <span className="info-dot" title={text}>
-      ?
+    <span className="info-tip" tabIndex={0}>
+      <span className="info-dot">?</span>
+      <span className="info-tip-bubble">{text}</span>
     </span>
   );
 }

@@ -461,9 +461,15 @@ button {
   }
 }
 
-/* Botão "?" ao lado do título de cada stat — legenda aparece no title
-   nativo do navegador ao passar o mouse (mesmo padrão de title já usado
-   no resto do app, ver Select/badges). */
+/* Botão "?" ao lado do título de cada stat — passa o mouse (ou foca via
+   teclado) pra ver a legenda numa bolha com a mesma linguagem visual dos
+   outros painéis flutuantes do app (Select aberto, busca global). */
+.info-tip {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  outline: none;
+}
 .info-dot {
   display: inline-flex;
   align-items: center;
@@ -478,9 +484,55 @@ button {
   cursor: help;
   flex: none;
 }
-.info-dot:hover {
+.info-tip:hover .info-dot,
+.info-tip:focus-visible .info-dot {
   background: var(--acc18, rgba(239, 73, 88, 0.16));
   color: var(--acc, #ef4958);
+}
+
+.info-tip-bubble {
+  position: absolute;
+  top: calc(100% + 9px);
+  left: 50%;
+  transform: translateX(-50%) translateY(-4px);
+  width: max-content;
+  min-width: 140px;
+  max-width: 220px;
+  padding: 9px 11px;
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  border: 1px solid var(--surface-border);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.45);
+  color: var(--text-2);
+  font-size: 11.5px;
+  font-weight: 400;
+  line-height: 1.45;
+  text-align: left;
+  white-space: normal;
+  letter-spacing: normal;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.12s ease, transform 0.12s ease;
+  z-index: 50;
+}
+.info-tip-bubble::before {
+  content: '';
+  position: absolute;
+  top: -5px;
+  left: 50%;
+  width: 9px;
+  height: 9px;
+  background: var(--surface);
+  border-left: 1px solid var(--surface-border);
+  border-top: 1px solid var(--surface-border);
+  transform: translateX(-50%) rotate(45deg);
+}
+.info-tip:hover .info-tip-bubble,
+.info-tip:focus-visible .info-tip-bubble {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(0);
 }
 
 /* Visão do ato: lista de partidas + sidebar (Agentes/Mapas/Funções) */
