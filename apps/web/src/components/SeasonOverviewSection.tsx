@@ -320,12 +320,12 @@ export function SeasonOverviewSection({
     { label: 'K/D', value: data.deaths > 0 ? fmtNum(data.kills / data.deaths, 2) : String(data.kills), explain: 'Abates divididos pelas mortes, no ato.' },
     { label: 'Headshot %', value: `${fmtNum(data.hsPercent, 1)}%`, explain: 'Dos seus tiros que acertaram, quantos foram na cabeça.' },
     { label: 'Win %', value: `${data.winratePercent}%`, explain: `${plural(data.wins, 'vitória')} em ${plural(data.matchesCount, 'partida')} no ato.` },
+    { label: 'KDA', value: fmtNum(data.kda, 2), explain: 'Abates mais assistências divididos pelas mortes, por partida em média.' },
+    { label: 'V/D', value: `${data.wins}V–${data.losses}D`, explain: 'Vitórias e derrotas somadas no ato.' },
   ];
 
   const miniStats: Array<{ label: string; value: string; explain: string }> = [
-    { label: 'Vitórias', value: `${data.wins}V–${data.losses}D`, explain: 'Vitórias e derrotas somadas no ato.' },
     { label: 'ACS', value: String(data.acs), explain: 'Pontuação de combate por round, considerando todo o ato.' },
-    { label: 'KDA', value: fmtNum(data.kda, 2), explain: 'Abates mais assistências divididos pelas mortes, por partida em média.' },
     { label: 'DDΔ/round', value: fmtDelta(data.ddPerRound, 1), explain: 'Quanto de dano a mais (ou a menos) você fez por round, comparado à média dos outros 9 jogadores das mesmas partidas.' },
     { label: 'Abates', value: String(data.kills), explain: 'Total de abates no ato.' },
     { label: 'Mortes', value: String(data.deaths), explain: 'Total de mortes no ato.' },
