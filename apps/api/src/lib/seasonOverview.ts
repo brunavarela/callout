@@ -1,12 +1,10 @@
-import type { AccuracyBreakdown, MapWinrate, MatchBadge, RoleStat, SeasonMatchSummary, SeasonOption, SeasonOverview, SidesBreakdown, TopAgentStat, WeaponStat } from "@callout/shared";
+import type { AccuracyBreakdown, MapWinrate, MatchBadge, RoleStat, SeasonMatchesPage, SeasonMatchSummary, SeasonOption, SeasonOverview, SidesBreakdown, TopAgentStat, WeaponStat } from "@callout/shared";
 import { prisma } from "./prisma.js";
 import { getMmr, getMmrHistory } from "./henrikdev.js";
 import { getCurrentSeasonId } from "./dashboard.js";
 import { mapNameFrom, scoreFor, formatPlayedAt } from "./dashboard.js";
 import { matchResult, countsTowardStats } from "./match-result.js";
 import { loadAgentColorsByName } from "./assets.js";
-
-const RECENT_MATCHES_LIMIT = 20;
 
 // Teto de partidas (de qualquer modo) lidas por ato — mesmo valor e mesmo
 // motivo de MAX_EQUIPE_MATCHES/MAX_SIDES_MATCHES: sem isso, um ato muito
@@ -229,7 +227,6 @@ export async function buildSeasonOverview(
       roles: [],
       accuracy: { headPercent: 0, bodyPercent: 0, legPercent: 0, headHits: 0, bodyHits: 0, legHits: 0 },
       topWeapons: [],
-      recentMatches: [],
       mapIcons: {},
       agentIcons: {},
     };
@@ -288,7 +285,6 @@ export async function buildSeasonOverview(
       roles: [],
       accuracy: { headPercent: 0, bodyPercent: 0, legPercent: 0, headHits: 0, bodyHits: 0, legHits: 0 },
       topWeapons: [],
-      recentMatches: [],
       mapIcons,
       agentIcons,
     };
@@ -426,35 +422,50 @@ export async function buildSeasonOverview(
   const firstBloods = filteredStatRows.reduce((s, r) => s + (r.firstBloods ?? 0), 0);
   const aces = filteredStatRows.reduce((s, r) => s + ((r.multiKills as Record<string, number> | null)?.["5"] ?? 0), 0);
 
-  // Últimas 20 partidas sob o filtro atual, com badges de clutch/multi-kill
-  // e o Índice callout por partida. `perMatchDelta` já está alinhado com
-  // `filteredStatRows` (mesma ordem, mais recente primeiro) — reusa direto,
-  // sem recalcular.
-  const recentRows = filteredStatRows.slice(0, RECENT_MATCHES_LIMIT);
-  const recentDeltas = perMatchDelta.slice(0, RECENT_MATCHES_LIMIT);
+  return {
+    seasonId,
+    seasonShort,
+    availableSeasons,
+    availableModos,
+    accountLevel: rows[0]?.accountLevel ?? null,
+    currentRank,
+    peakRank,
+    playtimeMs,
+    matchesCount,
+    wins,
+    losses,
+    winratePercent,
+    kda,
+    acs,
+    adr,
+    hsPercent,
+    ddPerRound,
+    kills,
+    deaths,
+    assists,
+    firstBloods,
+    aces,
+    calloutIndex: { value: calcularIndiceCallout(winratePercent, kda, acs, ddPerRound) },
+    attackDefense,
+    topAgents,
+    topMaps,
+    roles,
+    accuracy,
+    topWeapons,
+    mapIcons,
+    agentIcons,
+  };
+}
 
-  let rrByMatch = new Map<string, number>();
-  try {
-    const history = await getMmrHistory(region, puuid);
-    rrByMatch = new Map(history.map((h) => [h.match_id, h.last_change]));
-  } catch {
-    // sem histórico de RR — recentMatches fica com rr null
-  }
-
-  const rawJsonByMatchId =
-    recentRows.length > 0
-      ? new Map(
-          (
-            await prisma.match.findMany({ where: { id: { in: recentRows.map((r) => r.matchId) } }, select: { id: true, rawJson: true } })
-          ).map((m) => [m.id, m.rawJson]),
-        )
-      : new Map<string, unknown>();
-
-  const now = new Date();
-  const recentMatches: SeasonMatchSummary[] = recentRows.map((r, i) => {
+// Constrói o SeasonMatchSummary de cada linha — badges de clutch/multi-kill,
+// placar (via rawJson, só das partidas dessa página), Índice callout por
+// partida. `perMatchDelta` e `rows` precisam estar alinhados 1:1 (mesmo
+// índice = mesma partida).
+function toSeasonMatchSummaries(rows: Row[], perMatchDelta: number[], rrByMatch: Map<string, number>, rawJsonByMatchId: Map<string, unknown>, now: Date): SeasonMatchSummary[] {
+  return rows.map((r, i) => {
     const shotsTotalMatch = r.headshots + r.bodyshots + r.legshots;
     const kdaRatio = r.deaths > 0 ? round2((r.kills + r.assists) / r.deaths) : r.kills + r.assists;
-    const ddDelta = round1(recentDeltas[i] ?? 0);
+    const ddDelta = round1(perMatchDelta[i] ?? 0);
 
     const badges: MatchBadge[] = [];
     const clutches = (r.clutches as Record<string, number> | null) ?? {};
@@ -486,41 +497,84 @@ export async function buildSeasonOverview(
       calloutIndex: calcularIndiceCallout(r.won ? 100 : 0, kdaRatio, r.acs, ddDelta),
     };
   });
+}
 
-  return {
-    seasonId,
-    seasonShort,
-    availableSeasons,
-    availableModos,
-    accountLevel: rows[0]?.accountLevel ?? null,
-    currentRank,
-    peakRank,
-    playtimeMs,
-    matchesCount,
-    wins,
-    losses,
-    winratePercent,
-    kda,
-    acs,
-    adr,
-    hsPercent,
-    ddPerRound,
-    kills,
-    deaths,
-    assists,
-    firstBloods,
-    aces,
-    calloutIndex: { value: calcularIndiceCallout(winratePercent, kda, acs, ddPerRound) },
-    attackDefense,
-    topAgents,
-    topMaps,
-    roles,
-    accuracy,
-    topWeapons,
-    recentMatches,
-    mapIcons,
-    agentIcons,
-  };
+const MATCHES_PAGE_SIZE = 10;
+
+// Lista paginada de partidas do ato (10 por página) — separada de
+// buildSeasonOverview de propósito: virar página não deveria recalcular os
+// KPIs/top agentes/mapas/etc. de novo, só a própria lista. Reaplica os
+// mesmos filtros de ato/mapa/agente/modo do painel (ver buildSeasonOverview),
+// mas o DDΔ/round e o rawJson só são buscados pras partidas dessa página —
+// nunca das ~150 inteiras.
+export async function buildSeasonMatchesPage(
+  puuid: string,
+  region: string,
+  requestedSeasonId?: string,
+  mapIdFilter?: string,
+  agentNameFilter?: string,
+  modoFilter?: string,
+  page = 1,
+): Promise<SeasonMatchesPage | null> {
+  const seasonId = requestedSeasonId ?? (await getCurrentSeasonId());
+  if (!seasonId) return null;
+
+  const rows = await prisma.matchPlayer.findMany({
+    where: { puuid, match: { seasonId } },
+    orderBy: { match: { startedAt: "desc" } },
+    take: MAX_SEASON_MATCHES,
+    ...rowArgs,
+  });
+
+  const statRows = modoFilter ? rows.filter((r) => r.match.modo === modoFilter) : rows.filter((r) => countsTowardStats(r.match.modo));
+  const filteredStatRows = statRows.filter(
+    (r) => (!mapIdFilter || r.match.mapId === mapIdFilter) && (!agentNameFilter || r.agentName === agentNameFilter),
+  );
+
+  const total = filteredStatRows.length;
+  const safePage = Math.max(1, page);
+  const pageRows = filteredStatRows.slice((safePage - 1) * MATCHES_PAGE_SIZE, safePage * MATCHES_PAGE_SIZE);
+
+  if (pageRows.length === 0) {
+    return { matches: [], page: safePage, pageSize: MATCHES_PAGE_SIZE, total };
+  }
+
+  // DDΔ/round só pras partidas dessa página (não das ~150 do ato inteiro).
+  const matchIds = pageRows.map((r) => r.matchId);
+  const allPlayers = await prisma.matchPlayer.findMany({
+    where: { matchId: { in: matchIds } },
+    select: { matchId: true, puuid: true, damageDealt: true, roundsPlayed: true },
+  });
+  const othersByMatch = new Map<string, { dmg: number; rounds: number }>();
+  for (const p of allPlayers) {
+    if (p.puuid === puuid) continue;
+    const entry = othersByMatch.get(p.matchId) ?? { dmg: 0, rounds: 0 };
+    entry.dmg += p.damageDealt;
+    entry.rounds += p.roundsPlayed;
+    othersByMatch.set(p.matchId, entry);
+  }
+  const perMatchDelta = pageRows.map((r) => {
+    const selfAdr = r.roundsPlayed > 0 ? r.damageDealt / r.roundsPlayed : 0;
+    const others = othersByMatch.get(r.matchId);
+    const othersAdr = others && others.rounds > 0 ? others.dmg / others.rounds : selfAdr;
+    return selfAdr - othersAdr;
+  });
+
+  let rrByMatch = new Map<string, number>();
+  try {
+    const history = await getMmrHistory(region, puuid);
+    rrByMatch = new Map(history.map((h) => [h.match_id, h.last_change]));
+  } catch {
+    // sem histórico de RR — a página fica com rr null
+  }
+
+  const rawJsonByMatchId = new Map(
+    (await prisma.match.findMany({ where: { id: { in: matchIds } }, select: { id: true, rawJson: true } })).map((m) => [m.id, m.rawJson]),
+  );
+
+  const matches = toSeasonMatchSummaries(pageRows, perMatchDelta, rrByMatch, rawJsonByMatchId, new Date());
+
+  return { matches, page: safePage, pageSize: MATCHES_PAGE_SIZE, total };
 }
 
 function round1(n: number): number {

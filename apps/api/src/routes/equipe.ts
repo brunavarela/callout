@@ -267,12 +267,14 @@ export async function equipeRoutes(app: FastifyInstance) {
   });
 
   // Só partidas com pelo menos MIN_TEAM_MATCH_PLAYERS membros da equipe
-  // juntos (ver buildEquipeMatches) — histórico completo, sem recorte de 30
-  // dias como o resumo do card da equipe.
+  // juntos (ver buildEquipeMatches) — escopado por ato e paginado de 10 em
+  // 10. Sem `seasonId`, mostra o ato atual.
   app.get("/equipe/partidas", { preHandler: requireAuth }, async (request, reply) => {
     const equipeId = await getUserEquipeId(request.user!.id);
     if (!equipeId) return reply.code(404).send({ error: "Você ainda não tem uma equipe." });
-    return buildEquipeMatches(equipeId);
+    const { seasonId, page } = request.query as { seasonId?: string; page?: string };
+    const pageNumber = Number(page);
+    return buildEquipeMatches(equipeId, seasonId || undefined, Number.isFinite(pageNumber) && pageNumber > 0 ? pageNumber : 1);
   });
 
   // Agregado das mesmas "partidas da equipe" de /equipe/partidas — sem

@@ -342,9 +342,19 @@ export interface SeasonOverview {
   roles: RoleStat[];
   accuracy: AccuracyBreakdown;
   topWeapons: WeaponStat[];
-  recentMatches: SeasonMatchSummary[]; // últimas 20 do ato selecionado
   mapIcons: Record<string, string>; // nome do mapa -> url do ícone (valorant-api.com)
   agentIcons: Record<string, string>; // nome do agente -> url do ícone
+}
+
+// Resposta de GET /dashboard/season/matches — lista paginada (10 por
+// página) das partidas do ato sob o filtro atual. Separada de
+// SeasonOverview de propósito: virar página não deveria recalcular os
+// KPIs/top agentes/mapas/etc, só a própria lista de partidas.
+export interface SeasonMatchesPage {
+  matches: SeasonMatchSummary[];
+  page: number;
+  pageSize: number;
+  total: number; // total de partidas sob o filtro atual — front usa pra calcular o nº de páginas
 }
 
 // Resposta de GET /dashboard/rr-history — RR e os 4 tópicos de análise
@@ -514,6 +524,19 @@ export interface PartidaEquipeSummary {
   score: string;
   playedAtLabel: string;
   participants: ParticipanteEquipeMatch[];
+}
+
+// Resposta de GET /equipe/partidas — paginada (10 por página) e escopada
+// por ato, igual a Visão do ato individual (ver SeasonMatchesPage). Sem
+// `seasonId` no request, o back resolve o ato atual sozinho.
+export interface EquipePartidasPage {
+  matches: PartidaEquipeSummary[];
+  seasonId: string | null;
+  seasonShort: string | null;
+  availableSeasons: SeasonOption[];
+  page: number;
+  pageSize: number;
+  total: number;
 }
 
 // --- Painel da equipe (GET /equipe/painel) ---

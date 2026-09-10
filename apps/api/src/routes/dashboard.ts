@@ -4,7 +4,7 @@ import type { MatchCountFilter } from "@callout/shared";
 import { requireAuth } from "../lib/session.js";
 import { buildDashboardSummary } from "../lib/dashboard.js";
 import { buildRrAndInsights, buildSidesBreakdown } from "../lib/insights.js";
-import { buildSeasonOverview } from "../lib/seasonOverview.js";
+import { buildSeasonOverview, buildSeasonMatchesPage } from "../lib/seasonOverview.js";
 import { resolveDashboardTarget } from "../lib/equipe.js";
 
 // Resolve o membro do time cujo painel a rota deve montar — o próprio
@@ -86,5 +86,24 @@ export async function dashboardRoutes(app: FastifyInstance) {
     if (!target) return;
     const { seasonId, mapId, agent, modo } = request.query as { seasonId?: string; mapId?: string; agent?: string; modo?: string };
     return buildSeasonOverview(target.riotPuuid!, target.riotRegion!, seasonId || undefined, mapId || undefined, agent || undefined, modo || undefined);
+  });
+
+  // Lista paginada (10 por página) das partidas do ato — separada de
+  // /dashboard/season pra virar página sem recalcular KPIs/top agentes/
+  // mapas/etc de novo. Mesmos filtros de ato/mapa/agente/modo do painel.
+  app.get("/dashboard/season/matches", { preHandler: requireAuth }, async (request, reply) => {
+    const target = await resolveTarget(request, reply);
+    if (!target) return;
+    const { seasonId, mapId, agent, modo, page } = request.query as { seasonId?: string; mapId?: string; agent?: string; modo?: string; page?: string };
+    const pageNumber = Number(page);
+    return buildSeasonMatchesPage(
+      target.riotPuuid!,
+      target.riotRegion!,
+      seasonId || undefined,
+      mapId || undefined,
+      agent || undefined,
+      modo || undefined,
+      Number.isFinite(pageNumber) && pageNumber > 0 ? pageNumber : 1,
+    );
   });
 }
