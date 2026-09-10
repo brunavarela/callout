@@ -8,6 +8,15 @@ import { loadAgentColorsByName } from "./assets.js";
 
 const RECENT_MATCHES_LIMIT = 20;
 
+// Teto de partidas (de qualquer modo) lidas por ato — mesmo valor e mesmo
+// motivo de MAX_EQUIPE_MATCHES/MAX_SIDES_MATCHES: sem isso, um ato muito
+// ativo (spam de Deathmatch etc.) buscaria a temporada inteira de uma vez.
+// Aqui o risco de memória é bem menor que nos outros dois (essa query não
+// toca rawJson, só colunas escalares/JSON pequenas já agregadas na sync),
+// mas o teto entra do mesmo jeito por consistência e porque `allPlayers`
+// (pro DDΔ/round) escala 10x esse número.
+const MAX_SEASON_MATCHES = 150;
+
 // Mesmo padrão inglês->português usado pro resto do texto do app.
 // AgentAsset.funcao vem do `role.displayName` da valorant-api.com (ver
 // seedAgents em assets.ts), sempre em inglês.
@@ -166,6 +175,7 @@ export async function buildSeasonOverview(
   const rows = await prisma.matchPlayer.findMany({
     where: { puuid, match: { seasonId } },
     orderBy: { match: { startedAt: "desc" } },
+    take: MAX_SEASON_MATCHES,
     ...rowArgs,
   });
 
