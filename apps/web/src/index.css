@@ -434,22 +434,56 @@ button {
   }
 }
 
-/* KPIs da Visão do ato — 6 cards numa linha só em telas largas (KDA/ACS/
-   ADR/HS%/vitórias/Índice callout), indo pra 3 e depois 2 por linha. */
-.grid-responsive-kpi6 {
+/* KPIs da Visão do ato — tira densa (não "cards" separados, um retângulo
+   só). Linha de destaque (ADR/K:D/Headshot%/Win%) em 4 colunas; linha
+   miúda (o resto) em quantas colunas couberem, encolhendo antes de
+   quebrar linha — cabe tudo sem crescer a altura do bloco. */
+.kpi-hero-row {
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
-  gap: 14px;
-}
-@media (max-width: 1180px) {
-  .grid-responsive-kpi6 {
-    grid-template-columns: repeat(3, 1fr);
-  }
+  grid-template-columns: repeat(4, 1fr);
+  gap: 18px;
 }
 @media (max-width: 640px) {
-  .grid-responsive-kpi6 {
+  .kpi-hero-row {
     grid-template-columns: repeat(2, 1fr);
+    row-gap: 12px;
   }
+}
+
+.kpi-mini-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(84px, 1fr));
+  gap: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--divider);
+}
+@media (max-width: 640px) {
+  .kpi-mini-row {
+    grid-template-columns: repeat(3, 1fr);
+    row-gap: 14px;
+  }
+}
+
+/* Botão "?" ao lado do título de cada stat — legenda aparece no title
+   nativo do navegador ao passar o mouse (mesmo padrão de title já usado
+   no resto do app, ver Select/badges). */
+.info-dot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: var(--track);
+  color: var(--text-faint);
+  font-size: 9px;
+  font-weight: 700;
+  cursor: help;
+  flex: none;
+}
+.info-dot:hover {
+  background: var(--acc18, rgba(239, 73, 88, 0.16));
+  color: var(--acc, #ef4958);
 }
 
 /* Visão do ato: lista de partidas + sidebar (Agentes/Mapas/Funções) */

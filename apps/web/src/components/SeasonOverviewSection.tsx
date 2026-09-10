@@ -25,6 +25,16 @@ export function formatPlaytime(ms: number): string {
   return `${fmtNum(hours, hours < 10 ? 1 : 0)}h`;
 }
 
+// "?" ao lado do título de cada stat — passa o mouse pra ver a legenda
+// (title nativo, mesmo padrão já usado no resto do app pra tooltip).
+function InfoDot({ text }: { text: string }) {
+  return (
+    <span className="info-dot" title={text}>
+      ?
+    </span>
+  );
+}
+
 function fmtRr(n: number): string {
   const abs = Math.abs(n);
   if (n > 0) return `+${abs}`;
@@ -305,46 +315,55 @@ export function SeasonOverviewSection({
     );
   }
 
-  const kpiCards = [
-    { label: 'KDA médio', value: fmtNum(data.kda, 2), explain: 'Abates mais assistências divididos pelas mortes, no ato.' },
-    { label: 'ACS médio', value: String(data.acs), explain: 'Pontuação de combate por round, considerando todo o ato.' },
+  const heroStats: Array<{ label: string; value: string; explain: string }> = [
     { label: 'ADR', value: String(data.adr), explain: 'Dano médio causado por round no ato.' },
-    { label: 'Tiros na cabeça', value: `${fmtNum(data.hsPercent, 1)}%`, explain: 'Dos seus tiros que acertaram, quantos foram na cabeça.' },
-    { label: 'Partidas ganhas', value: `${data.winratePercent}%`, explain: `${plural(data.wins, 'vitória')} em ${plural(data.matchesCount, 'partida')} no ato.` },
-    {
-      label: 'Índice callout',
-      value: String(data.calloutIndex.value),
-      explain: 'Nota própria de 0 a 100 combinando taxa de vitória, KDA, ACS e delta de dano — não é comparável a scores de outras plataformas.',
-      highlight: true,
-    },
+    { label: 'K/D', value: data.deaths > 0 ? fmtNum(data.kills / data.deaths, 2) : String(data.kills), explain: 'Abates divididos pelas mortes, no ato.' },
+    { label: 'Headshot %', value: `${fmtNum(data.hsPercent, 1)}%`, explain: 'Dos seus tiros que acertaram, quantos foram na cabeça.' },
+    { label: 'Win %', value: `${data.winratePercent}%`, explain: `${plural(data.wins, 'vitória')} em ${plural(data.matchesCount, 'partida')} no ato.` },
+  ];
+
+  const miniStats: Array<{ label: string; value: string; explain: string }> = [
+    { label: 'Vitórias', value: `${data.wins}V–${data.losses}D`, explain: 'Vitórias e derrotas somadas no ato.' },
+    { label: 'ACS', value: String(data.acs), explain: 'Pontuação de combate por round, considerando todo o ato.' },
+    { label: 'KDA', value: fmtNum(data.kda, 2), explain: 'Abates mais assistências divididos pelas mortes, por partida em média.' },
+    { label: 'DDΔ/round', value: fmtDelta(data.ddPerRound, 1), explain: 'Quanto de dano a mais (ou a menos) você fez por round, comparado à média dos outros 9 jogadores das mesmas partidas.' },
+    { label: 'Abates', value: String(data.kills), explain: 'Total de abates no ato.' },
+    { label: 'Mortes', value: String(data.deaths), explain: 'Total de mortes no ato.' },
+    { label: 'Assistências', value: String(data.assists), explain: 'Total de assistências no ato.' },
+    { label: 'First bloods', value: String(data.firstBloods), explain: 'Primeiro abate da rodada, contando só as vezes que foi você.' },
+    { label: 'Aces', value: String(data.aces), explain: 'Rodadas em que você fez os 5 abates da equipe adversária sozinho.' },
   ];
 
   const dayGroups = groupByDay(data.recentMatches);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      <div className="grid-responsive-kpi6">
-        {kpiCards.map((k) => (
-          <div
-            key={k.label}
-            style={{
-              ...cardStyle,
-              padding: '14px 16px',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 8,
-              ...(k.highlight
-                ? { background: 'color-mix(in srgb, var(--pos, #18AAB7) 12%, var(--surface))', border: '1px solid color-mix(in srgb, var(--pos, #18AAB7) 35%, var(--surface-border))' }
-                : {}),
-            }}
-          >
-            <span style={{ fontSize: 13, fontWeight: 600, color: k.highlight ? WIN : 'var(--text-3)' }}>{k.label}</span>
-            <span style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 28, letterSpacing: '-.02em', color: k.highlight ? WIN : 'var(--text)' }}>{k.value}</span>
-            <div style={{ borderTop: '1px solid var(--divider)', paddingTop: 8 }}>
-              <span style={{ fontSize: 11.5, lineHeight: 1.35, color: 'var(--text-dim)' }}>{k.explain}</span>
+      <div style={{ ...cardStyle, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <div className="kpi-hero-row">
+          {heroStats.map((s) => (
+            <div key={s.label} style={{ display: 'flex', gap: 10, alignItems: 'stretch', minWidth: 0 }}>
+              <span style={{ width: 3, borderRadius: 2, background: 'var(--acc, #EF4958)', flex: 'none' }} />
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 3, minWidth: 0 }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, color: 'var(--text-dim)' }}>
+                  {s.label}
+                  <InfoDot text={s.explain} />
+                </span>
+                <span style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 700, fontSize: 22, letterSpacing: '-.02em' }}>{s.value}</span>
+              </div>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
+        <div className="kpi-mini-row">
+          {miniStats.map((s) => (
+            <div key={s.label} style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 10.5, color: 'var(--text-faint)', whiteSpace: 'nowrap' }}>
+                {s.label}
+                <InfoDot text={s.explain} />
+              </span>
+              <span style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 15 }}>{s.value}</span>
+            </div>
+          ))}
+        </div>
       </div>
 
       <div className="grid-responsive-season">
