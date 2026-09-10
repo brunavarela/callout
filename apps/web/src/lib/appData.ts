@@ -74,6 +74,12 @@ export function useAppData(user: SessionUser | null) {
   // "atual" nos bastidores.
   const [selectedSeasonId, setSelectedSeasonIdState] = useState<string | null>(null);
 
+  // Filtros de mapa/agente do painel "Visão do ato" — separados do
+  // mapFilter do dashboard antigo (que outras telas como Matches/busca
+  // global ainda usam) pra não acoplar os dois.
+  const [seasonMapFilter, setSeasonMapFilterState] = useState<string | null>(null);
+  const [seasonAgentFilter, setSeasonAgentFilterState] = useState<string | null>(null);
+
   const wasSyncing = useRef(false);
 
   const loadEquipe = useCallback(async () => {
@@ -106,23 +112,29 @@ export function useAppData(user: SessionUser | null) {
   }, []);
 
   // Visão do ato ("estilo tracker.gg") — depende de quem é o alvo (próprio
-  // usuário ou outro membro selecionado) e de qual ato o seletor do painel
-  // escolheu (null = ato atual, o back resolve sozinho).
-  const loadSeasonOverview = useCallback(async (memberId: string | null, seasonId: string | null) => {
-    setSeasonOverviewLoading(true);
-    try {
-      const params = new URLSearchParams();
-      if (memberId) params.set('userId', memberId);
-      if (seasonId) params.set('seasonId', seasonId);
-      const qs = params.toString();
-      setSeasonOverview(await apiFetch<SeasonOverview>(`/dashboard/season${qs ? `?${qs}` : ''}`));
-      setSeasonOverviewError(null);
-    } catch {
-      setSeasonOverviewError('Falha ao carregar a visão do ato.');
-    } finally {
-      setSeasonOverviewLoading(false);
-    }
-  }, []);
+  // usuário ou outro membro selecionado), de qual ato o seletor do painel
+  // escolheu (null = ato atual, o back resolve sozinho) e dos filtros de
+  // mapa/agente do painel.
+  const loadSeasonOverview = useCallback(
+    async (memberId: string | null, seasonId: string | null, mapId: string | null, agent: string | null) => {
+      setSeasonOverviewLoading(true);
+      try {
+        const params = new URLSearchParams();
+        if (memberId) params.set('userId', memberId);
+        if (seasonId) params.set('seasonId', seasonId);
+        if (mapId) params.set('mapId', mapId);
+        if (agent) params.set('agent', agent);
+        const qs = params.toString();
+        setSeasonOverview(await apiFetch<SeasonOverview>(`/dashboard/season${qs ? `?${qs}` : ''}`));
+        setSeasonOverviewError(null);
+      } catch {
+        setSeasonOverviewError('Falha ao carregar a visão do ato.');
+      } finally {
+        setSeasonOverviewLoading(false);
+      }
+    },
+    [],
+  );
 
   // RR e os tópicos de análise vêm juntos de /dashboard/rr-history, numa
   // fetch separada de /dashboard — trocar só a janela de partidas (7/20)
@@ -150,12 +162,13 @@ export function useAppData(user: SessionUser | null) {
   // Trocar de membro reseta o filtro de mapa — a lista de mapas filtráveis
   // vem dos mapas que ESSA pessoa jogou (mapWinrates dela), então um mapa
   // selecionado pode nem existir mais na lista de quem você acabou de trocar.
-  // Reseta o ato selecionado também — nem todo ato escolhido pra você existe
-  // pra quem você acabou de trocar.
+  // Reseta o ato/mapa/agente selecionados da Visão do ato pelo mesmo motivo.
   const setSelectedMemberId = useCallback((memberId: string | null) => {
     setSelectedMemberIdState(memberId);
     setMapFilterState(null);
     setSelectedSeasonIdState(null);
+    setSeasonMapFilterState(null);
+    setSeasonAgentFilterState(null);
   }, []);
 
   const setMapFilter = useCallback((mapId: string | null) => {
@@ -164,6 +177,14 @@ export function useAppData(user: SessionUser | null) {
 
   const setSelectedSeasonId = useCallback((seasonId: string | null) => {
     setSelectedSeasonIdState(seasonId);
+  }, []);
+
+  const setSeasonMapFilter = useCallback((mapId: string | null) => {
+    setSeasonMapFilterState(mapId);
+  }, []);
+
+  const setSeasonAgentFilter = useCallback((agent: string | null) => {
+    setSeasonAgentFilterState(agent);
   }, []);
 
   const updateEquipeMembroNota = useCallback((userId: string, note: string) => {
@@ -354,13 +375,13 @@ export function useAppData(user: SessionUser | null) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [riotId, modoFilter, matchCountFilter, selectedMemberId, mapFilter]);
 
-  // Visão do ato — não depende de modo/mapa, só de trocar de membro ou de
-  // ato selecionado no seletor do painel.
+  // Visão do ato — depende de trocar de membro, do ato selecionado e dos
+  // filtros de mapa/agente do próprio painel.
   useEffect(() => {
     if (!riotId) return;
-    loadSeasonOverview(selectedMemberId, selectedSeasonId);
+    loadSeasonOverview(selectedMemberId, selectedSeasonId, seasonMapFilter, seasonAgentFilter);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [riotId, selectedMemberId, selectedSeasonId]);
+  }, [riotId, selectedMemberId, selectedSeasonId, seasonMapFilter, seasonAgentFilter]);
 
   // Poll enquanto a sincronização está rolando.
   useEffect(() => {
@@ -387,7 +408,7 @@ export function useAppData(user: SessionUser | null) {
       loadSides(modoFilter, selectedMemberId, mapFilter);
       loadEquipe();
       loadRrHistory(modoFilter, matchCountFilter, selectedMemberId, mapFilter);
-      loadSeasonOverview(selectedMemberId, selectedSeasonId);
+      loadSeasonOverview(selectedMemberId, selectedSeasonId, seasonMapFilter, seasonAgentFilter);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sync?.state]);
@@ -415,6 +436,10 @@ export function useAppData(user: SessionUser | null) {
     seasonOverviewLoading,
     selectedSeasonId,
     setSelectedSeasonId,
+    seasonMapFilter,
+    setSeasonMapFilter,
+    seasonAgentFilter,
+    setSeasonAgentFilter,
     equipe,
     equipeError,
     reloadEquipe: loadEquipe,

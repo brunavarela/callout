@@ -147,6 +147,43 @@ function SearchBar({ appData }: { appData: AppData }) {
 
 const SIDEBAR_COLLAPSED_KEY = 'callout:sidebar-collapsed';
 
+// Elo atual + nível da conta — fica fixo no header global (não só na página
+// do painel) porque é "quem você é" agora, não um dado específico do ato
+// selecionado. Vem de seasonOverview (mesma chamada de MMR que já
+// alimentava o painel antigo, só que now compartilhada pelo header).
+function RankLevelChip({ appData }: { appData: AppData }) {
+  const { seasonOverview } = appData;
+  if (!seasonOverview) return null;
+  const { currentRank, peakRank, accountLevel } = seasonOverview;
+  if (!currentRank && accountLevel === null) return null;
+
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 'none' }}>
+      {currentRank && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {currentRank.iconUrl ? (
+            <img src={currentRank.iconUrl} alt="" style={{ width: 28, height: 28, objectFit: 'contain', flex: 'none' }} />
+          ) : (
+            <span style={{ width: 28, height: 28, borderRadius: 8, background: 'var(--avatar-bg)', flex: 'none' }} />
+          )}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+            <span style={{ fontSize: 12.5, fontWeight: 600 }}>
+              {currentRank.tierLabel} · {currentRank.rr} RR
+            </span>
+            {peakRank && <span style={{ fontSize: 10.5, color: 'var(--text-dim)' }}>Máx: {peakRank.tierLabel}</span>}
+          </div>
+        </div>
+      )}
+      {accountLevel !== null && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 1, paddingLeft: currentRank ? 10 : 0, borderLeft: currentRank ? '1px solid var(--divider)' : 'none' }}>
+          <span style={{ fontSize: 9, letterSpacing: '.1em', color: 'var(--text-dim)' }}>LEVEL</span>
+          <span style={{ fontSize: 15, fontWeight: 700, fontFamily: 'Poppins,sans-serif', lineHeight: 1 }}>{accountLevel}</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function AppShell() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -311,6 +348,7 @@ export function AppShell() {
 
       <main className="app-main" style={{ minWidth: 0, height: '100%', display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
         <header className="app-header" style={{ padding: '16px 26px', borderBottom: '1px solid var(--divider)' }}>
+          <RankLevelChip appData={appData} />
           <SearchBar appData={appData} />
           <div ref={accountMenuRef} style={{ marginLeft: 'auto', position: 'relative' }}>
             {settingsOpen && <AccountMenu className="header-profile-panel" onClose={() => setSettingsOpen(false)} />}
