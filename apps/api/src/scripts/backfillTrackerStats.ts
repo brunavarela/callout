@@ -7,8 +7,10 @@
 // projeto, ver MAX_EQUIPE_MATCHES em packages/shared/src/domain.ts.
 // Idempotente — só pega partidas com `seasonId: null`.
 import type { MatchV4Data } from "@callout/shared";
+import { Prisma } from "@prisma/client";
 import { prisma } from "../lib/prisma.js";
 import { replayMatchStats } from "../lib/matchReplay.js";
+import { computeMatchSides } from "../lib/insights.js";
 
 const BATCH_SIZE = 25;
 
@@ -17,7 +19,7 @@ async function main() {
 
   for (;;) {
     const matches = await prisma.match.findMany({
-      where: { OR: [{ seasonId: null }, { players: { some: { firstBloods: null } } }] },
+      where: { OR: [{ seasonId: null }, { players: { some: { sidesRounds: { equals: Prisma.DbNull } } } }] },
       select: { id: true, rawJson: true },
       take: BATCH_SIZE,
     });
@@ -26,6 +28,8 @@ async function main() {
     for (const match of matches) {
       const raw = match.rawJson as unknown as MatchV4Data;
       const replay = replayMatchStats(raw);
+      const teamIds = [...new Set(raw.players.map((p) => p.team_id))];
+      const sidesByTeam = new Map(teamIds.map((teamId) => [teamId, computeMatchSides(raw, teamId)]));
 
       await prisma.match.update({
         where: { id: match.id },
@@ -34,6 +38,17 @@ async function main() {
 
       for (const p of raw.players) {
         const playerReplay = replay.get(p.puuid);
+        const sides = sidesByTeam.get(p.team_id);
+        const sidesRounds = sides
+          ? {
+              atkWins: sides.attack[0],
+              atkTotal: sides.attack[1],
+              defWins: sides.defense[0],
+              defTotal: sides.defense[1],
+              otWins: sides.overtime[0],
+              otTotal: sides.overtime[1],
+            }
+          : {};
         await prisma.matchPlayer.updateMany({
           where: { matchId: match.id, puuid: p.puuid },
           data: {
@@ -43,6 +58,7 @@ async function main() {
             clutches: playerReplay?.clutchesWonBySize ?? {},
             firstBloods: playerReplay?.firstBloods ?? 0,
             plants: playerReplay?.plants ?? 0,
+            sidesRounds,
           },
         });
       }

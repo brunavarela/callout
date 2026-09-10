@@ -119,7 +119,7 @@ export async function buildRrAndInsights(
 const HALF_1_LAST_ROUND = 12;
 const HALF_2_LAST_ROUND = 24;
 
-function computeMatchSides(match: MatchV4Data, teamId: string): { attack: [number, number]; defense: [number, number]; overtime: [number, number] } {
+export function computeMatchSides(match: MatchV4Data, teamId: string): { attack: [number, number]; defense: [number, number]; overtime: [number, number] } {
   const result = { attack: [0, 0] as [number, number], defense: [0, 0] as [number, number], overtime: [0, 0] as [number, number] };
 
   const teamIdOfPuuid = (puuid: string) => match.players.find((p) => p.puuid === puuid)?.team_id;

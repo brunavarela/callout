@@ -73,12 +73,14 @@ export async function dashboardRoutes(app: FastifyInstance) {
     return buildSidesBreakdown(target.riotPuuid!, parseModoFilter(modo), parseMapIdFilter(mapId));
   });
 
-  // Visão geral do ato atual — cards "estilo tracker.gg" (ver plano de
-  // 10/09/2026). Sem filtro de modo/mapa por ora (o ato inteiro, igual o
-  // concorrente mostra).
+  // Visão geral de um ato — cards "estilo tracker.gg" (ver plano de
+  // 10/09/2026). Sem `seasonId`, mostra o ato atual; com `seasonId`, a
+  // pessoa escolheu outro ato no seletor do painel. Sem filtro de modo/mapa
+  // por ora (o ato inteiro, igual o concorrente mostra).
   app.get("/dashboard/season", { preHandler: requireAuth }, async (request, reply) => {
     const target = await resolveTarget(request, reply);
     if (!target) return;
-    return buildSeasonOverview(target.riotPuuid!, target.riotRegion!);
+    const { seasonId } = request.query as { seasonId?: string };
+    return buildSeasonOverview(target.riotPuuid!, target.riotRegion!, seasonId || undefined);
   });
 }

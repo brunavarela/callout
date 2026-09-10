@@ -183,6 +183,10 @@ model MatchPlayer {
   clutches     Json? // { "1v1": n, ..., "1v5": n } — rounds vencidos em desvantagem numérica
   firstBloods  Int? // rounds em que foi a primeira kill da partida (replayMatchStats já calculava isso, só não era salvo)
   plants       Int? // idem, spike plantado
+  // { atkWins, atkTotal, defWins, defTotal, otWins, otTotal } — mesmo
+  // cálculo de computeMatchSides (insights.ts), só que salvo por jogador
+  // na sincronização em vez de recalculado a cada carga do dashboard.
+  sidesRounds  Json?
 
   @@unique([matchId, puuid])
   @@index([puuid])

@@ -5,6 +5,7 @@ import { getMatchlist, getMmrHistory, HenrikDevError } from "./henrikdev.js";
 import { ensureMapAsset } from "./strategy.js";
 import { countsTowardStats } from "./match-result.js";
 import { replayMatchStats } from "./matchReplay.js";
+import { computeMatchSides } from "./insights.js";
 
 function describeSyncFailure(err: unknown): string {
   if (err instanceof ZodError) return "A HenrikDev devolveu um formato de dado inesperado.";
@@ -123,6 +124,12 @@ async function persistMatch(match: MatchV4Data, selfPuuid: string, selfRr: numbe
   // vira a coluna `clutches` (mesmo formato, só nome mais curto no banco).
   const replay = replayMatchStats(match);
 
+  // Ataque/defesa (mesmo cálculo de computeMatchSides em insights.ts) — só
+  // depende do time, não do jogador, então calcula uma vez por time e
+  // reusa pros jogadores desse time.
+  const teamIds = [...new Set(match.players.map((p) => p.team_id))];
+  const sidesByTeam = new Map(teamIds.map((teamId) => [teamId, computeMatchSides(match, teamId)]));
+
   await prisma.match.create({
     data: {
       id: match.metadata.match_id,
@@ -137,6 +144,17 @@ async function persistMatch(match: MatchV4Data, selfPuuid: string, selfRr: numbe
         create: match.players.map((p) => {
           const team = match.teams.find((t) => t.team_id === p.team_id);
           const playerReplay = replay.get(p.puuid);
+          const sides = sidesByTeam.get(p.team_id);
+          const sidesRounds = sides
+            ? {
+                atkWins: sides.attack[0],
+                atkTotal: sides.attack[1],
+                defWins: sides.defense[0],
+                defTotal: sides.defense[1],
+                otWins: sides.overtime[0],
+                otTotal: sides.overtime[1],
+              }
+            : {};
           return {
             puuid: p.puuid,
             teamId: p.team_id,
@@ -162,6 +180,7 @@ async function persistMatch(match: MatchV4Data, selfPuuid: string, selfRr: numbe
             clutches: playerReplay?.clutchesWonBySize ?? {},
             firstBloods: playerReplay?.firstBloods ?? 0,
             plants: playerReplay?.plants ?? 0,
+            sidesRounds,
           };
         }),
       },

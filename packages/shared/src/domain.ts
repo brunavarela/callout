@@ -270,9 +270,44 @@ export interface CalloutIndex {
   value: number; // 0-100
 }
 
+// Um clutch ou multi-kill numa partida do ato — vira badge na lista de
+// partidas (ex.: "1v3 Clutch", "3k"). `size` é 1-5.
+export interface MatchBadge {
+  kind: "clutch" | "multiKill";
+  size: number;
+}
+
+export interface SeasonMatchSummary {
+  id: string;
+  result: "V" | "D" | "E";
+  map: string;
+  agent: string;
+  score: string;
+  kda: string;
+  kdaRatio: number;
+  acs: number;
+  ddPerRound: number;
+  hsPercent: number;
+  rr: number | null;
+  playedAtLabel: string;
+  badges: MatchBadge[];
+  // Mesma fórmula do calloutIndex agregado (ver CalloutIndex), só que
+  // aplicada a essa partida específica — substitui o "TRS" por partida do
+  // concorrente.
+  calloutIndex: number;
+}
+
+export interface SeasonOption {
+  seasonId: string;
+  seasonShort: string;
+}
+
 export interface SeasonOverview {
+  seasonId: string | null;
   seasonShort: string | null;
+  availableSeasons: SeasonOption[];
   accountLevel: number | null;
+  currentRank: { tierLabel: string; rr: number; iconUrl: string | null } | null;
   peakRank: { tierLabel: string; seasonShort: string } | null;
   playtimeMs: number;
   matchesCount: number;
@@ -290,11 +325,15 @@ export interface SeasonOverview {
   firstBloods: number;
   aces: number;
   calloutIndex: CalloutIndex;
+  attackDefense: SidesBreakdown;
   topAgents: TopAgentStat[];
   topMaps: MapWinrate[];
   roles: RoleStat[];
   accuracy: AccuracyBreakdown;
   topWeapons: WeaponStat[];
+  recentMatches: SeasonMatchSummary[]; // últimas 20 do ato selecionado
+  mapIcons: Record<string, string>; // nome do mapa -> url do ícone (valorant-api.com)
+  agentIcons: Record<string, string>; // nome do agente -> url do ícone
 }
 
 // Resposta de GET /dashboard/rr-history — RR e os 4 tópicos de análise
