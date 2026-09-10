@@ -4,7 +4,7 @@ import { LayoutDashboard, Swords, Users, PenTool, MapPin, Trophy, ChevronLeft, C
 import { useSession } from '../lib/session';
 import { useAppData, type AppData } from '../lib/appData';
 import { routeForStep } from '../lib/onboarding';
-import { ThemeSettings } from './ThemeSettings';
+import { AccountMenu } from './AccountMenu';
 import { Logo, LogoMark } from './Logo';
 import { Footer } from './Footer';
 
@@ -303,7 +303,7 @@ export function AppShell() {
         <header className="app-header" style={{ padding: '16px 26px', borderBottom: '1px solid var(--divider)' }}>
           <SearchBar appData={appData} />
           <div style={{ marginLeft: 'auto', position: 'relative' }}>
-            {settingsOpen && <ThemeSettings className="header-profile-panel" onClose={() => setSettingsOpen(false)} />}
+            {settingsOpen && <AccountMenu className="header-profile-panel" onClose={() => setSettingsOpen(false)} />}
             <button
               className="header-profile-trigger"
               onClick={() => setSettingsOpen((v) => !v)}

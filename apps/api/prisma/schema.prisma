@@ -51,6 +51,19 @@ model User {
   // avatarUrl ?? discordAvatarUrl (imagem).
   displayName String?
   avatarUrl   String? // upload próprio, data URL comprimida no navegador — mesmo padrão de Spot.imagens
+  // Preferência de "qual nome usar" em qualquer lugar que mostre esse
+  // usuário (resolveDisplayName em dto.ts) — false (padrão) usa
+  // displayName/riotName como sempre foi; true usa "riotName#riotTag".
+  exibirRiotIdComoNome Boolean @default(false)
+
+  // Troca de email/RiotID (Configurações de Perfil) — fica pendente até a
+  // pessoa confirmar posse do novo valor (código por email / troca de tag,
+  // mesmo mecanismo do cadastro), só then é que sobrescreve o valor real.
+  emailPendente      String?
+  riotPuuidPendente  String?
+  riotNamePendente   String?
+  riotTagPendente    String?
+  riotRegionPendente String?
 
   // Tema v2 — customizável em runtime (ver design_handoff_callout v2). Cor de
   // ação também colore valores positivos (vitória etc); cor negativa é

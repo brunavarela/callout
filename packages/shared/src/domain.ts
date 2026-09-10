@@ -91,6 +91,12 @@ export interface ThemePreferences {
 
 export interface SessionUser {
   nome: string;
+  // Valor bruto digitado no cadastro/editado em Configurações de Perfil —
+  // diferente de `nome` (que já é o valor resolvido pra exibição, ver
+  // resolveDisplayName). Usado só pra pré-preencher o campo "Nome" editável
+  // no modal de perfil, sem misturar com o RiotID quando a preferência de
+  // exibição estiver em "RiotID".
+  displayName: string | null;
   avatarUrl: string | null;
   email: string | null;
   emailVerificado: boolean;
@@ -98,6 +104,11 @@ export interface SessionUser {
   dataNascimento: string | null;
   intuitos: Intuito[];
   riotId: { name: string; tag: string; puuid: string } | null;
+  exibirRiotIdComoNome: boolean;
+  // Troca de email/RiotID pendente de confirmação (Configurações de Perfil)
+  // — null quando não há nenhuma troca em andamento.
+  emailPendente: string | null;
+  riotIdPendente: { name: string; tag: string } | null;
   equipe: { id: string; name: string } | null;
   theme: ThemePreferences;
   isAdmin: boolean;

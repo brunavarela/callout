@@ -1,5 +1,4 @@
 import type { FastifyInstance } from "fastify";
-import { randomBytes, randomInt } from "node:crypto";
 import { z } from "zod";
 import { INTUITOS } from "@callout/shared";
 import { prisma } from "../lib/prisma.js";
@@ -9,44 +8,22 @@ import { sendCodigoEmail, sendCodigoRedefinicaoSenha } from "../lib/email.js";
 import { setSessionCookie, clearSessionCookie, requireAuth, getSessionUser } from "../lib/session.js";
 import { getUserEquipe } from "../lib/equipe.js";
 import { toSessionUser } from "../lib/dto.js";
-
-const RIOT_ID_REGEX = /^[^#]{3,16}#[A-Za-z0-9]{3,5}$/;
-const CODIGO_EXPIRA_MS = 15 * 60 * 1000;
-const REENVIO_COOLDOWN_MS = 60 * 1000;
-// Sem O/0/I/1 — evita confusão na hora de digitar a tag no cliente do Valorant.
-const TAG_CHARSET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-
-function gerarCodigoEmail(): string {
-  return String(randomInt(0, 1_000_000)).padStart(6, "0");
-}
-
-function gerarCodigoTag(): string {
-  const bytes = randomBytes(4);
-  let out = "";
-  for (const b of bytes) out += TAG_CHARSET[b % TAG_CHARSET.length];
-  return out;
-}
+import {
+  RIOT_ID_REGEX,
+  REENVIO_COOLDOWN_MS,
+  gerarCodigoEmail,
+  gerarCodigoTag,
+  criarCodigo,
+  ultimoCodigo,
+  verificarCodigo,
+  senhaSchema,
+} from "../lib/authCodes.js";
 
 async function enviarCodigoEmail(userId: string, email: string): Promise<void> {
   const codigo = gerarCodigoEmail();
-  await prisma.authCode.deleteMany({ where: { userId, tipo: "email" } });
-  await prisma.authCode.create({
-    data: { userId, tipo: "email", codigo, expiresAt: new Date(Date.now() + CODIGO_EXPIRA_MS) },
-  });
+  await criarCodigo(userId, "email", codigo);
   await sendCodigoEmail(email, codigo);
 }
-
-// Mesmas regras validadas no front (apps/web/src/lib/senha.ts,
-// SENHA_REQUISITOS) — duplicado de propósito: o front dá feedback ao
-// digitar, o back é a fonte de verdade (nunca confia só na validação do
-// cliente).
-const senhaSchema = z
-  .string()
-  .min(8, "A senha precisa ter pelo menos 8 caracteres.")
-  .max(72)
-  .regex(/[A-Z]/, "A senha precisa ter pelo menos uma letra maiúscula.")
-  .regex(/[0-9]/, "A senha precisa ter pelo menos um número.")
-  .regex(/[^A-Za-z0-9]/, "A senha precisa ter pelo menos um caractere especial.");
 
 const cadastroBodySchema = z
   .object({
@@ -171,22 +148,9 @@ export async function authRoutes(app: FastifyInstance) {
     const user = await prisma.user.findUnique({ where: { email: parsed.data.email } });
     if (!user) return reply.code(404).send({ error: "Não achamos esse cadastro." });
 
-    const authCode = await prisma.authCode.findFirst({
-      where: { userId: user.id, tipo: "email" },
-      orderBy: { createdAt: "desc" },
-    });
-    if (!authCode || authCode.expiresAt < new Date()) {
-      return reply.code(400).send({ error: "Código expirado. Pede um novo." });
-    }
-    if (authCode.tentativas >= 5) {
-      return reply.code(429).send({ error: "Muitas tentativas erradas. Pede um novo código." });
-    }
-    if (authCode.codigo !== parsed.data.codigo) {
-      await prisma.authCode.update({ where: { id: authCode.id }, data: { tentativas: { increment: 1 } } });
-      return reply.code(400).send({ error: "Código incorreto." });
-    }
+    const resultado = await verificarCodigo(user.id, "email", parsed.data.codigo);
+    if (!resultado.ok) return reply.code(resultado.status).send({ error: resultado.error });
 
-    await prisma.authCode.delete({ where: { id: authCode.id } });
     const updated = await prisma.user.update({ where: { id: user.id }, data: { emailVerificado: true } });
     setSessionCookie(reply, updated.id);
     return toSessionUser(updated, await getUserEquipe(updated.id));
@@ -200,10 +164,7 @@ export async function authRoutes(app: FastifyInstance) {
     if (!user) return reply.code(404).send({ error: "Não achamos esse cadastro." });
     if (user.emailVerificado) return reply.code(400).send({ error: "Esse email já foi verificado." });
 
-    const ultimo = await prisma.authCode.findFirst({
-      where: { userId: user.id, tipo: "email" },
-      orderBy: { createdAt: "desc" },
-    });
+    const ultimo = await ultimoCodigo(user.id, "email");
     if (ultimo && Date.now() - ultimo.createdAt.getTime() < REENVIO_COOLDOWN_MS) {
       return reply.code(429).send({ error: "Espera um instante antes de pedir outro código." });
     }
@@ -218,10 +179,7 @@ export async function authRoutes(app: FastifyInstance) {
     if (!user.riotName) return reply.code(400).send({ error: "Vincule um RiotID primeiro." });
 
     const codigo = gerarCodigoTag();
-    await prisma.authCode.deleteMany({ where: { userId: user.id, tipo: "riot_tag" } });
-    await prisma.authCode.create({
-      data: { userId: user.id, tipo: "riot_tag", codigo, expiresAt: new Date(Date.now() + CODIGO_EXPIRA_MS) },
-    });
+    await criarCodigo(user.id, "riot_tag", codigo);
     return { codigo, riotName: user.riotName };
   });
 
@@ -230,10 +188,7 @@ export async function authRoutes(app: FastifyInstance) {
     if (user.riotVerificado) return reply.code(400).send({ error: "Seu RiotID já está verificado." });
     if (!user.riotName || !user.riotPuuid) return reply.code(400).send({ error: "Vincule um RiotID primeiro." });
 
-    const authCode = await prisma.authCode.findFirst({
-      where: { userId: user.id, tipo: "riot_tag" },
-      orderBy: { createdAt: "desc" },
-    });
+    const authCode = await ultimoCodigo(user.id, "riot_tag");
     if (!authCode || authCode.expiresAt < new Date()) {
       return reply.code(400).send({ error: "Código expirado. Gera um novo." });
     }
@@ -308,19 +263,13 @@ export async function authRoutes(app: FastifyInstance) {
       return reply.code(400).send({ error: "Essa conta ainda não tem senha — complete o cadastro primeiro." });
     }
 
-    const ultimo = await prisma.authCode.findFirst({
-      where: { userId: user.id, tipo: "reset_senha" },
-      orderBy: { createdAt: "desc" },
-    });
+    const ultimo = await ultimoCodigo(user.id, "reset_senha");
     if (ultimo && Date.now() - ultimo.createdAt.getTime() < REENVIO_COOLDOWN_MS) {
       return reply.code(429).send({ error: "Espera um instante antes de pedir outro código." });
     }
 
     const codigo = gerarCodigoEmail();
-    await prisma.authCode.deleteMany({ where: { userId: user.id, tipo: "reset_senha" } });
-    await prisma.authCode.create({
-      data: { userId: user.id, tipo: "reset_senha", codigo, expiresAt: new Date(Date.now() + CODIGO_EXPIRA_MS) },
-    });
+    await criarCodigo(user.id, "reset_senha", codigo);
     await sendCodigoRedefinicaoSenha(user.email!, codigo);
     return { ok: true };
   });
@@ -334,22 +283,9 @@ export async function authRoutes(app: FastifyInstance) {
     const user = await prisma.user.findUnique({ where: { email: parsed.data.email } });
     if (!user) return reply.code(404).send({ error: "Não achamos esse cadastro." });
 
-    const authCode = await prisma.authCode.findFirst({
-      where: { userId: user.id, tipo: "reset_senha" },
-      orderBy: { createdAt: "desc" },
-    });
-    if (!authCode || authCode.expiresAt < new Date()) {
-      return reply.code(400).send({ error: "Código expirado. Pede um novo." });
-    }
-    if (authCode.tentativas >= 5) {
-      return reply.code(429).send({ error: "Muitas tentativas erradas. Pede um novo código." });
-    }
-    if (authCode.codigo !== parsed.data.codigo) {
-      await prisma.authCode.update({ where: { id: authCode.id }, data: { tentativas: { increment: 1 } } });
-      return reply.code(400).send({ error: "Código incorreto." });
-    }
+    const resultado = await verificarCodigo(user.id, "reset_senha", parsed.data.codigo);
+    if (!resultado.ok) return reply.code(resultado.status).send({ error: resultado.error });
 
-    await prisma.authCode.delete({ where: { id: authCode.id } });
     const updated = await prisma.user.update({ where: { id: user.id }, data: { senhaHash: hashPassword(parsed.data.novaSenha) } });
     setSessionCookie(reply, updated.id);
     return toSessionUser(updated, await getUserEquipe(updated.id));
