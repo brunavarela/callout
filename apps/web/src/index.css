@@ -321,7 +321,14 @@ button {
 
 /* Menu de conta (AccountMenu.tsx) — --card-hover-bg é sutil demais pra um
    item de menu pequeno (fica praticamente imperceptível), usa o mesmo tom
-   mais forte do hover da sidebar. */
+   mais forte do hover da sidebar. Base (background/border) mora aqui, não
+   inline no componente — style inline tem prioridade sobre qualquer regra
+   de classe, incluía :hover, então um `background: 'none'` inline
+   bloquearia esse hover de sempre aparecer. */
+.account-menu-item {
+  background: none;
+  border: none;
+}
 .account-menu-item:hover {
   background: var(--nav-hover-bg);
 }
