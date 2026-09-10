@@ -84,7 +84,7 @@ export function AccountMenu({ className, onClose }: { className: string; onClose
 
         <div style={{ borderTop: '1px solid var(--surface-border)', margin: '6px 4px' }} />
 
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, padding: '4px 8px' }}>
+        <div className="strat-item" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, padding: '7px 8px', borderRadius: 'var(--radius-md)' }}>
           <span style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, color: 'var(--text-muted)' }}>
             {theme.mode === 'light' ? <Sun size={15} strokeWidth={1.75} /> : <Moon size={15} strokeWidth={1.75} />}
             Tema claro
@@ -93,7 +93,7 @@ export function AccountMenu({ className, onClose }: { className: string; onClose
         </div>
 
         {user?.isAdmin && (
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, padding: '4px 8px' }}>
+          <div className="strat-item" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, padding: '7px 8px', borderRadius: 'var(--radius-md)' }}>
             <span style={{ fontSize: 12.5, color: 'var(--text-muted)' }}>Administrador</span>
             <Switch checked={adminMode} onChange={setAdminMode} />
           </div>
@@ -103,12 +103,15 @@ export function AccountMenu({ className, onClose }: { className: string; onClose
 
         <button
           onClick={() => setConfirmingLogout(true)}
+          className="strat-item"
           style={{
             display: 'flex',
             alignItems: 'center',
             gap: 9,
+            width: '100%',
             background: 'none',
             border: 'none',
+            borderRadius: 'var(--radius-md)',
             padding: '9px 8px',
             fontSize: 13.5,
             fontWeight: 500,
