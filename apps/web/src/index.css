@@ -581,7 +581,8 @@ button {
 .sidebar-brand-mark {
   position: absolute;
   top: 24px;
-  left: 16px;
+  left: 50%;
+  transform: translateX(-50%);
   color: var(--text);
   opacity: 0;
   pointer-events: none;
