@@ -44,6 +44,8 @@ const rowArgs = {
   },
 } satisfies Parameters<typeof prisma.matchPlayer.findMany>[0];
 
+type Row = Awaited<ReturnType<typeof prisma.matchPlayer.findMany<typeof rowArgs>>>[number];
+
 // Nota própria do callout (0-100) — não é o "Tracker Score" de outra
 // plataforma (algoritmo deles, não documentado, não é dado bruto). Combina
 // métricas que a gente já mostra, com peso e faixa de referência
@@ -83,7 +85,79 @@ function emptySides(): SidesBreakdown {
   };
 }
 
-export async function buildSeasonOverview(puuid: string, region: string, requestedSeasonId?: string): Promise<SeasonOverview | null> {
+// Agentes mais jogados — de propósito ignora `agentNameFilter` (selecionar
+// um agente não pode fazer esse card colapsar pra 1 linha só; ele existe
+// justamente pra trocar de agente). Respeita `mapIdFilter`: escolher um
+// mapa restringe a quais agentes você jogou NESSE mapa. Mesmo padrão dual
+// já usado no /dashboard antigo (ver mapIdFilter em dashboard.ts).
+async function buildTopAgents(rows: Row[]): Promise<TopAgentStat[]> {
+  const byAgent = new Map<
+    string,
+    { matches: number; wins: number; kills: number; deaths: number; assists: number; dmg: number; rounds: number; acsSum: number; maps: Map<string, { wins: number; total: number }> }
+  >();
+  for (const r of rows) {
+    const entry = byAgent.get(r.agentName) ?? { matches: 0, wins: 0, kills: 0, deaths: 0, assists: 0, dmg: 0, rounds: 0, acsSum: 0, maps: new Map() };
+    entry.matches++;
+    if (r.won) entry.wins++;
+    entry.kills += r.kills;
+    entry.deaths += r.deaths;
+    entry.assists += r.assists;
+    entry.dmg += r.damageDealt;
+    entry.rounds += r.roundsPlayed;
+    entry.acsSum += r.acs;
+    const mapName = r.match.map?.nome ?? "—";
+    const mapEntry = entry.maps.get(mapName) ?? { wins: 0, total: 0 };
+    mapEntry.total++;
+    if (r.won) mapEntry.wins++;
+    entry.maps.set(mapName, mapEntry);
+    byAgent.set(r.agentName, entry);
+  }
+  const agentColors = await loadAgentColorsByName();
+  return [...byAgent.entries()]
+    .map(([agent, s]) => {
+      let bestMap: TopAgentStat["bestMap"] = null;
+      for (const [map, m] of s.maps) {
+        if (m.total < 2) continue;
+        const wr = Math.round((m.wins / m.total) * 100);
+        if (!bestMap || wr > bestMap.winratePercent) bestMap = { map, winratePercent: wr };
+      }
+      return {
+        agent,
+        color: agentColors.get(agent) ?? "#9A9DA1",
+        matches: s.matches,
+        winratePercent: Math.round((s.wins / s.matches) * 100),
+        kda: s.deaths > 0 ? round2((s.kills + s.assists) / s.deaths) : s.kills + s.assists,
+        adr: s.rounds > 0 ? Math.round(s.dmg / s.rounds) : 0,
+        acs: Math.round(s.acsSum / s.matches),
+        bestMap,
+      };
+    })
+    .sort((a, b) => b.matches - a.matches);
+}
+
+// Mapas — espelha buildTopAgents, mas de propósito ignora `mapIdFilter`
+// (mesmo motivo: selecionar um mapa não pode colapsar esse card).
+function buildTopMaps(rows: Row[]): MapWinrate[] {
+  const byMap = new Map<string, { wins: number; total: number; mapId: string | null }>();
+  for (const r of rows) {
+    const mapName = r.match.map?.nome ?? "—";
+    const entry = byMap.get(mapName) ?? { wins: 0, total: 0, mapId: r.match.mapId };
+    entry.total++;
+    if (r.won) entry.wins++;
+    byMap.set(mapName, entry);
+  }
+  return [...byMap.entries()]
+    .map(([map, s]) => ({ map, mapId: s.mapId, winratePercent: Math.round((s.wins / s.total) * 100), wins: s.wins, total: s.total }))
+    .sort((a, b) => b.winratePercent - a.winratePercent);
+}
+
+export async function buildSeasonOverview(
+  puuid: string,
+  region: string,
+  requestedSeasonId?: string,
+  mapIdFilter?: string,
+  agentNameFilter?: string,
+): Promise<SeasonOverview | null> {
   const availableSeasons = await listAvailableSeasons();
   const seasonId = requestedSeasonId ?? (await getCurrentSeasonId());
   if (!seasonId) return null;
@@ -143,34 +217,92 @@ export async function buildSeasonOverview(puuid: string, region: string, request
     };
   }
 
-  const kills = statRows.reduce((s, r) => s + r.kills, 0);
-  const deaths = statRows.reduce((s, r) => s + r.deaths, 0);
-  const assists = statRows.reduce((s, r) => s + r.assists, 0);
-  const acsSum = statRows.reduce((s, r) => s + r.acs, 0);
-  const dmg = statRows.reduce((s, r) => s + r.damageDealt, 0);
-  const rounds = statRows.reduce((s, r) => s + r.roundsPlayed, 0);
-  const headshots = statRows.reduce((s, r) => s + r.headshots, 0);
-  const bodyshots = statRows.reduce((s, r) => s + r.bodyshots, 0);
-  const legshots = statRows.reduce((s, r) => s + r.legshots, 0);
+  // Ícones sempre vêm do ato inteiro (não do filtro atual) — os seletores
+  // de mapa/agente do painel precisam continuar mostrando o catálogo
+  // completo mesmo com um filtro já aplicado.
+  const mapIcons = Object.fromEntries(
+    [...new Map(statRows.map((r) => [r.match.map?.nome ?? "—", r.match.map?.displayIcon ?? null])).entries()].filter(
+      ([, icon]) => icon !== null,
+    ) as [string, string][],
+  );
+  const agentAssets = await prisma.agentAsset.findMany({ select: { nome: true, funcao: true, displayIcon: true } });
+  const agentIcons = Object.fromEntries(agentAssets.filter((a) => a.displayIcon).map((a) => [a.nome, a.displayIcon!]));
+
+  const topAgents = await buildTopAgents(mapIdFilter ? statRows.filter((r) => r.match.mapId === mapIdFilter) : statRows);
+  const topMaps = buildTopMaps(agentNameFilter ? statRows.filter((r) => r.agentName === agentNameFilter) : statRows);
+
+  // O resto do painel (KPIs, últimas partidas, funções, precisão, ataque/
+  // defesa, armas) respeita os dois filtros juntos — é a visão "sob esse
+  // filtro", diferente de Agentes/Mapas acima que de propósito ficam
+  // completos pros seletores continuarem úteis.
+  const filteredStatRows = statRows.filter(
+    (r) => (!mapIdFilter || r.match.mapId === mapIdFilter) && (!agentNameFilter || r.agentName === agentNameFilter),
+  );
+
+  if (filteredStatRows.length === 0) {
+    return {
+      seasonId,
+      seasonShort,
+      availableSeasons,
+      accountLevel: rows[0]?.accountLevel ?? null,
+      currentRank,
+      peakRank,
+      playtimeMs: 0,
+      matchesCount: 0,
+      wins: 0,
+      losses: 0,
+      winratePercent: 0,
+      kda: 0,
+      acs: 0,
+      adr: 0,
+      hsPercent: 0,
+      ddPerRound: 0,
+      kills: 0,
+      deaths: 0,
+      assists: 0,
+      firstBloods: 0,
+      aces: 0,
+      calloutIndex: { value: 0 },
+      attackDefense: emptySides(),
+      topAgents,
+      topMaps,
+      roles: [],
+      accuracy: { headPercent: 0, bodyPercent: 0, legPercent: 0, headHits: 0, bodyHits: 0, legHits: 0 },
+      topWeapons: [],
+      recentMatches: [],
+      mapIcons,
+      agentIcons,
+    };
+  }
+
+  const kills = filteredStatRows.reduce((s, r) => s + r.kills, 0);
+  const deaths = filteredStatRows.reduce((s, r) => s + r.deaths, 0);
+  const assists = filteredStatRows.reduce((s, r) => s + r.assists, 0);
+  const acsSum = filteredStatRows.reduce((s, r) => s + r.acs, 0);
+  const dmg = filteredStatRows.reduce((s, r) => s + r.damageDealt, 0);
+  const rounds = filteredStatRows.reduce((s, r) => s + r.roundsPlayed, 0);
+  const headshots = filteredStatRows.reduce((s, r) => s + r.headshots, 0);
+  const bodyshots = filteredStatRows.reduce((s, r) => s + r.bodyshots, 0);
+  const legshots = filteredStatRows.reduce((s, r) => s + r.legshots, 0);
   const shotsTotal = headshots + bodyshots + legshots;
-  const wins = statRows.filter((r) => r.won).length;
-  const losses = statRows.length - wins;
+  const wins = filteredStatRows.filter((r) => r.won).length;
+  const losses = filteredStatRows.length - wins;
   const kda = deaths > 0 ? round2((kills + assists) / deaths) : kills + assists;
-  const acs = Math.round(acsSum / statRows.length);
+  const acs = Math.round(acsSum / filteredStatRows.length);
   const adr = rounds > 0 ? Math.round(dmg / rounds) : 0;
   const hsPercent = shotsTotal > 0 ? round1((headshots / shotsTotal) * 100) : 0;
-  const winratePercent = Math.round((wins / statRows.length) * 100);
+  const winratePercent = Math.round((wins / filteredStatRows.length) * 100);
 
-  const playtimeMs = statRows.reduce((s, r) => s + r.match.durationMs, 0);
-  const matchesCount = statRows.length;
+  const playtimeMs = filteredStatRows.reduce((s, r) => s + r.match.durationMs, 0);
+  const matchesCount = filteredStatRows.length;
 
   // DDΔ/round: seu ADR na partida menos a média de ADR dos outros 9
   // jogadores da mesma partida — quanto de dano a mais (ou a menos) você
   // fez por round comparado ao resto da lobby. Só colunas escalares já
   // salvas (damageDealt/roundsPlayed de todo mundo), sem tocar rawJson.
-  // Alinhado 1:1 com `statRows` (mesma ordem) — reusado depois pro
+  // Alinhado 1:1 com `filteredStatRows` (mesma ordem) — reusado depois pro
   // Índice callout por partida.
-  const matchIds = statRows.map((r) => r.matchId);
+  const matchIds = filteredStatRows.map((r) => r.matchId);
   const allPlayers =
     matchIds.length > 0
       ? await prisma.matchPlayer.findMany({
@@ -186,7 +318,7 @@ export async function buildSeasonOverview(puuid: string, region: string, request
     entry.rounds += p.roundsPlayed;
     othersByMatch.set(p.matchId, entry);
   }
-  const perMatchDelta = statRows.map((r) => {
+  const perMatchDelta = filteredStatRows.map((r) => {
     const selfAdr = r.roundsPlayed > 0 ? r.damageDealt / r.roundsPlayed : 0;
     const others = othersByMatch.get(r.matchId);
     const othersAdr = others && others.rounds > 0 ? others.dmg / others.rounds : selfAdr;
@@ -194,69 +326,10 @@ export async function buildSeasonOverview(puuid: string, region: string, request
   });
   const ddPerRound = round1(perMatchDelta.reduce((s, d) => s + d, 0) / perMatchDelta.length);
 
-  // Top Agents
-  const byAgent = new Map<
-    string,
-    { matches: number; wins: number; kills: number; deaths: number; assists: number; dmg: number; rounds: number; acsSum: number; maps: Map<string, { wins: number; total: number }> }
-  >();
-  for (const r of statRows) {
-    const entry = byAgent.get(r.agentName) ?? { matches: 0, wins: 0, kills: 0, deaths: 0, assists: 0, dmg: 0, rounds: 0, acsSum: 0, maps: new Map() };
-    entry.matches++;
-    if (r.won) entry.wins++;
-    entry.kills += r.kills;
-    entry.deaths += r.deaths;
-    entry.assists += r.assists;
-    entry.dmg += r.damageDealt;
-    entry.rounds += r.roundsPlayed;
-    entry.acsSum += r.acs;
-    const mapName = r.match.map?.nome ?? "—";
-    const mapEntry = entry.maps.get(mapName) ?? { wins: 0, total: 0 };
-    mapEntry.total++;
-    if (r.won) mapEntry.wins++;
-    entry.maps.set(mapName, mapEntry);
-    byAgent.set(r.agentName, entry);
-  }
-  const agentColors = await loadAgentColorsByName();
-  const topAgents: TopAgentStat[] = [...byAgent.entries()]
-    .map(([agent, s]) => {
-      let bestMap: TopAgentStat["bestMap"] = null;
-      for (const [map, m] of s.maps) {
-        if (m.total < 2) continue;
-        const wr = Math.round((m.wins / m.total) * 100);
-        if (!bestMap || wr > bestMap.winratePercent) bestMap = { map, winratePercent: wr };
-      }
-      return {
-        agent,
-        color: agentColors.get(agent) ?? "#9A9DA1",
-        matches: s.matches,
-        winratePercent: Math.round((s.wins / s.matches) * 100),
-        kda: s.deaths > 0 ? round2((s.kills + s.assists) / s.deaths) : s.kills + s.assists,
-        adr: s.rounds > 0 ? Math.round(s.dmg / s.rounds) : 0,
-        acs: Math.round(s.acsSum / s.matches),
-        bestMap,
-      };
-    })
-    .sort((a, b) => b.matches - a.matches);
-
-  // Top Maps — direto do MapAsset já associado ao Match (sem rawJson).
-  const byMap = new Map<string, { wins: number; total: number; mapId: string | null }>();
-  for (const r of statRows) {
-    const mapName = r.match.map?.nome ?? "—";
-    const entry = byMap.get(mapName) ?? { wins: 0, total: 0, mapId: r.match.mapId };
-    entry.total++;
-    if (r.won) entry.wins++;
-    byMap.set(mapName, entry);
-  }
-  const topMaps: MapWinrate[] = [...byMap.entries()]
-    .map(([map, s]) => ({ map, mapId: s.mapId, winratePercent: Math.round((s.wins / s.total) * 100), wins: s.wins, total: s.total }))
-    .sort((a, b) => b.winratePercent - a.winratePercent);
-
-  // Roles — agentName -> AgentAsset.funcao (em inglês) -> label pt-BR.
-  const agentAssets = await prisma.agentAsset.findMany({ select: { nome: true, funcao: true, displayIcon: true } });
+  // Funções — agentName -> AgentAsset.funcao (em inglês) -> label pt-BR.
   const roleByAgent = new Map(agentAssets.map((a) => [a.nome, a.funcao]));
-  const agentIcons = Object.fromEntries(agentAssets.filter((a) => a.displayIcon).map((a) => [a.nome, a.displayIcon!]));
   const byRole = new Map<string, { matches: number; wins: number; kills: number; deaths: number; assists: number }>();
-  for (const r of statRows) {
+  for (const r of filteredStatRows) {
     const rawRole = roleByAgent.get(r.agentName);
     if (!rawRole) continue;
     const role = ROLE_LABELS[rawRole] ?? rawRole;
@@ -296,7 +369,7 @@ export async function buildSeasonOverview(puuid: string, region: string, request
     defTotal = 0,
     otWins = 0,
     otTotal = 0;
-  for (const r of statRows) {
+  for (const r of filteredStatRows) {
     const s = (r.sidesRounds as { atkWins?: number; atkTotal?: number; defWins?: number; defTotal?: number; otWins?: number; otTotal?: number } | null) ?? {};
     atkWins += s.atkWins ?? 0;
     atkTotal += s.atkTotal ?? 0;
@@ -314,7 +387,7 @@ export async function buildSeasonOverview(puuid: string, region: string, request
   // Top Weapons — lê a coluna weaponKills já agregada na sincronização
   // (ver sync.ts/matchReplay.ts), não relê rawJson aqui.
   const weaponTotals = new Map<string, number>();
-  for (const r of statRows) {
+  for (const r of filteredStatRows) {
     const wk = (r.weaponKills as Record<string, number> | null) ?? {};
     for (const [weapon, count] of Object.entries(wk)) {
       weaponTotals.set(weapon, (weaponTotals.get(weapon) ?? 0) + count);
@@ -331,19 +404,15 @@ export async function buildSeasonOverview(puuid: string, region: string, request
     .sort((a, b) => b.kills - a.kills)
     .slice(0, 5);
 
-  const firstBloods = statRows.reduce((s, r) => s + (r.firstBloods ?? 0), 0);
-  const aces = statRows.reduce((s, r) => s + ((r.multiKills as Record<string, number> | null)?.["5"] ?? 0), 0);
+  const firstBloods = filteredStatRows.reduce((s, r) => s + (r.firstBloods ?? 0), 0);
+  const aces = filteredStatRows.reduce((s, r) => s + ((r.multiKills as Record<string, number> | null)?.["5"] ?? 0), 0);
 
-  // Últimas 20 partidas do ato, com badges de clutch/multi-kill e o Índice
-  // callout por partida. `perMatchDelta` já está alinhado com `statRows`
-  // (mesma ordem, mais recente primeiro) — reusa direto, sem recalcular.
-  const recentRows = statRows.slice(0, RECENT_MATCHES_LIMIT);
+  // Últimas 20 partidas sob o filtro atual, com badges de clutch/multi-kill
+  // e o Índice callout por partida. `perMatchDelta` já está alinhado com
+  // `filteredStatRows` (mesma ordem, mais recente primeiro) — reusa direto,
+  // sem recalcular.
+  const recentRows = filteredStatRows.slice(0, RECENT_MATCHES_LIMIT);
   const recentDeltas = perMatchDelta.slice(0, RECENT_MATCHES_LIMIT);
-  const mapIcons = Object.fromEntries(
-    [...new Map(statRows.map((r) => [r.match.map?.nome ?? "—", r.match.map?.displayIcon ?? null])).entries()].filter(
-      ([, icon]) => icon !== null,
-    ) as [string, string][],
-  );
 
   let rrByMatch = new Map<string, number>();
   try {
@@ -362,6 +431,7 @@ export async function buildSeasonOverview(puuid: string, region: string, request
         )
       : new Map<string, unknown>();
 
+  const now = new Date();
   const recentMatches: SeasonMatchSummary[] = recentRows.map((r, i) => {
     const shotsTotalMatch = r.headshots + r.bodyshots + r.legshots;
     const kdaRatio = r.deaths > 0 ? round2((r.kills + r.assists) / r.deaths) : r.kills + r.assists;
@@ -391,7 +461,8 @@ export async function buildSeasonOverview(puuid: string, region: string, request
       ddPerRound: ddDelta,
       hsPercent: shotsTotalMatch > 0 ? round1((r.headshots / shotsTotalMatch) * 100) : 0,
       rr: rrByMatch.get(r.matchId) ?? null,
-      playedAtLabel: formatPlayedAt(r.match.startedAt, new Date()),
+      playedAtLabel: formatPlayedAt(r.match.startedAt, now),
+      playedAtIso: r.match.startedAt.toISOString(),
       badges,
       calloutIndex: calcularIndiceCallout(r.won ? 100 : 0, kdaRatio, r.acs, ddDelta),
     };

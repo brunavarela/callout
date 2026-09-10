@@ -75,12 +75,13 @@ export async function dashboardRoutes(app: FastifyInstance) {
 
   // Visão geral de um ato — cards "estilo tracker.gg" (ver plano de
   // 10/09/2026). Sem `seasonId`, mostra o ato atual; com `seasonId`, a
-  // pessoa escolheu outro ato no seletor do painel. Sem filtro de modo/mapa
-  // por ora (o ato inteiro, igual o concorrente mostra).
+  // pessoa escolheu outro ato no seletor do painel. `mapId`/`agent` filtram
+  // a visão sem sair do ato — mesmo padrão dual de mapIdFilter do
+  // /dashboard antigo (ver comentário em buildSeasonOverview).
   app.get("/dashboard/season", { preHandler: requireAuth }, async (request, reply) => {
     const target = await resolveTarget(request, reply);
     if (!target) return;
-    const { seasonId } = request.query as { seasonId?: string };
-    return buildSeasonOverview(target.riotPuuid!, target.riotRegion!, seasonId || undefined);
+    const { seasonId, mapId, agent } = request.query as { seasonId?: string; mapId?: string; agent?: string };
+    return buildSeasonOverview(target.riotPuuid!, target.riotRegion!, seasonId || undefined, mapId || undefined, agent || undefined);
   });
 }

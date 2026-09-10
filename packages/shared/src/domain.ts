@@ -290,6 +290,10 @@ export interface SeasonMatchSummary {
   hsPercent: number;
   rr: number | null;
   playedAtLabel: string;
+  // Data/hora ISO completa da partida — só pra agrupar por dia calendário
+  // na lista do painel (playedAtLabel já é o texto relativo bonito, mas
+  // "hoje"/"ontem"/"seg" não dá pra usar como chave de agrupamento).
+  playedAtIso: string;
   badges: MatchBadge[];
   // Mesma fórmula do calloutIndex agregado (ver CalloutIndex), só que
   // aplicada a essa partida específica — substitui o "TRS" por partida do
