@@ -310,6 +310,13 @@ export interface SeasonOverview {
   seasonId: string | null;
   seasonShort: string | null;
   availableSeasons: SeasonOption[];
+  // Modos de jogo com pelo menos 1 partida sincronizada nesse ato (valor
+  // bruto de Match.modo, ex.: "Competitive"/"Unrated"/"Deathmatch") — pro
+  // seletor de modo do painel. Sem filtro escolhido, o painel mistura só
+  // Competitivo/Sem classificação/Premier (ver countsTowardStats); com um
+  // modo específico escolhido, mostra só esse, mesmo que não conte pra
+  // estatística normalmente (ex.: Deathmatch).
+  availableModos: string[];
   accountLevel: number | null;
   currentRank: { tierLabel: string; rr: number; iconUrl: string | null } | null;
   peakRank: { tierLabel: string; seasonShort: string } | null;

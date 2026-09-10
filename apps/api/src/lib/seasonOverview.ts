@@ -157,6 +157,7 @@ export async function buildSeasonOverview(
   requestedSeasonId?: string,
   mapIdFilter?: string,
   agentNameFilter?: string,
+  modoFilter?: string,
 ): Promise<SeasonOverview | null> {
   const availableSeasons = await listAvailableSeasons();
   const seasonId = requestedSeasonId ?? (await getCurrentSeasonId());
@@ -168,7 +169,13 @@ export async function buildSeasonOverview(
     ...rowArgs,
   });
 
-  const statRows = rows.filter((r) => countsTowardStats(r.match.modo));
+  // Sem `modoFilter`, o painel mistura só os modos com estatística de
+  // verdade (Competitivo/Sem classificação/Premier — ver countsTowardStats,
+  // ACS zerado nos outros na sincronização). Com um modo específico
+  // escolhido no seletor, mostra só esse — mesmo que normalmente não conte
+  // pra estatística (ex.: Deathmatch), já que a pessoa pediu explicitamente.
+  const statRows = modoFilter ? rows.filter((r) => r.match.modo === modoFilter) : rows.filter((r) => countsTowardStats(r.match.modo));
+  const availableModos = [...new Set(rows.map((r) => r.match.modo))];
   const seasonShort = availableSeasons.find((s) => s.seasonId === seasonId)?.seasonShort ?? null;
 
   let currentRank: SeasonOverview["currentRank"] = null;
@@ -186,6 +193,7 @@ export async function buildSeasonOverview(
       seasonId,
       seasonShort,
       availableSeasons,
+      availableModos,
       accountLevel: rows[0]?.accountLevel ?? null,
       currentRank,
       peakRank,
@@ -244,6 +252,7 @@ export async function buildSeasonOverview(
       seasonId,
       seasonShort,
       availableSeasons,
+      availableModos,
       accountLevel: rows[0]?.accountLevel ?? null,
       currentRank,
       peakRank,
@@ -472,6 +481,7 @@ export async function buildSeasonOverview(
     seasonId,
     seasonShort,
     availableSeasons,
+    availableModos,
     accountLevel: rows[0]?.accountLevel ?? null,
     currentRank,
     peakRank,

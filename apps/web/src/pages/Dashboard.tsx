@@ -110,6 +110,47 @@ function SeasonAgentFilterSelect({
   );
 }
 
+// Rótulos em português pra Match.modo (valor bruto do queue.name da
+// HenrikDev) — cai no valor bruto pra qualquer modo novo/raro sem label
+// mapeado ainda, em vez de esconder a opção.
+const MODO_LABELS: Record<string, string> = {
+  Competitive: 'Competitivo',
+  Unrated: 'Não-classificatória',
+  Premier: 'Premier',
+  Deathmatch: 'Deathmatch',
+  'Team Deathmatch': 'Deathmatch em equipe',
+  'Spike Rush': 'Spike Rush',
+  Escalation: 'Escalation',
+  Swiftplay: 'Swiftplay',
+  'Custom Game': 'Partida personalizada',
+};
+
+// Filtro de modo de jogo da Visão do ato — sem filtro (padrão), mistura só
+// os modos com estatística de verdade (Competitivo/Sem classificação/
+// Premier); escolher um modo específico mostra só esse, mesmo que
+// normalmente não conte pra estatística (ex.: Deathmatch).
+function SeasonModoFilterSelect({
+  availableModos,
+  modoFilter,
+  setModoFilter,
+}: {
+  availableModos: string[];
+  modoFilter: string | null;
+  setModoFilter: (modo: string | null) => void;
+}) {
+  if (availableModos.length <= 1) return null;
+
+  return (
+    <Select
+      value={modoFilter ?? 'all'}
+      onChange={(v) => setModoFilter(v === 'all' ? null : v)}
+      options={[{ value: 'all', label: 'Todos os modos' }, ...availableModos.map((m) => ({ value: m, label: MODO_LABELS[m] ?? m }))]}
+      title="Filtrar o painel por modo de jogo"
+      style={{ width: 'auto', height: 40, padding: '0 14px', borderRadius: 9, fontSize: 12.5, fontWeight: 600 }}
+    />
+  );
+}
+
 export function Dashboard() {
   const navigate = useNavigate();
   const {
@@ -121,10 +162,11 @@ export function Dashboard() {
     setSeasonMapFilter,
     seasonAgentFilter,
     setSeasonAgentFilter,
+    seasonModoFilter,
+    setSeasonModoFilter,
     equipe,
     selectedMemberId,
     setSelectedMemberId,
-    rrHistory,
   } = useOutletContext<OutletContext>();
   const { user } = useSession();
 
@@ -153,6 +195,7 @@ export function Dashboard() {
               <SeasonFilterSelect availableSeasons={seasonOverview.availableSeasons} seasonId={seasonOverview.seasonId} setSelectedSeasonId={setSelectedSeasonId} />
               <SeasonMapFilterSelect topMaps={seasonOverview.topMaps} mapFilter={seasonMapFilter} setMapFilter={setSeasonMapFilter} />
               <SeasonAgentFilterSelect topAgents={seasonOverview.topAgents} agentFilter={seasonAgentFilter} setAgentFilter={setSeasonAgentFilter} />
+              <SeasonModoFilterSelect availableModos={seasonOverview.availableModos} modoFilter={seasonModoFilter} setModoFilter={setSeasonModoFilter} />
             </>
           )}
           <div className="dashboard-action-buttons">
@@ -170,7 +213,7 @@ export function Dashboard() {
           <div style={{ fontSize: 14, color: 'var(--text-3)' }}>{seasonOverviewError}</div>
         </div>
       ) : (
-        <SeasonOverviewSection data={seasonOverview} loading={false} error={seasonOverviewError} rrHistory={rrHistory} />
+        <SeasonOverviewSection data={seasonOverview} loading={false} error={seasonOverviewError} />
       )}
     </div>
   );

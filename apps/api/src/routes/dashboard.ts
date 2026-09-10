@@ -77,11 +77,14 @@ export async function dashboardRoutes(app: FastifyInstance) {
   // 10/09/2026). Sem `seasonId`, mostra o ato atual; com `seasonId`, a
   // pessoa escolheu outro ato no seletor do painel. `mapId`/`agent` filtram
   // a visão sem sair do ato — mesmo padrão dual de mapIdFilter do
-  // /dashboard antigo (ver comentário em buildSeasonOverview).
+  // /dashboard antigo (ver comentário em buildSeasonOverview). `modo`
+  // restringe a um modo de jogo específico (inclusive fora da allowlist de
+  // estatística, como Deathmatch) — sem ele, mistura só os modos com
+  // estatística de verdade (ver countsTowardStats).
   app.get("/dashboard/season", { preHandler: requireAuth }, async (request, reply) => {
     const target = await resolveTarget(request, reply);
     if (!target) return;
-    const { seasonId, mapId, agent } = request.query as { seasonId?: string; mapId?: string; agent?: string };
-    return buildSeasonOverview(target.riotPuuid!, target.riotRegion!, seasonId || undefined, mapId || undefined, agent || undefined);
+    const { seasonId, mapId, agent, modo } = request.query as { seasonId?: string; mapId?: string; agent?: string; modo?: string };
+    return buildSeasonOverview(target.riotPuuid!, target.riotRegion!, seasonId || undefined, mapId || undefined, agent || undefined, modo || undefined);
   });
 }

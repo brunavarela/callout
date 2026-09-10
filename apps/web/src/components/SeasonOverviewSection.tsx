@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import type { MatchBadge, RrHistoryPoint, SeasonMatchSummary, SeasonOverview } from '@callout/shared';
+import type { MatchBadge, SeasonMatchSummary, SeasonOverview } from '@callout/shared';
 import { LoadingFill } from './Spinner';
 import { cardStyle, fmtNum, fmtDelta, plural, rateBarColor, RateBlock, RankingBlock } from './statsPrimitives';
 
@@ -205,37 +205,6 @@ function StatCol({ label, value, color, bold, width = 40 }: { label: string; val
   );
 }
 
-// Barra por partida (win=verde, loss=vermelho) do RR ganho/perdido —
-// mesma fonte de dados do card antigo de linha, só que em barras (mais
-// perto do jeito que o concorrente mostra isso).
-function RrBarChart({ points }: { points: RrHistoryPoint[] }) {
-  if (points.length === 0) return <div style={{ fontSize: 12.5, color: 'var(--text-faint)' }}>Sem histórico de RR ainda.</div>;
-  const max = Math.max(...points.map((p) => Math.abs(p.delta)), 1);
-  const total = points.reduce((s, p) => s + p.delta, 0);
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-      <div style={{ display: 'flex', alignItems: 'flex-end', gap: 3, height: 90 }}>
-        {points.map((p) => (
-          <div
-            key={p.matchId}
-            title={`${p.label} · ${p.map} · ${fmtDelta(p.delta, 0)} RR`}
-            style={{
-              flex: 1,
-              height: `${Math.max((Math.abs(p.delta) / max) * 100, 6)}%`,
-              borderRadius: 3,
-              background: p.delta >= 0 ? WIN : LOSS,
-              opacity: 0.85,
-            }}
-          />
-        ))}
-      </div>
-      <div style={{ fontSize: 11, color: 'var(--text-faint)' }}>
-        Fechou em <span style={{ color: total >= 0 ? WIN : LOSS, fontWeight: 600 }}>{fmtDelta(total, 0)} RR</span> nas últimas {points.length}.
-      </div>
-    </div>
-  );
-}
-
 // Ataque/defesa — % de rounds ganhos em cada lado, no ato (e sob o filtro
 // de mapa/agente atual). Mesmo visual do card que já existia no dashboard
 // de 30 dias, só que alimentado por SeasonOverview.attackDefense.
@@ -315,12 +284,10 @@ export function SeasonOverviewSection({
   data,
   loading,
   error,
-  rrHistory,
 }: {
   data: SeasonOverview | null;
   loading: boolean;
   error: string | null;
-  rrHistory: RrHistoryPoint[];
 }) {
   const [compact, setCompact] = useState(false);
 
@@ -438,26 +405,17 @@ export function SeasonOverviewSection({
               dot: a.color,
             }))}
           />
-          <div className="grid-responsive-2" style={{ gap: 16 }}>
-            <div style={{ ...cardStyle, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <div>
-                <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 15 }}>RR no período</div>
-                <div style={{ fontSize: 11.5, color: 'var(--text-dim)', marginTop: 2 }}>RR ganho/perdido por partida</div>
-              </div>
-              <RrBarChart points={rrHistory} />
-            </div>
-            <RankingBlock
-              title="Mapa"
-              sub="Vitórias no ato"
-              rows={data.topMaps.map((m) => ({
-                key: m.map,
-                name: m.map,
-                value: `${m.wins}V · ${m.total - m.wins}D`,
-                caption: `${m.winratePercent}% de winrate`,
-                icon: data.mapIcons[m.map],
-              }))}
-            />
-          </div>
+          <RankingBlock
+            title="Mapa"
+            sub="Vitórias no ato"
+            rows={data.topMaps.map((m) => ({
+              key: m.map,
+              name: m.map,
+              value: `${m.wins}V · ${m.total - m.wins}D`,
+              caption: `${m.winratePercent}% de winrate`,
+              icon: data.mapIcons[m.map],
+            }))}
+          />
           <AttackDefenseCard sides={data.attackDefense} />
         </div>
       </div>
