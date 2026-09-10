@@ -192,10 +192,10 @@ export function Dashboard() {
           <MemberFilterSelect equipe={equipe} selectedMemberId={selectedMemberId} setSelectedMemberId={setSelectedMemberId} />
           {seasonOverview && (
             <>
-              <SeasonFilterSelect availableSeasons={seasonOverview.availableSeasons} seasonId={seasonOverview.seasonId} setSelectedSeasonId={setSelectedSeasonId} />
-              <SeasonMapFilterSelect topMaps={seasonOverview.topMaps} mapFilter={seasonMapFilter} setMapFilter={setSeasonMapFilter} />
               <SeasonAgentFilterSelect topAgents={seasonOverview.topAgents} agentFilter={seasonAgentFilter} setAgentFilter={setSeasonAgentFilter} />
+              <SeasonMapFilterSelect topMaps={seasonOverview.topMaps} mapFilter={seasonMapFilter} setMapFilter={setSeasonMapFilter} />
               <SeasonModoFilterSelect availableModos={seasonOverview.availableModos} modoFilter={seasonModoFilter} setModoFilter={setSeasonModoFilter} />
+              <SeasonFilterSelect availableSeasons={seasonOverview.availableSeasons} seasonId={seasonOverview.seasonId} setSelectedSeasonId={setSelectedSeasonId} />
             </>
           )}
           <div className="dashboard-action-buttons">
