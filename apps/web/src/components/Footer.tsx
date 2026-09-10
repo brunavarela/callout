@@ -12,8 +12,7 @@ export function Footer() {
     <footer style={{ borderTop: '1px solid var(--divider)', marginTop: 'auto' }}>
       <div style={{ padding: '14px 26px', display: 'flex', flexDirection: 'column', gap: 8 }}>
         <div style={{ fontSize: 11, color: 'var(--text-faint)', lineHeight: 1.6, maxWidth: '70ch' }}>
-          Ferramenta independente feita por um grupo de amigos. Sem vínculo com a Riot Games. Dados de partida
-          vindos de API pública não-oficial.
+          Ferramenta independente. Sem vínculo com a Riot Games. Dados de partida vindos de API pública não-oficial.
         </div>
         <div
           style={{
