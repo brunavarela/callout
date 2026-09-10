@@ -8,6 +8,18 @@ export interface PlayerMatchReplayStats {
   plants: number;
   clutchesPlayed: number;
   clutchesWon: number;
+  // Chave = quantos adversários ainda vivos no momento em que o jogador
+  // ficou sozinho no time ("1" = 1v1, "3" = 1v3 etc.) — só entra aqui
+  // quando o clutch foi GANHO (mesmo critério de clutchesWon).
+  clutchesWonBySize: Record<string, number>;
+  // Nome da arma (kills[].weapon.name) -> quantidade de kills com ela.
+  // Kills sem arma "normal" (bomba, ambiente) têm weapon.name null e
+  // ficam de fora — não tem "arma" de verdade pra contar.
+  weaponKills: Record<string, number>;
+  // Kills do próprio jogador no mesmo round, agrupado por round -> chave =
+  // tamanho do multi-kill ("2" a "5"). Generaliza o hasAce() antigo
+  // (dashboard.ts), que é só multiKills["5"] > 0.
+  multiKills: Record<string, number>;
 }
 
 // Clutch: o round em que o time do jogador fica reduzido a ele sozinho, com
@@ -31,7 +43,42 @@ export function replayMatchStats(match: MatchV4Data): Map<string, PlayerMatchRep
 
   const stats = new Map<string, PlayerMatchReplayStats>();
   for (const p of match.players) {
-    stats.set(p.puuid, { puuid: p.puuid, teamId: p.team_id, firstBloods: 0, firstDeaths: 0, plants: 0, clutchesPlayed: 0, clutchesWon: 0 });
+    stats.set(p.puuid, {
+      puuid: p.puuid,
+      teamId: p.team_id,
+      firstBloods: 0,
+      firstDeaths: 0,
+      plants: 0,
+      clutchesPlayed: 0,
+      clutchesWon: 0,
+      clutchesWonBySize: {},
+      weaponKills: {},
+      multiKills: {},
+    });
+  }
+
+  // Arma e multi-kill não dependem de round-a-round simulado (só de
+  // contar), então saem numa passada simples separada da lógica de clutch
+  // abaixo — mais fácil de ler que misturar tudo no mesmo loop.
+  for (const kill of match.kills) {
+    const killer = stats.get(kill.killer.puuid);
+    if (killer && kill.weapon.name) {
+      killer.weaponKills[kill.weapon.name] = (killer.weaponKills[kill.weapon.name] ?? 0) + 1;
+    }
+  }
+  for (const [round, kills] of killsByRound) {
+    void round; // só precisamos do agrupamento, não do número do round aqui
+    const killsByKiller = new Map<string, number>();
+    for (const kill of kills) {
+      killsByKiller.set(kill.killer.puuid, (killsByKiller.get(kill.killer.puuid) ?? 0) + 1);
+    }
+    for (const [puuid, count] of killsByKiller) {
+      if (count < 2) continue;
+      const entry = stats.get(puuid);
+      if (!entry) continue;
+      const key = String(Math.min(count, 5));
+      entry.multiKills[key] = (entry.multiKills[key] ?? 0) + 1;
+    }
   }
 
   const teamIds = [...new Set(match.players.map((p) => p.team_id))];
@@ -56,7 +103,7 @@ export function replayMatchStats(match: MatchV4Data): Map<string, PlayerMatchRep
     // Marca o(a) sobrevivente só na primeira vez que o time dele cai pra 1
     // com o adversário ainda vivo — não "descongela" se mais gente morrer
     // depois, igual o original.
-    const clutchSurvivorByTeam = new Map<string, string>();
+    const clutchSurvivorByTeam = new Map<string, { puuid: string; enemyAlive: number }>();
 
     for (const kill of kills) {
       for (const alive of aliveByTeam.values()) alive.delete(kill.victim.puuid);
@@ -66,16 +113,20 @@ export function replayMatchStats(match: MatchV4Data): Map<string, PlayerMatchRep
         const teamAlive = aliveByTeam.get(teamId)!;
         const enemyAlive = [...aliveByTeam.entries()].filter(([id]) => id !== teamId).reduce((sum, [, set]) => sum + set.size, 0);
         if (teamAlive.size === 1 && enemyAlive >= 1) {
-          clutchSurvivorByTeam.set(teamId, [...teamAlive][0]!);
+          clutchSurvivorByTeam.set(teamId, { puuid: [...teamAlive][0]!, enemyAlive });
         }
       }
     }
 
-    for (const [teamId, puuid] of clutchSurvivorByTeam) {
+    for (const [teamId, { puuid, enemyAlive }] of clutchSurvivorByTeam) {
       const entry = stats.get(puuid);
       if (!entry) continue;
       entry.clutchesPlayed++;
-      if (aliveByTeam.get(teamId)!.has(puuid) && round.winning_team === teamId) entry.clutchesWon++;
+      if (aliveByTeam.get(teamId)!.has(puuid) && round.winning_team === teamId) {
+        entry.clutchesWon++;
+        const key = String(Math.min(enemyAlive, 5));
+        entry.clutchesWonBySize[key] = (entry.clutchesWonBySize[key] ?? 0) + 1;
+      }
     }
   }
 

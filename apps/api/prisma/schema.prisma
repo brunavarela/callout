@@ -128,6 +128,13 @@ model Match {
   durationMs Int
   rawJson    Json
   createdAt  DateTime @default(now())
+  // Ato/episódio da Riot (metadata.season da HenrikDev) — mesmo pra todo
+  // mundo num dado momento, usado pra escopar dashboard/painel no "ato
+  // atual" (ver getCurrentSeasonId em lib/dashboard.ts). Nullable só nas
+  // partidas sincronizadas antes desse campo existir (backfill via
+  // scripts/backfillTrackerStats.ts, que relê o rawJson já salvo).
+  seasonId    String?
+  seasonShort String? // ex.: "V26: A5" — label pronto pra exibir
 
   players MatchPlayer[]
   strategyUsages StrategyUsage[]
@@ -164,6 +171,18 @@ model MatchPlayer {
   // ~20 partidas ranqueadas mais recentes — depois disso o dado some da API
   // pra sempre, então precisa capturar cedo.
   rr             Int?
+
+  // Dados novos pro dashboard "estilo tracker.gg" (ver LAUNCH-adjacent
+  // plan) — calculados uma vez em persistMatch() a partir do rawJson que
+  // já chega na sincronização, nunca relidos do rawJson depois (mesmo
+  // cuidado de memória do resto da sessão). Nullable nas partidas de antes
+  // desse campo existir (backfill via scripts/backfillTrackerStats.ts).
+  accountLevel Int? // nível da conta no momento dessa partida (players[].account_level)
+  weaponKills  Json? // { "Vandal": 12, "Phantom": 8, ... } — kills[] agrupado por arma
+  multiKills   Json? // { "2": n, "3": n, "4": n, "5": n } — kills[] agrupado por (round, killer)
+  clutches     Json? // { "1v1": n, ..., "1v5": n } — rounds vencidos em desvantagem numérica
+  firstBloods  Int? // rounds em que foi a primeira kill da partida (replayMatchStats já calculava isso, só não era salvo)
+  plants       Int? // idem, spike plantado
 
   @@unique([matchId, puuid])
   @@index([puuid])

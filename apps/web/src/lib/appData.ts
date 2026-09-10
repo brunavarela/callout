@@ -16,6 +16,7 @@ import type {
   EquipePainelSummary,
   PartidaEquipeSummary,
   EquipeOverview,
+  SeasonOverview,
 } from '@callout/shared';
 import { apiFetch } from './api';
 
@@ -49,6 +50,10 @@ export function useAppData(user: SessionUser | null) {
   const [dashboardLoading, setDashboardLoading] = useState(true);
 
   const [sides, setSides] = useState<SidesBreakdown | null>(null);
+
+  const [seasonOverview, setSeasonOverview] = useState<SeasonOverview | null>(null);
+  const [seasonOverviewError, setSeasonOverviewError] = useState<string | null>(null);
+  const [seasonOverviewLoading, setSeasonOverviewLoading] = useState(true);
 
   const [rrHistoryCache, setRrHistoryCache] = useState<Record<string, RrHistoryResponse>>({});
   const [rrHistoryLoading, setRrHistoryLoading] = useState(true);
@@ -91,6 +96,21 @@ export function useAppData(user: SessionUser | null) {
       setSides(await apiFetch<SidesBreakdown>(`/dashboard/sides${dashboardQuery(modo, memberId, mapId)}`));
     } catch {
       // widget secundário — falha aqui não precisa de estado de erro próprio
+    }
+  }, []);
+
+  // Visão do ato atual ("estilo tracker.gg") — não depende de modo/mapa,
+  // só de quem é o alvo (próprio usuário ou outro membro selecionado).
+  const loadSeasonOverview = useCallback(async (memberId: string | null) => {
+    setSeasonOverviewLoading(true);
+    try {
+      const qs = memberId ? `?userId=${memberId}` : '';
+      setSeasonOverview(await apiFetch<SeasonOverview>(`/dashboard/season${qs}`));
+      setSeasonOverviewError(null);
+    } catch {
+      setSeasonOverviewError('Falha ao carregar a visão do ato.');
+    } finally {
+      setSeasonOverviewLoading(false);
     }
   }, []);
 
@@ -317,6 +337,13 @@ export function useAppData(user: SessionUser | null) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [riotId, modoFilter, matchCountFilter, selectedMemberId, mapFilter]);
 
+  // Visão do ato atual — não depende de modo/mapa, só de trocar de membro.
+  useEffect(() => {
+    if (!riotId) return;
+    loadSeasonOverview(selectedMemberId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [riotId, selectedMemberId]);
+
   // Poll enquanto a sincronização está rolando.
   useEffect(() => {
     if (sync?.state !== 'syncing') return;
@@ -342,6 +369,7 @@ export function useAppData(user: SessionUser | null) {
       loadSides(modoFilter, selectedMemberId, mapFilter);
       loadEquipe();
       loadRrHistory(modoFilter, matchCountFilter, selectedMemberId, mapFilter);
+      loadSeasonOverview(selectedMemberId);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sync?.state]);
@@ -364,6 +392,9 @@ export function useAppData(user: SessionUser | null) {
   return {
     sync,
     startSync,
+    seasonOverview,
+    seasonOverviewError,
+    seasonOverviewLoading,
     equipe,
     equipeError,
     reloadEquipe: loadEquipe,

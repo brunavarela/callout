@@ -7,6 +7,31 @@ import { matchResult, countsTowardStats } from "./match-result.js";
 
 const WEEKDAY_LABELS = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
 
+// O ato/episódio "atual" é o mesmo pra todo mundo num dado momento — não é
+// por usuário. Resolve como o seasonId da partida mais recente que já
+// sincronizamos (de qualquer jogador), em vez de bater na HenrikDev pra
+// perguntar isso; ela nunca é exposta direto como "ato atual" num endpoint
+// à parte de qualquer forma, só implícita em metadata.season de cada
+// partida. Cacheado em processo por alguns minutos — chamado por vários
+// cards do dashboard na mesma requisição, não precisa bater no banco de
+// novo em cada um.
+let seasonCache: { seasonId: string; cachedAt: number } | null = null;
+const SEASON_CACHE_MS = 5 * 60 * 1000;
+
+export async function getCurrentSeasonId(): Promise<string | null> {
+  if (seasonCache && Date.now() - seasonCache.cachedAt < SEASON_CACHE_MS) return seasonCache.seasonId;
+
+  const latest = await prisma.match.findFirst({
+    where: { seasonId: { not: null } },
+    orderBy: { startedAt: "desc" },
+    select: { seasonId: true },
+  });
+  if (!latest?.seasonId) return null;
+
+  seasonCache = { seasonId: latest.seasonId, cachedAt: Date.now() };
+  return latest.seasonId;
+}
+
 export function formatPlayedAt(date: Date, now: Date): string {
   const time = date.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
   const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();

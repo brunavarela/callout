@@ -15,7 +15,8 @@
     "prisma:deploy": "prisma migrate deploy",
     "seed:assets": "tsx --env-file=../../.env src/scripts/seedAssets.ts",
     "seed:competicoes": "tsx --env-file=../../.env src/scripts/seedCompeticoes.ts",
-    "backfill:match-map-id": "tsx --env-file=../../.env src/scripts/backfillMatchMapId.ts"
+    "backfill:match-map-id": "tsx --env-file=../../.env src/scripts/backfillMatchMapId.ts",
+    "backfill:tracker-stats": "tsx --env-file=../../.env src/scripts/backfillTrackerStats.ts"
   },
   "dependencies": {
     "@callout/shared": "*",

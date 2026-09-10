@@ -4,6 +4,7 @@ import type { MatchCountFilter } from "@callout/shared";
 import { requireAuth } from "../lib/session.js";
 import { buildDashboardSummary } from "../lib/dashboard.js";
 import { buildRrAndInsights, buildSidesBreakdown } from "../lib/insights.js";
+import { buildSeasonOverview } from "../lib/seasonOverview.js";
 import { resolveDashboardTarget } from "../lib/equipe.js";
 
 // Resolve o membro do time cujo painel a rota deve montar — o próprio
@@ -70,5 +71,14 @@ export async function dashboardRoutes(app: FastifyInstance) {
     if (!target) return;
     const { modo, mapId } = request.query as { modo?: string; mapId?: string };
     return buildSidesBreakdown(target.riotPuuid!, parseModoFilter(modo), parseMapIdFilter(mapId));
+  });
+
+  // Visão geral do ato atual — cards "estilo tracker.gg" (ver plano de
+  // 10/09/2026). Sem filtro de modo/mapa por ora (o ato inteiro, igual o
+  // concorrente mostra).
+  app.get("/dashboard/season", { preHandler: requireAuth }, async (request, reply) => {
+    const target = await resolveTarget(request, reply);
+    if (!target) return;
+    return buildSeasonOverview(target.riotPuuid!, target.riotRegion!);
   });
 }

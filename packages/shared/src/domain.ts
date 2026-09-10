@@ -221,6 +221,82 @@ export interface DashboardSummary {
   dataAgeLabel?: string;
 }
 
+// --- Visão geral do ato (GET /dashboard/season) — cards "estilo tracker.gg" ---
+// Tudo escopado no ato atual (Match.seasonId), não numa janela de dias como
+// o resto do /dashboard. Ver LAUNCH-adjacent plan de 10/09/2026.
+
+export interface TopAgentStat {
+  agent: string;
+  color: string;
+  matches: number;
+  winratePercent: number;
+  kda: number;
+  adr: number;
+  acs: number;
+  bestMap: { map: string; winratePercent: number } | null;
+}
+
+export interface RoleStat {
+  role: string; // label em português já resolvido (Duelista/Iniciador/Controlador/Sentinela)
+  matches: number;
+  winratePercent: number;
+  kda: number;
+  wins: number;
+  losses: number;
+}
+
+export interface AccuracyBreakdown {
+  headPercent: number;
+  bodyPercent: number;
+  legPercent: number;
+  headHits: number;
+  bodyHits: number;
+  legHits: number;
+}
+
+export interface WeaponStat {
+  weapon: string;
+  kills: number;
+  headPercent: number;
+  bodyPercent: number;
+  legPercent: number;
+}
+
+// Substitui o "Tracker Score" do concorrente (algoritmo deles, não é dado
+// bruto) — nota própria do callout, fórmula documentada e transparente
+// (ver calcularIndiceCallout em apps/api/src/lib/seasonOverview.ts), não
+// pretende ser comparável ao score de outra plataforma.
+export interface CalloutIndex {
+  value: number; // 0-100
+}
+
+export interface SeasonOverview {
+  seasonShort: string | null;
+  accountLevel: number | null;
+  peakRank: { tierLabel: string; seasonShort: string } | null;
+  playtimeMs: number;
+  matchesCount: number;
+  wins: number;
+  losses: number;
+  winratePercent: number;
+  kda: number;
+  acs: number;
+  adr: number;
+  hsPercent: number;
+  ddPerRound: number; // Damage Delta médio por round — seu ADR menos o ADR médio dos outros 9 jogadores das mesmas partidas
+  kills: number;
+  deaths: number;
+  assists: number;
+  firstBloods: number;
+  aces: number;
+  calloutIndex: CalloutIndex;
+  topAgents: TopAgentStat[];
+  topMaps: MapWinrate[];
+  roles: RoleStat[];
+  accuracy: AccuracyBreakdown;
+  topWeapons: WeaponStat[];
+}
+
 // Resposta de GET /dashboard/rr-history — RR e os 4 tópicos de análise
 // vivem no mesmo card na tela e usam o mesmo filtro de partidas (7/20),
 // então saem juntos numa fetch só, independente do resto do /dashboard.

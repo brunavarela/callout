@@ -4,6 +4,7 @@ import { prisma } from "./prisma.js";
 import { getMatchlist, getMmrHistory, HenrikDevError } from "./henrikdev.js";
 import { ensureMapAsset } from "./strategy.js";
 import { countsTowardStats } from "./match-result.js";
+import { replayMatchStats } from "./matchReplay.js";
 
 function describeSyncFailure(err: unknown): string {
   if (err instanceof ZodError) return "A HenrikDev devolveu um formato de dado inesperado.";
@@ -117,6 +118,11 @@ async function persistMatch(match: MatchV4Data, selfPuuid: string, selfRr: numbe
   // ganham ACS de verdade, o resto fica 0.
   const map = await ensureMapAsset(match.metadata.map.name);
 
+  // Calculado uma vez aqui (não em toda carga do dashboard depois) — ver
+  // MatchPlayer.weaponKills/multiKills/clutches no schema. clutchesWonBySize
+  // vira a coluna `clutches` (mesmo formato, só nome mais curto no banco).
+  const replay = replayMatchStats(match);
+
   await prisma.match.create({
     data: {
       id: match.metadata.match_id,
@@ -125,9 +131,12 @@ async function persistMatch(match: MatchV4Data, selfPuuid: string, selfRr: numbe
       startedAt: new Date(match.metadata.started_at),
       durationMs: match.metadata.game_length_in_ms,
       rawJson: match as unknown as object,
+      seasonId: match.metadata.season.id,
+      seasonShort: match.metadata.season.short,
       players: {
         create: match.players.map((p) => {
           const team = match.teams.find((t) => t.team_id === p.team_id);
+          const playerReplay = replay.get(p.puuid);
           return {
             puuid: p.puuid,
             teamId: p.team_id,
@@ -147,6 +156,12 @@ async function persistMatch(match: MatchV4Data, selfPuuid: string, selfRr: numbe
             damageDealt: p.stats.damage.dealt,
             damageReceived: p.stats.damage.received,
             rr: p.puuid === selfPuuid ? selfRr : null,
+            accountLevel: p.account_level,
+            weaponKills: playerReplay?.weaponKills ?? {},
+            multiKills: playerReplay?.multiKills ?? {},
+            clutches: playerReplay?.clutchesWonBySize ?? {},
+            firstBloods: playerReplay?.firstBloods ?? 0,
+            plants: playerReplay?.plants ?? 0,
           };
         }),
       },

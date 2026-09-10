@@ -4,6 +4,7 @@ import type { OutletContext } from '../components/AppShell';
 import { LoadingFill, SnakeSpinner } from '../components/Spinner';
 import { MatchRow } from '../components/MatchRow';
 import { Select } from '../components/Select';
+import { SeasonOverviewSection } from '../components/SeasonOverviewSection';
 import { cardStyle, WIN, LOSS, DRAW, UNDER_50, fmtNum, fmtDelta, plural, rateBarColor, RateBlock } from '../components/statsPrimitives';
 import { useSession } from '../lib/session';
 
@@ -581,6 +582,9 @@ function DashboardContent({
 export function Dashboard() {
   const navigate = useNavigate();
   const {
+    seasonOverview,
+    seasonOverviewLoading,
+    seasonOverviewError,
     equipe,
     dashboard: data,
     dashboardError: error,
@@ -691,6 +695,13 @@ export function Dashboard() {
           isSelf={isSelf}
         />
       )}
+
+      <div>
+        <h2 style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 700, fontSize: 22, letterSpacing: '-.02em', margin: '4px 0 14px' }}>
+          Visão do ato {isSelf ? '' : `de ${subject}`}
+        </h2>
+        <SeasonOverviewSection data={seasonOverview} loading={seasonOverviewLoading} error={seasonOverviewError} />
+      </div>
 
       {error && data && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 14, borderRadius: 14, padding: '14px 18px', background: 'var(--acc10, rgba(239,73,88,.1))', border: '1px solid var(--acc25, rgba(239,73,88,.25))' }}>
