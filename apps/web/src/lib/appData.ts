@@ -273,8 +273,9 @@ export function useAppData(user: SessionUser | null) {
   const riotId = user?.riotId?.puuid;
 
   // Carga inicial — uma vez por login, não por navegação. Dispara a
-  // sincronização em paralelo, sem esperar clique no botão — quando ela
-  // termina, o efeito de "sync terminou" (mais abaixo) rebusca os dados.
+  // sincronização em paralelo, sem precisar de nenhuma ação da pessoa —
+  // quando ela termina, o efeito de "sync terminou" (mais abaixo) rebusca
+  // os dados.
   useEffect(() => {
     if (!riotId) return;
     apiFetch<SyncStatus>('/sync').then((status) => {
@@ -282,6 +283,16 @@ export function useAppData(user: SessionUser | null) {
       if (status.state !== 'syncing') startSync();
     }).catch(() => {});
     loadEquipe();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [riotId]);
+
+  // Ressincroniza sozinho a cada 30min enquanto a aba fica aberta — não
+  // existe mais botão manual de "Sincronizar" (removido do Dashboard); essa
+  // é a única forma de os dados se atualizarem depois da carga inicial.
+  useEffect(() => {
+    if (!riotId) return;
+    const interval = setInterval(() => startSync(), 30 * 60 * 1000);
+    return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [riotId]);
 

@@ -581,8 +581,6 @@ function DashboardContent({
 export function Dashboard() {
   const navigate = useNavigate();
   const {
-    sync,
-    startSync,
     equipe,
     dashboard: data,
     dashboardError: error,
@@ -656,16 +654,6 @@ export function Dashboard() {
             <button className="btn-secondary" style={{ minHeight: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 17px' }} onClick={() => navigate('/board')}>
               Abrir estratégia
             </button>
-            {isSelf && (
-              <button
-                className="btn-primary"
-                style={{ minHeight: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '0 17px', fontSize: 13 }}
-                onClick={startSync}
-                disabled={sync?.state === 'syncing'}
-              >
-                {sync?.state === 'syncing' ? <SnakeSpinner size={14} color="#000" /> : '+'} Sincronizar
-              </button>
-            )}
           </div>
         </div>
       </div>
