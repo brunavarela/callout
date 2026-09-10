@@ -585,6 +585,8 @@ export function Dashboard() {
     seasonOverview,
     seasonOverviewLoading,
     seasonOverviewError,
+    selectedSeasonId,
+    setSelectedSeasonId,
     equipe,
     dashboard: data,
     dashboardError: error,
@@ -700,7 +702,13 @@ export function Dashboard() {
         <h2 style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 700, fontSize: 22, letterSpacing: '-.02em', margin: '4px 0 14px' }}>
           Visão do ato {isSelf ? '' : `de ${subject}`}
         </h2>
-        <SeasonOverviewSection data={seasonOverview} loading={seasonOverviewLoading} error={seasonOverviewError} />
+        <SeasonOverviewSection
+          data={seasonOverview}
+          loading={seasonOverviewLoading}
+          error={seasonOverviewError}
+          selectedSeasonId={selectedSeasonId}
+          setSelectedSeasonId={setSelectedSeasonId}
+        />
       </div>
 
       {error && data && (

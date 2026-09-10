@@ -434,6 +434,18 @@ button {
   }
 }
 
+/* Visão do ato: lista de partidas + sidebar (Agentes/Mapas/Funções) */
+.grid-responsive-season {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 16px;
+}
+@media (max-width: 1000px) {
+  .grid-responsive-season {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* Pares de cards 50/50 do Painel do time (mapa+combinação, ACS+MVP etc.) */
 .grid-responsive-2 {
   display: grid;

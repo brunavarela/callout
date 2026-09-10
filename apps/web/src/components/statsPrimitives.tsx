@@ -38,6 +38,15 @@ export function rateBarColor(wins: number, total: number): string {
   return wins / total >= 0.5 ? WIN : UNDER_50;
 }
 
+// Quadradinho de ícone (mapa/agente, via valorant-api.com) ou, na ausência
+// de ícone, um "dot" de cor — usado tanto em RateBlock quanto em
+// RankingBlock. Ícone tem prioridade sobre `dot` quando os dois vêm juntos.
+function RowGlyph({ icon, dot, size }: { icon?: string; dot?: string; size: number }) {
+  if (icon) return <img src={icon} alt="" style={{ width: size, height: size, borderRadius: 4, objectFit: 'contain', background: 'var(--track)', flex: 'none' }} />;
+  if (dot) return <span style={{ width: 9, height: 9, borderRadius: 3, background: dot, flex: 'none' }} />;
+  return null;
+}
+
 export function RateBlock({
   title,
   sub,
@@ -47,7 +56,7 @@ export function RateBlock({
 }: {
   title: string;
   sub: string;
-  rows: Array<{ key: string; name: string; wins: number; total: number; dot?: string }>;
+  rows: Array<{ key: string; name: string; wins: number; total: number; dot?: string; icon?: string }>;
   colorFor: (wins: number, total: number) => string;
   // Opcional — quando passado, o card vira altura fixa e só a lista de
   // linhas rola por dentro (título/legenda continuam sempre visíveis). Sem
@@ -69,7 +78,7 @@ export function RateBlock({
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}>
                   <span style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 13, color: 'var(--text-3)' }}>
-                    {r.dot && <span style={{ width: 9, height: 9, borderRadius: 3, background: r.dot, flex: 'none' }} />}
+                    <RowGlyph icon={r.icon} dot={r.dot} size={18} />
                     {r.name}
                   </span>
                   <span style={{ fontSize: 11, color: 'var(--text-faint)', whiteSpace: 'nowrap' }}>{plural(r.total, 'partida')}</span>
@@ -103,6 +112,7 @@ export interface RankingRow {
   value: string;
   caption?: string;
   dot?: string;
+  icon?: string;
 }
 
 // Leaderboard genérico — numerado, nome + legenda opcional, valor alinhado
@@ -152,7 +162,7 @@ export function RankingBlock({ title, sub, rows }: { title: string; sub: string;
                   {i + 1}
                 </span>
                 <span style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 7, fontSize: 13, color: 'var(--text-3)', overflow: 'hidden' }}>
-                  {r.dot && <span style={{ width: 9, height: 9, borderRadius: 3, background: r.dot, flex: 'none' }} />}
+                  <RowGlyph icon={r.icon} dot={r.dot} size={20} />
                   <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {r.name}
                     {r.caption && <span style={{ marginLeft: 6, fontSize: 10.5, color: 'var(--text-faint)' }}>{r.caption}</span>}

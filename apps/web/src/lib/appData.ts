@@ -68,6 +68,12 @@ export function useAppData(user: SessionUser | null) {
   // pra bater direto com a coluna Match.mapId no filtro do backend.
   const [mapFilter, setMapFilterState] = useState<string | null>(null);
 
+  // Seletor de ato do painel "Visão do ato" — null = ato atual (o back
+  // resolve sozinho). SeasonOverview.seasonId devolve qual foi escolhido de
+  // fato, pro seletor mostrar o valor certo mesmo quando null significa
+  // "atual" nos bastidores.
+  const [selectedSeasonId, setSelectedSeasonIdState] = useState<string | null>(null);
+
   const wasSyncing = useRef(false);
 
   const loadEquipe = useCallback(async () => {
@@ -99,13 +105,17 @@ export function useAppData(user: SessionUser | null) {
     }
   }, []);
 
-  // Visão do ato atual ("estilo tracker.gg") — não depende de modo/mapa,
-  // só de quem é o alvo (próprio usuário ou outro membro selecionado).
-  const loadSeasonOverview = useCallback(async (memberId: string | null) => {
+  // Visão do ato ("estilo tracker.gg") — depende de quem é o alvo (próprio
+  // usuário ou outro membro selecionado) e de qual ato o seletor do painel
+  // escolheu (null = ato atual, o back resolve sozinho).
+  const loadSeasonOverview = useCallback(async (memberId: string | null, seasonId: string | null) => {
     setSeasonOverviewLoading(true);
     try {
-      const qs = memberId ? `?userId=${memberId}` : '';
-      setSeasonOverview(await apiFetch<SeasonOverview>(`/dashboard/season${qs}`));
+      const params = new URLSearchParams();
+      if (memberId) params.set('userId', memberId);
+      if (seasonId) params.set('seasonId', seasonId);
+      const qs = params.toString();
+      setSeasonOverview(await apiFetch<SeasonOverview>(`/dashboard/season${qs ? `?${qs}` : ''}`));
       setSeasonOverviewError(null);
     } catch {
       setSeasonOverviewError('Falha ao carregar a visão do ato.');
@@ -140,13 +150,20 @@ export function useAppData(user: SessionUser | null) {
   // Trocar de membro reseta o filtro de mapa — a lista de mapas filtráveis
   // vem dos mapas que ESSA pessoa jogou (mapWinrates dela), então um mapa
   // selecionado pode nem existir mais na lista de quem você acabou de trocar.
+  // Reseta o ato selecionado também — nem todo ato escolhido pra você existe
+  // pra quem você acabou de trocar.
   const setSelectedMemberId = useCallback((memberId: string | null) => {
     setSelectedMemberIdState(memberId);
     setMapFilterState(null);
+    setSelectedSeasonIdState(null);
   }, []);
 
   const setMapFilter = useCallback((mapId: string | null) => {
     setMapFilterState(mapId);
+  }, []);
+
+  const setSelectedSeasonId = useCallback((seasonId: string | null) => {
+    setSelectedSeasonIdState(seasonId);
   }, []);
 
   const updateEquipeMembroNota = useCallback((userId: string, note: string) => {
@@ -337,12 +354,13 @@ export function useAppData(user: SessionUser | null) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [riotId, modoFilter, matchCountFilter, selectedMemberId, mapFilter]);
 
-  // Visão do ato atual — não depende de modo/mapa, só de trocar de membro.
+  // Visão do ato — não depende de modo/mapa, só de trocar de membro ou de
+  // ato selecionado no seletor do painel.
   useEffect(() => {
     if (!riotId) return;
-    loadSeasonOverview(selectedMemberId);
+    loadSeasonOverview(selectedMemberId, selectedSeasonId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [riotId, selectedMemberId]);
+  }, [riotId, selectedMemberId, selectedSeasonId]);
 
   // Poll enquanto a sincronização está rolando.
   useEffect(() => {
@@ -369,7 +387,7 @@ export function useAppData(user: SessionUser | null) {
       loadSides(modoFilter, selectedMemberId, mapFilter);
       loadEquipe();
       loadRrHistory(modoFilter, matchCountFilter, selectedMemberId, mapFilter);
-      loadSeasonOverview(selectedMemberId);
+      loadSeasonOverview(selectedMemberId, selectedSeasonId);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sync?.state]);
@@ -395,6 +413,8 @@ export function useAppData(user: SessionUser | null) {
     seasonOverview,
     seasonOverviewError,
     seasonOverviewLoading,
+    selectedSeasonId,
+    setSelectedSeasonId,
     equipe,
     equipeError,
     reloadEquipe: loadEquipe,
