@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Navigate, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { LayoutDashboard, Swords, Users, PenTool, MapPin, Trophy, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useSession } from '../lib/session';
@@ -154,6 +154,16 @@ export function AppShell() {
   const appData = useAppData(user);
   const { equipe } = appData;
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const accountMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!settingsOpen) return;
+    function onPointerDown(e: PointerEvent) {
+      if (accountMenuRef.current && !accountMenuRef.current.contains(e.target as Node)) setSettingsOpen(false);
+    }
+    document.addEventListener('pointerdown', onPointerDown);
+    return () => document.removeEventListener('pointerdown', onPointerDown);
+  }, [settingsOpen]);
   const [collapsed, setCollapsed] = useState(() => {
     try {
       return localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === '1';
@@ -302,7 +312,7 @@ export function AppShell() {
       <main className="app-main" style={{ minWidth: 0, height: '100%', display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
         <header className="app-header" style={{ padding: '16px 26px', borderBottom: '1px solid var(--divider)' }}>
           <SearchBar appData={appData} />
-          <div style={{ marginLeft: 'auto', position: 'relative' }}>
+          <div ref={accountMenuRef} style={{ marginLeft: 'auto', position: 'relative' }}>
             {settingsOpen && <AccountMenu className="header-profile-panel" onClose={() => setSettingsOpen(false)} />}
             <button
               className="header-profile-trigger"

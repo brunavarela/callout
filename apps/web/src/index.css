@@ -319,6 +319,13 @@ button {
   background: var(--card-hover-bg);
 }
 
+/* Menu de conta (AccountMenu.tsx) — --card-hover-bg é sutil demais pra um
+   item de menu pequeno (fica praticamente imperceptível), usa o mesmo tom
+   mais forte do hover da sidebar. */
+.account-menu-item:hover {
+  background: var(--nav-hover-bg);
+}
+
 .card-hover-acc:hover {
   border-color: var(--acc25, rgba(239, 73, 88, 0.25)) !important;
 }
