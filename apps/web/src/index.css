@@ -435,19 +435,16 @@ button {
 }
 
 /* KPIs da Visão do ato — tira densa (não "cards" separados, um retângulo
-   só). Linha de destaque (ADR/K:D/Headshot%/Win%/KDA/V-D) em flex — cada
-   item só ocupa a largura do próprio conteúdo, o espaço sobrando vira
-   gap extra entre eles (grid com colunas 1fr esparramava demais quando o
-   card ficava mais largo que o conteúdo). */
+   só). Linha de destaque (ADR/K:D/Headshot%/Win%/KDA/V-D) espalhada pela
+   largura inteira do card (space-between) — cada item só ocupa a largura
+   do próprio conteúdo, mas a distância entre eles cresce/encolhe com o
+   card em vez de ficar tudo colado à esquerda com um vazio à direita.
+   `gap` é só o mínimo, pra não colar quando quebra linha em telas estreitas. */
 .kpi-hero-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 28px 40px;
-}
-@media (max-width: 640px) {
-  .kpi-hero-row {
-    gap: 16px 28px;
-  }
+  justify-content: space-between;
+  gap: 16px 28px;
 }
 
 .kpi-mini-row {
