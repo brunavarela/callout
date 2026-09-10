@@ -434,6 +434,24 @@ button {
   }
 }
 
+/* KPIs da Visão do ato — 6 cards numa linha só em telas largas (KDA/ACS/
+   ADR/HS%/vitórias/Índice callout), indo pra 3 e depois 2 por linha. */
+.grid-responsive-kpi6 {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 14px;
+}
+@media (max-width: 1180px) {
+  .grid-responsive-kpi6 {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+@media (max-width: 640px) {
+  .grid-responsive-kpi6 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
 /* Visão do ato: lista de partidas + sidebar (Agentes/Mapas/Funções) */
 .grid-responsive-season {
   display: grid;

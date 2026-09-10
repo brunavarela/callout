@@ -1,27 +1,28 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import type { MatchBadge, SeasonMatchSummary, SeasonOverview } from '@callout/shared';
+import type { MatchBadge, RrHistoryPoint, SeasonMatchSummary, SeasonOverview } from '@callout/shared';
 import { LoadingFill } from './Spinner';
-import { Select } from './Select';
 import { cardStyle, fmtNum, fmtDelta, plural, rateBarColor, RateBlock, RankingBlock } from './statsPrimitives';
 
 const WIN = 'var(--pos, #18AAB7)';
 const LOSS = 'var(--neg, #EF4958)';
 const DRAW = 'var(--text-muted, #9A9DA1)';
-
-function formatPlaytime(ms: number): string {
-  const hours = ms / 3_600_000;
-  if (hours < 1) return `${Math.round(ms / 60_000)}min`;
-  return `${fmtNum(hours, hours < 10 ? 1 : 0)}h`;
-}
+const UNDER_50 = 'color-mix(in srgb, var(--neg, #EF4958) 42%, var(--track))';
 
 // A HenrikDev devolve o "short" do ato em código interno ("e11a5" =
 // episódio 11, ato 5), não no formato bonito que aparece no cliente do
 // jogo — só deixa mais legível; se um dia o formato mudar, cai de volta
 // pro valor bruto sem quebrar nada.
-function formatSeasonShort(raw: string): string {
+export function formatSeasonShort(raw: string): string {
   const match = /^e(\d+)a(\d+)$/i.exec(raw);
   if (!match) return raw;
   return `Episódio ${match[1]} · Ato ${match[2]}`;
+}
+
+export function formatPlaytime(ms: number): string {
+  const hours = ms / 3_600_000;
+  if (hours < 1) return `${Math.round(ms / 60_000)}min`;
+  return `${fmtNum(hours, hours < 10 ? 1 : 0)}h`;
 }
 
 function fmtRr(n: number): string {
@@ -31,39 +32,245 @@ function fmtRr(n: number): string {
   return String(abs);
 }
 
-function StatChip({ label, value, iconUrl }: { label: string; value: string; iconUrl?: string | null }) {
+function badgeLabel(b: MatchBadge): string {
+  return b.kind === 'clutch' ? `1v${b.size} clutch` : `${b.size}k`;
+}
+
+function badgeColor(b: MatchBadge): string {
+  return b.kind === 'clutch' ? '#A78BFA' : '#E8B339';
+}
+
+// Agrupa as partidas por dia calendário (não pelo texto relativo de
+// playedAtLabel, que é "hoje"/"ontem"/"seg" — não dá pra usar como chave).
+// A lista já vem ordenada da mais recente pra mais antiga; preserva isso.
+function groupByDay(matches: SeasonMatchSummary[]): Array<{ key: string; label: string; matches: SeasonMatchSummary[] }> {
+  const today = new Date();
+  const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  const todayStart = startOfDay(today);
+
+  const groups: Array<{ key: string; label: string; matches: SeasonMatchSummary[] }> = [];
+  for (const m of matches) {
+    const d = new Date(m.playedAtIso);
+    const key = d.toDateString();
+    let group = groups.find((g) => g.key === key);
+    if (!group) {
+      const diffDays = Math.round((todayStart - startOfDay(d)) / 86_400_000);
+      const label = diffDays === 0 ? 'Hoje' : diffDays === 1 ? 'Ontem' : d.toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' }).replace('.', '');
+      group = { key, label, matches: [] };
+      groups.push(group);
+    }
+    group.matches.push(m);
+  }
+  return groups;
+}
+
+function parseKda(kda: string): [number, number, number] {
+  const [k, d, a] = kda.split('/').map(Number);
+  return [k ?? 0, d ?? 0, a ?? 0];
+}
+
+// Linha de resumo do dia — contagem V/D e a média das mesmas métricas que
+// cada linha de partida mostra, pra dar o "placar do dia" antes de listar
+// as partidas dele.
+function DayHeaderRow({ label, matches }: { label: string; matches: SeasonMatchSummary[] }) {
+  const wins = matches.filter((m) => m.result === 'V').length;
+  const losses = matches.filter((m) => m.result === 'D').length;
+  let k = 0,
+    d = 0,
+    a = 0;
+  for (const m of matches) {
+    const [mk, md, ma] = parseKda(m.kda);
+    k += mk;
+    d += md;
+    a += ma;
+  }
+  const avgAcs = Math.round(matches.reduce((s, m) => s + m.acs, 0) / matches.length);
+  const avgHs = matches.reduce((s, m) => s + m.hsPercent, 0) / matches.length;
+  const avgDd = matches.reduce((s, m) => s + m.ddPerRound, 0) / matches.length;
+  const kd = d > 0 ? fmtNum(k / d, 1) : String(k);
+
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-      {iconUrl && <img src={iconUrl} alt="" style={{ width: 22, height: 22, objectFit: 'contain', flex: 'none' }} />}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-        <span style={{ fontSize: 10, letterSpacing: '.1em', color: 'var(--text-dim)' }}>{label.toUpperCase()}</span>
-        <span style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 15 }}>{value}</span>
+    <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, padding: '14px 6px 6px', flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+        <span style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 13.5 }}>{label}</span>
+        <span style={{ fontSize: 11, color: 'var(--text-faint)' }}>
+          {plural(matches.length, 'partida')} · {wins}V·{losses}D
+        </span>
+      </div>
+      <div style={{ display: 'flex', gap: 16, fontSize: 11, color: 'var(--text-faint)', whiteSpace: 'nowrap' }}>
+        <span>
+          K/D <b style={{ color: 'var(--text-3)', fontWeight: 600 }}>{kd}</b>
+        </span>
+        <span style={{ color: 'var(--text-2)' }}>
+          {k}/{d}/{a}
+        </span>
+        <span>
+          DDΔ <b style={{ color: avgDd >= 0 ? WIN : LOSS, fontWeight: 600 }}>{fmtDelta(avgDd, 0)}</b>
+        </span>
+        <span>
+          HS <b style={{ color: 'var(--text-3)', fontWeight: 600 }}>{fmtNum(avgHs, 0)}</b>
+        </span>
+        <span>
+          ACS <b style={{ color: 'var(--text-3)', fontWeight: 600 }}>{avgAcs}</b>
+        </span>
       </div>
     </div>
   );
 }
 
-// Mini ataque/defesa — ocupa o lugar que antes era o número grande do
-// Índice callout na faixa de topo (a Bruna pediu pra tirar o índice
-// callout dali; "vamos ver o encaixe dele depois" — por ora ele mora como
-// mais um card no grid de KPIs, mais abaixo).
-function AttackDefenseMini({ sides }: { sides: SeasonOverview['attackDefense'] }) {
-  const rows: Array<{ label: string; winratePercent: number }> = [
-    { label: 'Ataque', winratePercent: sides.attack.winratePercent },
-    { label: 'Defesa', winratePercent: sides.defense.winratePercent },
-  ];
+// Uma linha de partida do ato — ícone de agente preenchendo o "quadrado"
+// (mapa como fallback), badges de clutch/multi-kill, e o Índice callout
+// dessa partida (calculado com a mesma fórmula do agregado, só que com o
+// resultado 0/100 dessa partida) no lugar do "TRS" do concorrente.
+function SeasonMatchRow({ m, agentIcon, mapIcon, compact }: { m: SeasonMatchSummary; agentIcon: string | null; mapIcon: string | null; compact: boolean }) {
+  const navigate = useNavigate();
+  const resultColor = m.result === 'V' ? WIN : m.result === 'D' ? LOSS : DRAW;
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 140 }}>
-      <span style={{ fontSize: 10, letterSpacing: '.08em', color: 'var(--text-dim)' }}>ATAQUE × DEFESA</span>
-      {rows.map((r) => (
-        <div key={r.label} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ fontSize: 11, color: 'var(--text-3)', width: 46, flex: 'none' }}>{r.label}</span>
-          <div style={{ flex: 1, height: 7, borderRadius: 4, background: 'var(--track)', position: 'relative' }}>
-            <div style={{ position: 'absolute', inset: '0 auto 0 0', width: `${r.winratePercent}%`, borderRadius: 4, background: r.winratePercent >= 50 ? WIN : 'color-mix(in srgb, var(--neg, #EF4958) 42%, var(--track))' }} />
+    <div
+      className="list-row"
+      onClick={() => navigate(`/partida/${m.id}`)}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 10,
+        padding: '8px 8px 8px 10px',
+        margin: '2px 0',
+        borderRadius: 8,
+        cursor: 'pointer',
+        borderLeft: `3px solid ${resultColor}`,
+        background: 'var(--surface-2, rgba(255,255,255,.02))',
+      }}
+    >
+      {agentIcon || mapIcon ? (
+        <img src={agentIcon ?? mapIcon!} alt="" style={{ width: 32, height: 32, borderRadius: 7, objectFit: 'contain', background: 'var(--track)', flex: 'none' }} />
+      ) : (
+        <span style={{ width: 32, height: 32, borderRadius: 7, background: 'var(--track)', flex: 'none' }} />
+      )}
+
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, flexWrap: 'wrap' }}>
+          <span style={{ fontSize: 12.5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {m.map} <span style={{ color: 'var(--text-faint)' }}>· {m.agent}</span>
+          </span>
+          {m.badges.map((b, i) => (
+            <span key={i} style={{ fontSize: 8.5, fontWeight: 700, borderRadius: 4, padding: '1px 5px', whiteSpace: 'nowrap', color: badgeColor(b), background: `color-mix(in srgb, ${badgeColor(b)} 18%, transparent)` }}>
+              {badgeLabel(b)}
+            </span>
+          ))}
+        </div>
+        {!compact && <div style={{ fontSize: 10.5, color: 'var(--text-dim)', marginTop: 2 }}>{m.playedAtLabel}</div>}
+      </div>
+
+      {!compact && (
+        <>
+          <StatCol label="K/D" value={fmtNum(m.kdaRatio, 1)} />
+          <StatCol label="K/D/A" value={m.kda} width={62} />
+          <StatCol label="DDΔ" value={fmtDelta(m.ddPerRound, 0)} color={m.ddPerRound >= 0 ? WIN : LOSS} />
+          <StatCol label="HS%" value={`${fmtNum(m.hsPercent, 0)}%`} />
+          <StatCol label="ACS" value={String(m.acs)} bold />
+        </>
+      )}
+
+      <span style={{ fontSize: 11.5, color: 'var(--text-3)', whiteSpace: 'nowrap', flex: 'none', width: 42, textAlign: 'center' }}>{m.score}</span>
+      <span style={{ fontSize: 11.5, fontWeight: 600, textAlign: 'right', width: 32, flex: 'none', color: m.rr === null ? 'var(--text-faint)' : m.rr >= 0 ? WIN : LOSS }}>
+        {m.rr === null ? '—' : fmtRr(m.rr)}
+      </span>
+      <span
+        title="Índice callout dessa partida"
+        style={{
+          fontSize: 12.5,
+          fontWeight: 700,
+          textAlign: 'center',
+          width: 30,
+          flex: 'none',
+          padding: '3px 0',
+          borderRadius: 6,
+          color: 'var(--acc, #EF4958)',
+          background: 'color-mix(in srgb, var(--acc, #EF4958) 12%, transparent)',
+        }}
+      >
+        {m.calloutIndex}
+      </span>
+    </div>
+  );
+}
+
+function StatCol({ label, value, color, bold, width = 40 }: { label: string; value: string; color?: string; bold?: boolean; width?: number }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1, width, flex: 'none' }} title={label}>
+      <span style={{ fontSize: 8.5, letterSpacing: '.04em', color: 'var(--text-faint)' }}>{label}</span>
+      <span style={{ fontSize: 12, fontWeight: bold ? 700 : 500, color: color ?? 'var(--text-2)', whiteSpace: 'nowrap' }}>{value}</span>
+    </div>
+  );
+}
+
+// Barra por partida (win=verde, loss=vermelho) do RR ganho/perdido —
+// mesma fonte de dados do card antigo de linha, só que em barras (mais
+// perto do jeito que o concorrente mostra isso).
+function RrBarChart({ points }: { points: RrHistoryPoint[] }) {
+  if (points.length === 0) return <div style={{ fontSize: 12.5, color: 'var(--text-faint)' }}>Sem histórico de RR ainda.</div>;
+  const max = Math.max(...points.map((p) => Math.abs(p.delta)), 1);
+  const total = points.reduce((s, p) => s + p.delta, 0);
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <div style={{ display: 'flex', alignItems: 'flex-end', gap: 3, height: 90 }}>
+        {points.map((p) => (
+          <div
+            key={p.matchId}
+            title={`${p.label} · ${p.map} · ${fmtDelta(p.delta, 0)} RR`}
+            style={{
+              flex: 1,
+              height: `${Math.max((Math.abs(p.delta) / max) * 100, 6)}%`,
+              borderRadius: 3,
+              background: p.delta >= 0 ? WIN : LOSS,
+              opacity: 0.85,
+            }}
+          />
+        ))}
+      </div>
+      <div style={{ fontSize: 11, color: 'var(--text-faint)' }}>
+        Fechou em <span style={{ color: total >= 0 ? WIN : LOSS, fontWeight: 600 }}>{fmtDelta(total, 0)} RR</span> nas últimas {points.length}.
+      </div>
+    </div>
+  );
+}
+
+// Ataque/defesa — % de rounds ganhos em cada lado, no ato (e sob o filtro
+// de mapa/agente atual). Mesmo visual do card que já existia no dashboard
+// de 30 dias, só que alimentado por SeasonOverview.attackDefense.
+function AttackDefenseCard({ sides }: { sides: SeasonOverview['attackDefense'] }) {
+  return (
+    <div style={{ ...cardStyle, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <div>
+        <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 15 }}>Ataque ou defesa</div>
+        <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 3 }}>% de rounds ganhos em cada lado, no ato</div>
+      </div>
+      {(
+        [
+          { label: 'Ataque', ...sides.attack },
+          { label: 'Defesa', ...sides.defense },
+        ] as Array<{ label: string; winratePercent: number; wins: number; total: number }>
+      ).map((s) => (
+        <div key={s.label} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+            <span style={{ fontSize: 13, color: 'var(--text-3)' }}>{s.label}</span>
+            <span style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 17 }}>{s.winratePercent}%</span>
           </div>
-          <span style={{ fontSize: 12, fontWeight: 600, width: 32, textAlign: 'right', flex: 'none' }}>{r.winratePercent}%</span>
+          <div style={{ height: 9, borderRadius: 5, background: 'var(--track)', position: 'relative' }}>
+            <div style={{ position: 'absolute', inset: '0 auto 0 0', width: `${s.winratePercent}%`, borderRadius: 5, background: s.winratePercent >= 50 ? WIN : UNDER_50 }} />
+            <div style={{ position: 'absolute', left: '50%', top: -3, bottom: -3, width: 1, background: 'var(--text-faint)' }} />
+          </div>
+          <span style={{ fontSize: 11, color: 'var(--text-faint)' }}>
+            {plural(s.wins, 'round')} ganho{s.wins === 1 ? '' : 's'} de {s.total}
+          </span>
         </div>
       ))}
+      {sides.overtime.total > 0 && (
+        <div style={{ fontSize: 11, color: 'var(--text-faint)' }}>
+          + overtime: {sides.overtime.wins} de {sides.overtime.total} rounds
+        </div>
+      )}
     </div>
   );
 }
@@ -104,185 +311,68 @@ function AccuracyBar({ accuracy }: { accuracy: SeasonOverview['accuracy'] }) {
   );
 }
 
-function badgeLabel(b: MatchBadge): string {
-  return b.kind === 'clutch' ? `1v${b.size} clutch` : `${b.size}k`;
-}
-
-// Uma linha de partida do ato — mesmo espírito visual do MatchRow.tsx (V/D
-// à esquerda, resultado + placar + RR), mas com ícone de agente (ou de
-// mapa, na ausência do de agente) preenchendo o "quadrado" da linha, os
-// badges de clutch/multi-kill dessa partida, e o Índice callout calculado
-// só pra essa partida no lugar do "TRS" do concorrente.
-function SeasonMatchRow({ m, agentIcon, mapIcon }: { m: SeasonMatchSummary; agentIcon: string | null; mapIcon: string | null }) {
-  const navigate = useNavigate();
-  return (
-    <div
-      className="list-row"
-      onClick={() => navigate(`/partida/${m.id}`)}
-      style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 6px', margin: '0 -6px', borderRadius: 8, cursor: 'pointer', borderTop: '1px solid var(--divider)' }}
-    >
-      <span
-        style={{
-          fontSize: 10.5,
-          fontWeight: 700,
-          borderRadius: 4,
-          textAlign: 'center',
-          width: 22,
-          flex: 'none',
-          padding: '3px 0',
-          color: m.result === 'V' ? WIN : m.result === 'D' ? LOSS : DRAW,
-          background:
-            m.result === 'V'
-              ? 'color-mix(in srgb, var(--pos, #18AAB7) 16%, transparent)'
-              : m.result === 'D'
-                ? 'color-mix(in srgb, var(--neg, #EF4958) 14%, transparent)'
-                : 'color-mix(in srgb, var(--text-muted, #9A9DA1) 16%, transparent)',
-        }}
-      >
-        {m.result}
-      </span>
-
-      {agentIcon || mapIcon ? (
-        <img src={agentIcon ?? mapIcon!} alt="" style={{ width: 34, height: 34, borderRadius: 7, objectFit: 'contain', background: 'var(--track)', flex: 'none' }} />
-      ) : (
-        <span style={{ width: 34, height: 34, borderRadius: 7, background: 'var(--track)', flex: 'none' }} />
-      )}
-
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, flexWrap: 'wrap' }}>
-          <span style={{ fontSize: 12.5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {m.map} <span style={{ color: 'var(--text-faint)' }}>· {m.agent}</span>
-          </span>
-          {m.badges.map((b, i) => (
-            <span
-              key={i}
-              style={{ fontSize: 8.5, fontWeight: 700, borderRadius: 4, padding: '1px 5px', whiteSpace: 'nowrap', color: b.kind === 'clutch' ? '#A78BFA' : '#E8B339', background: `color-mix(in srgb, ${b.kind === 'clutch' ? '#A78BFA' : '#E8B339'} 18%, transparent)` }}
-            >
-              {badgeLabel(b)}
-            </span>
-          ))}
-        </div>
-        <div style={{ fontSize: 10.5, color: 'var(--text-dim)', marginTop: 2 }}>
-          KDA {m.kda} · ACS {m.acs} · HS {m.hsPercent}% · {m.playedAtLabel}
-        </div>
-      </div>
-
-      <span style={{ fontSize: 11.5, color: 'var(--text-3)', whiteSpace: 'nowrap', flex: 'none' }}>{m.score}</span>
-
-      <span style={{ fontSize: 11.5, fontWeight: 600, textAlign: 'right', width: 34, flex: 'none', color: m.rr === null ? 'var(--text-faint)' : m.rr >= 0 ? WIN : LOSS }}>
-        {m.rr === null ? '—' : fmtRr(m.rr)}
-      </span>
-
-      <span
-        title="Índice callout dessa partida"
-        style={{
-          fontSize: 12.5,
-          fontWeight: 700,
-          textAlign: 'center',
-          width: 30,
-          flex: 'none',
-          padding: '3px 0',
-          borderRadius: 6,
-          color: 'var(--acc, #EF4958)',
-          background: 'color-mix(in srgb, var(--acc, #EF4958) 12%, transparent)',
-        }}
-      >
-        {m.calloutIndex}
-      </span>
-    </div>
-  );
-}
-
 export function SeasonOverviewSection({
   data,
   loading,
   error,
-  selectedSeasonId,
-  setSelectedSeasonId,
+  rrHistory,
 }: {
   data: SeasonOverview | null;
   loading: boolean;
   error: string | null;
-  selectedSeasonId: string | null;
-  setSelectedSeasonId: (seasonId: string | null) => void;
+  rrHistory: RrHistoryPoint[];
 }) {
+  const [compact, setCompact] = useState(false);
+
   if (loading) return <LoadingFill />;
   if (error) return <div style={{ ...cardStyle, padding: 24, textAlign: 'center', color: 'var(--text-muted)', fontSize: 13.5 }}>{error}</div>;
   if (!data) {
     return <div style={{ ...cardStyle, padding: 24, textAlign: 'center', color: 'var(--text-muted)', fontSize: 13.5 }}>Sem dados de ato ainda.</div>;
   }
 
-  const seasonOptions = data.availableSeasons.map((s) => ({ value: s.seasonId, label: formatSeasonShort(s.seasonShort) }));
-
   if (data.matchesCount === 0) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-        {seasonOptions.length > 1 && (
-          <Select
-            value={data.seasonId ?? selectedSeasonId ?? seasonOptions[0]!.value}
-            onChange={setSelectedSeasonId}
-            options={seasonOptions}
-            title="Escolher o ato"
-            style={{ width: 220, height: 36, padding: '0 12px', borderRadius: 9, fontSize: 12.5, fontWeight: 600 }}
-          />
-        )}
-        <div style={{ ...cardStyle, padding: 24, textAlign: 'center', color: 'var(--text-muted)', fontSize: 13.5 }}>
-          {data.seasonShort ? `Nenhuma partida competitiva ainda em ${formatSeasonShort(data.seasonShort)}.` : 'Sem dados desse ato ainda.'}
-        </div>
+      <div style={{ ...cardStyle, padding: 24, textAlign: 'center', color: 'var(--text-muted)', fontSize: 13.5 }}>
+        {data.seasonShort ? `Nenhuma partida encontrada em ${formatSeasonShort(data.seasonShort)} com esse filtro.` : 'Sem dados desse ato ainda.'}
       </div>
     );
   }
 
   const kpiCards = [
-    { label: 'Índice callout', value: String(data.calloutIndex.value), explain: 'Nota própria de 0 a 100 combinando taxa de vitória, KDA, ACS e delta de dano — não é comparável a scores de outras plataformas.' },
+    { label: 'KDA médio', value: fmtNum(data.kda, 2), explain: 'Abates mais assistências divididos pelas mortes, no ato.' },
     { label: 'ACS médio', value: String(data.acs), explain: 'Pontuação de combate por round, considerando todo o ato.' },
     { label: 'ADR', value: String(data.adr), explain: 'Dano médio causado por round no ato.' },
-    { label: 'K/D/A', value: `${data.kills}/${data.deaths}/${data.assists}`, explain: 'Total de abates, mortes e assistências somados no ato.' },
-    { label: 'HS%', value: `${fmtNum(data.hsPercent, 1)}%`, explain: 'Dos seus tiros que acertaram, quantos foram na cabeça.' },
+    { label: 'Tiros na cabeça', value: `${fmtNum(data.hsPercent, 1)}%`, explain: 'Dos seus tiros que acertaram, quantos foram na cabeça.' },
+    { label: 'Partidas ganhas', value: `${data.winratePercent}%`, explain: `${plural(data.wins, 'vitória')} em ${plural(data.matchesCount, 'partida')} no ato.` },
     {
-      label: 'DDΔ/round',
-      value: fmtDelta(data.ddPerRound, 1),
-      explain: 'Quanto de dano a mais (ou a menos) você fez por round, comparado à média dos outros 9 jogadores das mesmas partidas.',
+      label: 'Índice callout',
+      value: String(data.calloutIndex.value),
+      explain: 'Nota própria de 0 a 100 combinando taxa de vitória, KDA, ACS e delta de dano — não é comparável a scores de outras plataformas.',
+      highlight: true,
     },
-    { label: 'Vitórias', value: `${data.winratePercent}%`, explain: `${plural(data.wins, 'vitória')} em ${plural(data.matchesCount, 'partida')} no ato.` },
   ];
 
-  const recentMatches = data.recentMatches;
+  const dayGroups = groupByDay(data.recentMatches);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      <div style={{ ...cardStyle, padding: '18px 22px', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 24 }}>
-        <div>
-          {seasonOptions.length > 1 ? (
-            <Select
-              value={data.seasonId ?? selectedSeasonId ?? seasonOptions[0]!.value}
-              onChange={setSelectedSeasonId}
-              options={seasonOptions}
-              title="Escolher o ato"
-              style={{ width: 210, height: 32, padding: '0 10px', borderRadius: 8, fontSize: 15, fontWeight: 700 }}
-            />
-          ) : (
-            <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 700, fontSize: 19 }}>
-              {data.seasonShort ? formatSeasonShort(data.seasonShort) : 'Ato atual'}
-            </div>
-          )}
-          <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 6 }}>
-            {plural(data.matchesCount, 'partida')} · {formatPlaytime(data.playtimeMs)} jogadas
-          </div>
-        </div>
-        {data.accountLevel !== null && <StatChip label="Nível" value={String(data.accountLevel)} />}
-        {data.currentRank && <StatChip label="Elo atual" value={`${data.currentRank.tierLabel} · ${data.currentRank.rr} RR`} iconUrl={data.currentRank.iconUrl} />}
-        {data.peakRank && <StatChip label="Recorde de elo" value={`${data.peakRank.tierLabel} (${formatSeasonShort(data.peakRank.seasonShort)})`} />}
-        <div style={{ marginLeft: 'auto' }}>
-          <AttackDefenseMini sides={data.attackDefense} />
-        </div>
-      </div>
-
-      <div className="grid-responsive-4">
+      <div className="grid-responsive-kpi6">
         {kpiCards.map((k) => (
-          <div key={k.label} style={{ ...cardStyle, padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-3)' }}>{k.label}</span>
-            <span style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 28, letterSpacing: '-.02em' }}>{k.value}</span>
+          <div
+            key={k.label}
+            style={{
+              ...cardStyle,
+              padding: '14px 16px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 8,
+              ...(k.highlight
+                ? { background: 'color-mix(in srgb, var(--pos, #18AAB7) 12%, var(--surface))', border: '1px solid color-mix(in srgb, var(--pos, #18AAB7) 35%, var(--surface-border))' }
+                : {}),
+            }}
+          >
+            <span style={{ fontSize: 13, fontWeight: 600, color: k.highlight ? WIN : 'var(--text-3)' }}>{k.label}</span>
+            <span style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 28, letterSpacing: '-.02em', color: k.highlight ? WIN : 'var(--text)' }}>{k.value}</span>
             <div style={{ borderTop: '1px solid var(--divider)', paddingTop: 8 }}>
               <span style={{ fontSize: 11.5, lineHeight: 1.35, color: 'var(--text-dim)' }}>{k.explain}</span>
             </div>
@@ -291,54 +381,101 @@ export function SeasonOverviewSection({
       </div>
 
       <div className="grid-responsive-season">
-        <div style={{ ...cardStyle, padding: '18px 20px', display: 'flex', flexDirection: 'column' }}>
-          <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 16 }}>Últimas {plural(recentMatches.length, 'partida')} do ato</div>
-          <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 3 }}>
-            Da mais recente para a mais antiga · número em destaque é o Índice callout dessa partida
+        <div style={{ ...cardStyle, padding: '16px 18px 8px', display: 'flex', flexDirection: 'column' }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+            <div>
+              <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 16 }}>Partidas</div>
+              <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>Últimas {plural(data.recentMatches.length, 'partida')} do ato · número em destaque é o Índice callout</div>
+            </div>
+            <div style={{ display: 'flex', gap: 4, background: 'var(--input-bg)', border: '1px solid var(--surface-border)', borderRadius: 9, padding: 3 }}>
+              {(['Detalhado', 'Compacto'] as const).map((opt) => (
+                <button
+                  key={opt}
+                  onClick={() => setCompact(opt === 'Compacto')}
+                  style={{
+                    padding: '5px 11px',
+                    borderRadius: 6,
+                    border: 'none',
+                    cursor: 'pointer',
+                    fontSize: 11.5,
+                    whiteSpace: 'nowrap',
+                    background: (opt === 'Compacto') === compact ? 'var(--acc, #EF4958)' : 'transparent',
+                    color: (opt === 'Compacto') === compact ? 'var(--acc-text, #141415)' : 'var(--text-muted)',
+                  }}
+                >
+                  {opt}
+                </button>
+              ))}
+            </div>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
-            {recentMatches.map((m) => (
-              <SeasonMatchRow key={m.id} m={m} agentIcon={data.agentIcons[m.agent] ?? null} mapIcon={data.mapIcons[m.map] ?? null} />
-            ))}
+
+          <div className="scroll-x-mobile">
+            <div style={{ minWidth: compact ? undefined : 560 }}>
+              {dayGroups.map((g) => (
+                <div key={g.key}>
+                  <DayHeaderRow label={g.label} matches={g.matches} />
+                  <div style={{ display: 'flex', flexDirection: 'column', paddingBottom: 6 }}>
+                    {g.matches.map((m) => (
+                      <SeasonMatchRow key={m.id} m={m} agentIcon={data.agentIcons[m.agent] ?? null} mapIcon={data.mapIcons[m.map] ?? null} compact={compact} />
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           <RankingBlock
-            title="Agentes mais jogados"
-            sub="Winrate · partidas · KDA no ato"
+            title="Agentes"
+            sub="Winrate no ato"
             rows={data.topAgents.slice(0, 6).map((a) => ({
               key: a.agent,
               name: a.agent,
               value: `${a.winratePercent}%`,
-              caption: `${plural(a.matches, 'partida')} · KD ${fmtNum(a.kda, 2)}${a.bestMap ? ` · melhor em ${a.bestMap.map}` : ''}`,
+              caption: `${plural(a.matches, 'partida')} · KD ${fmtNum(a.kda, 2)}`,
               icon: data.agentIcons[a.agent],
               dot: a.color,
             }))}
           />
-          <RateBlock
-            title="Mapas"
-            sub="Winrate por mapa no ato"
-            rows={data.topMaps.map((m) => ({ key: m.map, name: m.map, wins: m.wins, total: m.total, icon: data.mapIcons[m.map] }))}
-            colorFor={rateBarColor}
-          />
-          <RateBlock
-            title="Funções"
-            sub="Winrate por função no ato"
-            rows={data.roles.map((r) => ({ key: r.role, name: r.role, wins: r.wins, total: r.matches }))}
-            colorFor={rateBarColor}
-          />
+          <div className="grid-responsive-2" style={{ gap: 16 }}>
+            <div style={{ ...cardStyle, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <div>
+                <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 15 }}>RR no período</div>
+                <div style={{ fontSize: 11.5, color: 'var(--text-dim)', marginTop: 2 }}>RR ganho/perdido por partida</div>
+              </div>
+              <RrBarChart points={rrHistory} />
+            </div>
+            <RankingBlock
+              title="Mapa"
+              sub="Vitórias no ato"
+              rows={data.topMaps.map((m) => ({
+                key: m.map,
+                name: m.map,
+                value: `${m.wins}V · ${m.total - m.wins}D`,
+                caption: `${m.winratePercent}% de winrate`,
+                icon: data.mapIcons[m.map],
+              }))}
+            />
+          </div>
+          <AttackDefenseCard sides={data.attackDefense} />
         </div>
       </div>
 
       {/* Cards adicionais — sobram depois da lista de partidas, "encaixados"
           lado a lado em vez de ficarem perdidos no fim da página. */}
-      <div className="grid-responsive-2">
+      <div className="grid-responsive-3">
         <AccuracyBar accuracy={data.accuracy} />
         <RankingBlock
           title="Armas mais usadas"
           sub="Abates por arma no ato"
           rows={data.topWeapons.map((w) => ({ key: w.weapon, name: w.weapon, value: plural(w.kills, 'abate') }))}
+        />
+        <RateBlock
+          title="Funções"
+          sub="Winrate por função no ato"
+          rows={data.roles.map((r) => ({ key: r.role, name: r.role, wins: r.wins, total: r.matches }))}
+          colorFor={rateBarColor}
         />
       </div>
     </div>
