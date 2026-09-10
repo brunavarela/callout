@@ -493,8 +493,12 @@ button {
 .info-tip-bubble {
   position: absolute;
   top: calc(100% + 9px);
-  left: 50%;
-  transform: translateX(-50%) translateY(-4px);
+  /* Ancorada pela esquerda (não centralizada) — os primeiros ícones de
+     cada linha ficam colados na borda esquerda do conteúdo, logo depois
+     da sidebar; centralizar a bolha fazia ela vazar pra esquerda e ficar
+     atrás da sidebar (área fora do container que rola, sem espaço). */
+  left: 0;
+  transform: translateY(-4px);
   width: max-content;
   min-width: 140px;
   max-width: 220px;
@@ -514,25 +518,25 @@ button {
   visibility: hidden;
   pointer-events: none;
   transition: opacity 0.12s ease, transform 0.12s ease;
-  z-index: 50;
+  z-index: 500;
 }
 .info-tip-bubble::before {
   content: '';
   position: absolute;
   top: -5px;
-  left: 50%;
+  left: 6px;
   width: 9px;
   height: 9px;
   background: var(--surface);
   border-left: 1px solid var(--surface-border);
   border-top: 1px solid var(--surface-border);
-  transform: translateX(-50%) rotate(45deg);
+  transform: rotate(45deg);
 }
 .info-tip:hover .info-tip-bubble,
 .info-tip:focus-visible .info-tip-bubble {
   opacity: 1;
   visibility: visible;
-  transform: translateX(-50%) translateY(0);
+  transform: translateY(0);
 }
 
 /* Visão do ato: lista de partidas + sidebar (Agentes/Mapas/Funções) */
