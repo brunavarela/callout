@@ -15,6 +15,15 @@ import { loadAgentColorsByName } from "./assets.js";
 // (pro DDΔ/round) escala 10x esse número.
 const MAX_SEASON_MATCHES = 150;
 
+// Rotação competitiva ativa nesse ato — a Riot muda esse pool
+// periodicamente, sem relação fixa com o calendário de atos, e não existe
+// API (nem da Riot nem da valorant-api.com) que devolva "quais mapas estão
+// na rotação agora". Confirmado manualmente com a Bruna em 11/09/2026 —
+// precisa atualizar essa lista na mão sempre que o pool mudar de novo.
+// Sem isso, o card de Mapa só mostraria os mapas que a pessoa já jogou,
+// escondendo os que ainda estão na rotação mas ela não jogou ainda.
+const ACTIVE_MAP_POOL = ["Split", "Haven", "Sunset", "Summit", "Abyss", "Lotus", "Ascent"];
+
 // Mesmo padrão inglês->português usado pro resto do texto do app.
 // AgentAsset.funcao vem do `role.displayName` da valorant-api.com (ver
 // seedAgents em assets.ts), sempre em inglês.
@@ -209,8 +218,11 @@ async function buildTopAgents(rows: Row[]): Promise<TopAgentStat[]> {
 }
 
 // Mapas — espelha buildTopAgents, mas de propósito ignora `mapIdFilter`
-// (mesmo motivo: selecionar um mapa não pode colapsar esse card).
-function buildTopMaps(rows: Row[]): MapWinrate[] {
+// (mesmo motivo: selecionar um mapa não pode colapsar esse card). Mapas do
+// pool ativo (ver ACTIVE_MAP_POOL) que a pessoa ainda não jogou nesse ato
+// entram com 0/0, pra ficar visível que o mapa está na rotação mas ainda
+// não foi jogado, em vez de simplesmente não aparecer no card.
+function buildTopMaps(rows: Row[], activeMapAssets: Array<{ id: string; nome: string }>): MapWinrate[] {
   const byMap = new Map<string, { wins: number; total: number; mapId: string | null }>();
   for (const r of rows) {
     const mapName = r.match.map?.nome ?? "—";
@@ -219,9 +231,12 @@ function buildTopMaps(rows: Row[]): MapWinrate[] {
     if (r.won) entry.wins++;
     byMap.set(mapName, entry);
   }
+  for (const m of activeMapAssets) {
+    if (!byMap.has(m.nome)) byMap.set(m.nome, { wins: 0, total: 0, mapId: m.id });
+  }
   return [...byMap.entries()]
-    .map(([map, s]) => ({ map, mapId: s.mapId, winratePercent: Math.round((s.wins / s.total) * 100), wins: s.wins, total: s.total }))
-    .sort((a, b) => b.winratePercent - a.winratePercent);
+    .map(([map, s]) => ({ map, mapId: s.mapId, winratePercent: s.total > 0 ? Math.round((s.wins / s.total) * 100) : 0, wins: s.wins, total: s.total }))
+    .sort((a, b) => b.total - a.total || b.winratePercent - a.winratePercent);
 }
 
 export async function buildSeasonOverview(
@@ -301,17 +316,25 @@ export async function buildSeasonOverview(
 
   // Ícones sempre vêm do ato inteiro (não do filtro atual) — os seletores
   // de mapa/agente do painel precisam continuar mostrando o catálogo
-  // completo mesmo com um filtro já aplicado.
+  // completo mesmo com um filtro já aplicado. Inclui os mapas do pool
+  // ativo (ver ACTIVE_MAP_POOL) mesmo que a pessoa ainda não tenha jogado
+  // nenhum deles nesse ato — senão o card de Mapa não teria ícone pra eles.
+  const activeMapAssets = await prisma.mapAsset.findMany({ where: { nome: { in: ACTIVE_MAP_POOL } }, select: { id: true, nome: true, displayIcon: true } });
   const mapIcons = Object.fromEntries(
-    [...new Map(statRows.map((r) => [r.match.map?.nome ?? "—", r.match.map?.displayIcon ?? null])).entries()].filter(
-      ([, icon]) => icon !== null,
-    ) as [string, string][],
+    [
+      ...new Map(
+        [
+          ...statRows.map((r) => [r.match.map?.nome ?? "—", r.match.map?.displayIcon ?? null] as [string, string | null]),
+          ...activeMapAssets.map((m) => [m.nome, m.displayIcon] as [string, string | null]),
+        ],
+      ).entries(),
+    ].filter(([, icon]) => icon !== null) as [string, string][],
   );
   const agentAssets = await prisma.agentAsset.findMany({ select: { nome: true, funcao: true, displayIcon: true } });
   const agentIcons = Object.fromEntries(agentAssets.filter((a) => a.displayIcon).map((a) => [a.nome, a.displayIcon!]));
 
   const topAgents = await buildTopAgents(mapIdFilter ? statRows.filter((r) => r.match.mapId === mapIdFilter) : statRows);
-  const topMaps = buildTopMaps(agentNameFilter ? statRows.filter((r) => r.agentName === agentNameFilter) : statRows);
+  const topMaps = buildTopMaps(agentNameFilter ? statRows.filter((r) => r.agentName === agentNameFilter) : statRows, activeMapAssets);
 
   // O resto do painel (KPIs, últimas partidas, funções, precisão, ataque/
   // defesa, armas) respeita os dois filtros juntos — é a visão "sob esse
