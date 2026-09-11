@@ -27,9 +27,9 @@ function InfoDot({ text }: { text: string }) {
 // Ataque/defesa — % de rounds ganhos em cada lado, no ato (e sob o filtro
 // de mapa/agente atual). Mesmo visual do card que já existia no dashboard
 // de 30 dias, só que alimentado por SeasonOverview.attackDefense.
-function AttackDefenseCard({ sides }: { sides: SeasonOverview['attackDefense'] }) {
+function AttackDefenseCard({ sides, grow = true }: { sides: SeasonOverview['attackDefense']; grow?: boolean }) {
   return (
-    <div style={{ ...cardStyle, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 12, flex: 1, justifyContent: 'center' }}>
+    <div style={{ ...cardStyle, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 12, flex: grow ? 1 : '0 0 auto', justifyContent: 'center' }}>
       <div>
         <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 15 }}>Ataque ou defesa</div>
         <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 3 }}>% de rounds ganhos em cada lado, no ato</div>
@@ -89,14 +89,14 @@ function BodySilhouette({ headColor, bodyColor, legColor }: { headColor: string;
 
 // Precisão cabeça/corpo/perna — visualizada como silhueta em vez da barra
 // empilhada antiga, cada parte com sua cor e %.
-function AccuracyBar({ accuracy }: { accuracy: SeasonOverview['accuracy'] }) {
+function AccuracyBar({ accuracy, grow = true }: { accuracy: SeasonOverview['accuracy']; grow?: boolean }) {
   const segments = [
     { label: 'Cabeça', percent: accuracy.headPercent, hits: accuracy.headHits, color: 'var(--pos, #18AAB7)' },
     { label: 'Corpo', percent: accuracy.bodyPercent, hits: accuracy.bodyHits, color: 'var(--text-muted)' },
     { label: 'Perna', percent: accuracy.legPercent, hits: accuracy.legHits, color: 'var(--neg, #EF4958)' },
   ];
   return (
-    <div style={{ ...cardStyle, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 12, flex: 1, justifyContent: 'center' }}>
+    <div style={{ ...cardStyle, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 12, flex: grow ? 1 : '0 0 auto', justifyContent: 'center' }}>
       <div>
         <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 15 }}>Precisão</div>
         <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 3 }}>Onde seus tiros acertaram no ato — cabeça, corpo ou perna.</div>
@@ -307,9 +307,16 @@ export function SeasonOverviewSection({
         </div>
 
         {/* Sidebar fixa -- nunca se move nem redimensiona com o toggle
-            Detalhado/Compacto. */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16, height: '100%' }}>
-          <div ref={setAgentesRef} style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+            Detalhado/Compacto. Só o `flex`/height de esticar (que serve pra
+            somar a altura dos 3 cards com a altura da lista de partidas no
+            modo normal) é desligado no compacto -- senão o card de Agentes
+            fica maior do que seu conteúdo natural (esticado pra preencher a
+            linha do grid), e como Mapa/Armas/Funções copiam a altura DELE,
+            isso cria um ciclo (a altura deles cresce, o que estica Agentes
+            de novo, e por aí vai) até estabilizar num valor errado. Sem
+            esticar, a altura medida de Agentes é sempre a de verdade. */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16, height: compact ? undefined : '100%' }}>
+          <div ref={setAgentesRef} style={{ display: 'flex', flexDirection: 'column', flex: compact ? '0 0 auto' : 1 }}>
             <RankingBlock
               title="Agentes"
               sub="Winrate no ato"
@@ -321,11 +328,11 @@ export function SeasonOverviewSection({
                 icon: data.agentIcons[a.agent],
                 dot: a.color,
               }))}
-              style={{ flex: 1 }}
+              style={{ flex: compact ? undefined : 1 }}
             />
           </div>
-          <AccuracyBar accuracy={data.accuracy} />
-          <AttackDefenseCard sides={data.attackDefense} />
+          <AccuracyBar accuracy={data.accuracy} grow={!compact} />
+          <AttackDefenseCard sides={data.attackDefense} grow={!compact} />
         </div>
       </div>
 
