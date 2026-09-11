@@ -155,8 +155,8 @@ function SeasonMatchRow({ m, agentIcon, mapIcon, compact }: { m: SeasonMatchSumm
         <span style={{ width: 32, height: 32, borderRadius: 7, background: 'var(--track)', flex: 'none' }} />
       )}
 
-      <div style={{ flex: '0 1 auto', minWidth: 0, maxWidth: 230 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+      <div style={{ flex: '1 1 auto', minWidth: 0, overflow: 'hidden' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'nowrap', overflow: 'hidden' }}>
           <span style={{ fontSize: 12.5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {m.map} <span style={{ color: 'var(--text-faint)' }}>· {MODO_LABELS[m.modo] ?? m.modo}</span>
           </span>
@@ -201,20 +201,22 @@ function SeasonMatchRow({ m, agentIcon, mapIcon, compact }: { m: SeasonMatchSumm
         {!compact && <div style={{ fontSize: 10.5, color: 'var(--text-dim)', marginTop: 2 }}>{m.playedAtLabel}</div>}
       </div>
 
-      <StatCol label="PLACAR" value={m.score} bold />
+      <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10, flex: 'none' }}>
+        <StatCol label="PLACAR" value={m.score} bold />
 
-      {!compact && (
-        <>
-          <StatCol label="K/D" value={fmtNum(m.kdaRatio, 1)} />
-          <StatCol label="K/D/A" value={m.kda} width={62} />
-          <StatCol label="DDΔ" value={fmtDelta(m.ddPerRound, 0)} color={m.ddPerRound >= 0 ? WIN : LOSS} />
-          <StatCol label="HS%" value={`${fmtNum(m.hsPercent, 0)}%`} />
-          <StatCol label="ACS" value={String(m.acs)} bold />
-        </>
-      )}
-      <span style={{ fontSize: 13, fontWeight: 600, textAlign: 'right', width: 36, flex: 'none', color: m.rr === null ? 'var(--text-faint)' : m.rr >= 0 ? WIN : LOSS }}>
-        {m.rr === null ? '—' : fmtRr(m.rr)}
-      </span>
+        {!compact && (
+          <>
+            <StatCol label="K/D" value={fmtNum(m.kdaRatio, 1)} />
+            <StatCol label="K/D/A" value={m.kda} width={62} />
+            <StatCol label="DDΔ" value={fmtDelta(m.ddPerRound, 0)} color={m.ddPerRound >= 0 ? WIN : LOSS} />
+            <StatCol label="HS%" value={`${fmtNum(m.hsPercent, 0)}%`} />
+            <StatCol label="ACS" value={String(m.acs)} bold />
+          </>
+        )}
+        <span style={{ fontSize: 13, fontWeight: 600, textAlign: 'right', width: 36, flex: 'none', color: m.rr === null ? 'var(--text-faint)' : m.rr >= 0 ? WIN : LOSS }}>
+          {m.rr === null ? '—' : fmtRr(m.rr)}
+        </span>
+      </div>
     </div>
   );
 }
