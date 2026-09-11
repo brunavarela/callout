@@ -86,6 +86,7 @@ export function Dashboard() {
           matchesLoading={seasonMatchesLoading}
           matchesError={seasonMatchesError}
           setMatchesPageNumber={setSeasonMatchesPageNumber}
+          subject={subject}
         />
       )}
     </div>

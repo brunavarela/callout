@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import type { MatchBadge, SeasonMatchesPage, SeasonMatchSummary } from '@callout/shared';
+import type { MatchBadge, RecentFormInsights, SeasonMatchesPage, SeasonMatchSummary } from '@callout/shared';
 import { LoadingFill } from './Spinner';
 import { cardStyle, fmtNum, fmtDelta, plural } from './statsPrimitives';
 import { PageControls } from './SeasonFilters';
@@ -8,6 +8,7 @@ import { PageControls } from './SeasonFilters';
 const WIN = 'var(--pos, #18AAB7)';
 const LOSS = 'var(--neg, #EF4958)';
 const DRAW = 'var(--text-muted, #9A9DA1)';
+const GOLD = '#E8B339';
 
 function fmtRr(n: number): string {
   const abs = Math.abs(n);
@@ -22,6 +23,19 @@ function badgeLabel(b: MatchBadge): string {
 
 function badgeColor(b: MatchBadge): string {
   return b.kind === 'clutch' ? '#A78BFA' : '#E8B339';
+}
+
+// Agrupa badges repetidos (3 clutches 1v2 na mesma partida, por exemplo)
+// numa contagem só — "3x 1v2 clutch" em vez de "1v2 clutch" três vezes.
+function groupBadges(badges: MatchBadge[]): Array<{ badge: MatchBadge; count: number }> {
+  const byKey = new Map<string, { badge: MatchBadge; count: number }>();
+  for (const b of badges) {
+    const key = `${b.kind}:${b.size}`;
+    const entry = byKey.get(key);
+    if (entry) entry.count++;
+    else byKey.set(key, { badge: b, count: 1 });
+  }
+  return [...byKey.values()];
 }
 
 // Agrupa as partidas (de uma página, já com no máximo 10) por dia
@@ -146,9 +160,15 @@ function SeasonMatchRow({ m, agentIcon, mapIcon, compact }: { m: SeasonMatchSumm
           <span style={{ fontSize: 12.5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {m.map} <span style={{ color: 'var(--text-faint)' }}>· {m.agent}</span>
           </span>
-          {m.badges.map((b, i) => (
-            <span key={i} style={{ fontSize: 8.5, fontWeight: 700, borderRadius: 4, padding: '1px 5px', whiteSpace: 'nowrap', color: badgeColor(b), background: `color-mix(in srgb, ${badgeColor(b)} 18%, transparent)` }}>
-              {badgeLabel(b)}
+          {m.mvp && (
+            <span style={{ fontSize: 8.5, fontWeight: 700, borderRadius: 4, padding: '1px 5px', whiteSpace: 'nowrap', color: GOLD, background: `color-mix(in srgb, ${GOLD} 18%, transparent)` }}>
+              MVP
+            </span>
+          )}
+          {groupBadges(m.badges).map(({ badge, count }, i) => (
+            <span key={i} style={{ fontSize: 8.5, fontWeight: 700, borderRadius: 4, padding: '1px 5px', whiteSpace: 'nowrap', color: badgeColor(badge), background: `color-mix(in srgb, ${badgeColor(badge)} 18%, transparent)` }}>
+              {count > 1 ? `${count}x ` : ''}
+              {badgeLabel(badge)}
             </span>
           ))}
         </div>
@@ -189,6 +209,53 @@ function SeasonMatchRow({ m, agentIcon, mapIcon, compact }: { m: SeasonMatchSumm
   );
 }
 
+// Mesmas 4 análises que o dashboard de 30 dias já tinha — agora sobre as
+// partidas do ato sob o filtro atual, não uma janela fixa de 7/20. Ocupa o
+// espaço que sobra embaixo da lista/paginação em vez de ficar vazio.
+function FormInsightsBlock({ insights, subject }: { insights: RecentFormInsights; subject: string }) {
+  if (insights.matchesAnalyzed === 0) return null;
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, margin: '14px 0', paddingTop: 12, borderTop: '1px solid var(--divider)' }}>
+      {insights.topMap && (
+        <div style={{ display: 'flex', gap: 8, fontSize: 12.5, color: 'var(--text-dim)', lineHeight: 1.4 }}>
+          <span style={{ color: 'var(--text-faint)' }}>•</span>
+          <span>
+            Nesse ato, {subject} jogou <b style={{ color: 'var(--text-2)', fontWeight: 600 }}>{insights.topMap.total}</b>{' '}
+            {insights.topMap.total === 1 ? 'vez' : 'vezes'} no mapa <b style={{ color: 'var(--text-2)', fontWeight: 600 }}>{insights.topMap.map}</b> e ganhou{' '}
+            <b style={{ color: 'var(--text-2)', fontWeight: 600 }}>{insights.topMap.wins}</b> {insights.topMap.wins === 1 ? 'vez' : 'vezes'}.
+          </span>
+        </div>
+      )}
+      {insights.topAgent && (
+        <div style={{ display: 'flex', gap: 8, fontSize: 12.5, color: 'var(--text-dim)', lineHeight: 1.4 }}>
+          <span style={{ color: 'var(--text-faint)' }}>•</span>
+          <span>
+            Nesse ato, {subject} jogou <b style={{ color: 'var(--text-2)', fontWeight: 600 }}>{insights.topAgent.total}</b>{' '}
+            {insights.topAgent.total === 1 ? 'vez' : 'vezes'} com <b style={{ color: 'var(--text-2)', fontWeight: 600 }}>{insights.topAgent.agent}</b> e ganhou{' '}
+            <b style={{ color: 'var(--text-2)', fontWeight: 600 }}>{insights.topAgent.wins}</b> {insights.topAgent.wins === 1 ? 'vez' : 'vezes'}.
+          </span>
+        </div>
+      )}
+      <div style={{ display: 'flex', gap: 8, fontSize: 12.5, color: 'var(--text-dim)', lineHeight: 1.4 }}>
+        <span style={{ color: 'var(--text-faint)' }}>•</span>
+        <span>
+          Nesse ato, {subject} ficou com KDA negativo{' '}
+          <b style={{ color: insights.negativeKdaMatches > 0 ? LOSS : 'var(--text-2)', fontWeight: 600 }}>{insights.negativeKdaMatches}</b>{' '}
+          {insights.negativeKdaMatches === 1 ? 'vez' : 'vezes'}.
+        </span>
+      </div>
+      <div style={{ display: 'flex', gap: 8, fontSize: 12.5, color: 'var(--text-dim)', lineHeight: 1.4 }}>
+        <span style={{ color: 'var(--text-faint)' }}>•</span>
+        <span>
+          Nesse ato, {subject} foi MVP <b style={{ color: insights.mvpMatches > 0 ? GOLD : 'var(--text-2)', fontWeight: 600 }}>{insights.mvpMatches}</b>{' '}
+          {insights.mvpMatches === 1 ? 'vez' : 'vezes'}.
+        </span>
+      </div>
+    </div>
+  );
+}
+
 // Card completo de lista de partidas — cabeçalho (título + toggle
 // Detalhado/Compacto), partidas agrupadas por dia, paginação de 10 em 10.
 // Usado tanto na Visão do ato (Dashboard) quanto na página de Partidas
@@ -201,6 +268,8 @@ export function SeasonMatchesList({
   agentIcons,
   setPage,
   title = 'Partidas',
+  formInsights,
+  subject = 'você',
 }: {
   matchesPage: SeasonMatchesPage | null;
   loading: boolean;
@@ -209,6 +278,8 @@ export function SeasonMatchesList({
   agentIcons: Record<string, string>;
   setPage: (page: number) => void;
   title?: string;
+  formInsights?: RecentFormInsights;
+  subject?: string;
 }) {
   const [compact, setCompact] = useState(false);
 
@@ -267,6 +338,7 @@ export function SeasonMatchesList({
       </div>
 
       <PageControls page={matchesPage.page} pageSize={matchesPage.pageSize} total={matchesPage.total} setPage={setPage} />
+      {formInsights && <FormInsightsBlock insights={formInsights} subject={subject} />}
     </div>
   );
 }

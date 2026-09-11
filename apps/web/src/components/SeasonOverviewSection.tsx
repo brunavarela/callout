@@ -104,6 +104,7 @@ export function SeasonOverviewSection({
   matchesLoading,
   matchesError,
   setMatchesPageNumber,
+  subject = 'você',
 }: {
   data: SeasonOverview | null;
   loading: boolean;
@@ -112,6 +113,7 @@ export function SeasonOverviewSection({
   matchesLoading: boolean;
   matchesError: string | null;
   setMatchesPageNumber: (page: number) => void;
+  subject?: string;
 }) {
   if (loading) return <LoadingFill />;
   if (error) return <div style={{ ...cardStyle, padding: 24, textAlign: 'center', color: 'var(--text-muted)', fontSize: 13.5 }}>{error}</div>;
@@ -184,6 +186,8 @@ export function SeasonOverviewSection({
           mapIcons={data.mapIcons}
           agentIcons={data.agentIcons}
           setPage={setMatchesPageNumber}
+          formInsights={data.formInsights}
+          subject={subject}
         />
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
