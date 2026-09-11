@@ -21,3 +21,5 @@ apps/api/prisma/dev.db
 # os
 .DS_Store
 Thumbs.db
+
+.claude

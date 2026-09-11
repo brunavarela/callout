@@ -119,6 +119,21 @@ model AgentAsset {
   @@map("agents")
 }
 
+// Ícone de cada tier competitivo (Ferro 1 .. Radiante) — seedado de
+// valorant-api.com/v1/competitivetiers (última tabela do array = ato
+// vigente na hora do seed). `tierId` é o `tier.id` que a HenrikDev devolve
+// no mmr-history (numeração estável desde a reformulação de rank de 2021),
+// usado pra achar o ícone do elo que a pessoa tava numa partida específica
+// (ver MatchPlayer.rankTierId) sem precisar re-perguntar à HenrikDev.
+model RankTierAsset {
+  id        String  @id @default(cuid())
+  tierId    Int     @unique
+  tierName  String
+  smallIcon String?
+
+  @@map("rank_tiers")
+}
+
 model Match {
   id         String   @id // match_id da HenrikDev — partida antiga nunca muda, ver CONTEXT.md §8
   mapId      String?
@@ -171,6 +186,13 @@ model MatchPlayer {
   // ~20 partidas ranqueadas mais recentes — depois disso o dado some da API
   // pra sempre, então precisa capturar cedo.
   rr             Int?
+  // Tier competitivo (RankTierAsset.tierId) que a pessoa estava quando essa
+  // partida foi jogada — capturado no mesmo momento/fonte do `rr` (mmr-
+  // history no sync), mesma limitação de janela (só cobre partidas dentro
+  // das ~20 mais recentes rankeadas no momento da sincronização). Nullable
+  // nas partidas de antes desse campo existir e nas que já saíram dessa
+  // janela antes de sincronizar.
+  rankTierId     Int?
 
   // Dados novos pro dashboard "estilo tracker.gg" (ver LAUNCH-adjacent
   // plan) — calculados uma vez em persistMatch() a partir do rawJson que

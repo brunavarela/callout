@@ -1,5 +1,5 @@
 import { prisma } from "../lib/prisma.js";
-import { seedAgents, seedMaps } from "../lib/assets.js";
+import { seedAgents, seedMaps, seedRankTiers } from "../lib/assets.js";
 
 async function main() {
   console.log("Buscando mapas na valorant-api.com…");
@@ -7,6 +7,9 @@ async function main() {
 
   console.log("Buscando agentes na valorant-api.com…");
   for (const line of await seedAgents()) console.log(`  ${line}`);
+
+  console.log("Buscando tiers competitivos na valorant-api.com…");
+  for (const line of await seedRankTiers()) console.log(`  ${line}`);
 
   console.log("Seed concluído.");
 }

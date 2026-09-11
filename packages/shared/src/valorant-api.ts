@@ -48,6 +48,28 @@ export const valorantApiAgentsResponseSchema = z.object({
   data: z.array(valorantApiAgentSchema),
 });
 
+// Cada item de /v1/competitivetiers é a tabela de ranques de UM ato — a
+// numeração de `tier` é estável entre atos (0=Unranked, 3-26=Ferro1..
+// Immortal3, 27=Radiante), só o ícone pode variar de estilo entre atos. O
+// seed usa só a última tabela do array (ato vigente na hora do seed) — ver
+// seedRankTiers em lib/rankTiers.ts.
+export const valorantApiCompetitiveTierSchema = z.object({
+  tier: z.number(),
+  tierName: z.string(),
+  smallIcon: z.string().nullable(),
+});
+export type ValorantApiCompetitiveTier = z.infer<typeof valorantApiCompetitiveTierSchema>;
+
+export const valorantApiCompetitiveTierTableSchema = z.object({
+  uuid: z.string(),
+  tiers: z.array(valorantApiCompetitiveTierSchema),
+});
+
+export const valorantApiCompetitiveTiersResponseSchema = z.object({
+  status: z.number(),
+  data: z.array(valorantApiCompetitiveTierTableSchema),
+});
+
 /**
  * Converte coordenada de jogo (x,y do payload de partida/kill) para posição
  * normalizada (0..1) sobre a imagem do minimapa. Ver context.md §5.4 — os

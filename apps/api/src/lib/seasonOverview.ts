@@ -37,6 +37,7 @@ const ROLE_LABELS: Record<string, string> = {
 const rowArgs = {
   select: {
     matchId: true,
+    puuid: true,
     teamId: true,
     won: true,
     agentName: true,
@@ -56,6 +57,7 @@ const rowArgs = {
     firstBloods: true,
     sidesRounds: true,
     rr: true,
+    rankTierId: true,
     match: { select: { modo: true, mapId: true, durationMs: true, startedAt: true, map: { select: { nome: true, displayIcon: true } } } },
   },
 } satisfies Parameters<typeof prisma.matchPlayer.findMany>[0];
@@ -112,6 +114,27 @@ function buildMaxAcsByMatchTeam(rows: Array<{ matchId: string; teamId: string; a
     if (r.acs > current) max.set(key, r.acs);
   }
   return max;
+}
+
+// Posição (1º-5º) por ACS dentro do próprio time, em cada partida — mesmo
+// critério do MVP (posição 1), só que pra todo mundo, não só quem ganhou.
+// Usada pra mostrar "2º lugar" etc. em quem não foi MVP na lista de
+// partidas.
+function buildTeamPositionByMatchPuuid(rows: Array<{ matchId: string; teamId: string; puuid: string; acs: number }>): Map<string, number> {
+  const byMatchTeam = new Map<string, Array<{ matchId: string; puuid: string; acs: number }>>();
+  for (const r of rows) {
+    const key = `${r.matchId}:${r.teamId}`;
+    const list = byMatchTeam.get(key) ?? [];
+    list.push(r);
+    byMatchTeam.set(key, list);
+  }
+
+  const position = new Map<string, number>();
+  for (const list of byMatchTeam.values()) {
+    const sorted = [...list].sort((a, b) => b.acs - a.acs);
+    sorted.forEach((p, i) => position.set(`${p.matchId}:${p.puuid}`, i + 1));
+  }
+  return position;
 }
 
 // Agentes mais jogados — de propósito ignora `agentNameFilter` (selecionar
@@ -495,14 +518,17 @@ export async function buildSeasonOverview(
 
 // Constrói o SeasonMatchSummary de cada linha — badges de clutch/multi-kill,
 // placar (via rawJson, só das partidas dessa página), MVP (maior ACS do
-// próprio time), Índice callout por partida. `perMatchDelta` e `rows`
-// precisam estar alinhados 1:1 (mesmo índice = mesma partida).
+// próprio time) e posição (1º-5º no time por ACS, pra quem não foi MVP),
+// Índice callout por partida. `perMatchDelta` e `rows` precisam estar
+// alinhados 1:1 (mesmo índice = mesma partida).
 function toSeasonMatchSummaries(
   rows: Row[],
   perMatchDelta: number[],
   rrByMatch: Map<string, number>,
   rawJsonByMatchId: Map<string, unknown>,
   maxAcsByMatchTeam: Map<string, number>,
+  teamPositionByMatchPuuid: Map<string, number>,
+  rankIconByTierId: Map<number, string>,
   now: Date,
 ): SeasonMatchSummary[] {
   return rows.map((r, i) => {
@@ -527,6 +553,8 @@ function toSeasonMatchSummaries(
       result: matchResult(r.won, rrByMatch.get(r.matchId)),
       map: r.match.map?.nome ?? mapNameFrom(rawJsonByMatchId.get(r.matchId)),
       agent: r.agentName,
+      modo: r.match.modo,
+      rankIconUrl: r.rankTierId !== null ? rankIconByTierId.get(r.rankTierId) ?? null : null,
       score: `${score.own}—${score.opponent}`,
       kda: `${r.kills}/${r.deaths}/${r.assists}`,
       kdaRatio,
@@ -538,6 +566,7 @@ function toSeasonMatchSummaries(
       playedAtIso: r.match.startedAt.toISOString(),
       badges,
       mvp: r.acs === maxAcsByMatchTeam.get(`${r.matchId}:${r.teamId}`),
+      position: teamPositionByMatchPuuid.get(`${r.matchId}:${r.puuid}`) ?? null,
       calloutIndex: calcularIndiceCallout(r.won ? 100 : 0, kdaRatio, r.acs, ddDelta),
     };
   });
@@ -616,7 +645,20 @@ export async function buildSeasonMatchesPage(
     (await prisma.match.findMany({ where: { id: { in: matchIds } }, select: { id: true, rawJson: true } })).map((m) => [m.id, m.rawJson]),
   );
 
-  const matches = toSeasonMatchSummaries(pageRows, perMatchDelta, rrByMatch, rawJsonByMatchId, buildMaxAcsByMatchTeam(allPlayers), new Date());
+  const rankIconByTierId = new Map(
+    (await prisma.rankTierAsset.findMany({ select: { tierId: true, smallIcon: true } })).filter((t) => t.smallIcon !== null).map((t) => [t.tierId, t.smallIcon!]),
+  );
+
+  const matches = toSeasonMatchSummaries(
+    pageRows,
+    perMatchDelta,
+    rrByMatch,
+    rawJsonByMatchId,
+    buildMaxAcsByMatchTeam(allPlayers),
+    buildTeamPositionByMatchPuuid(allPlayers),
+    rankIconByTierId,
+    new Date(),
+  );
 
   return { matches, page: safePage, pageSize: MATCHES_PAGE_SIZE, total };
 }

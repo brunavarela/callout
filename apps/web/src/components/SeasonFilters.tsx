@@ -106,7 +106,7 @@ export function SeasonAgentFilterSelect({
 // Rótulos em português pra Match.modo (valor bruto do queue.name da
 // HenrikDev) — cai no valor bruto pra qualquer modo novo/raro sem label
 // mapeado ainda, em vez de esconder a opção.
-const MODO_LABELS: Record<string, string> = {
+export const MODO_LABELS: Record<string, string> = {
   Competitive: 'Competitivo',
   Unrated: 'Não-classificatória',
   Premier: 'Premier',

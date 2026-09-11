@@ -286,6 +286,15 @@ export interface SeasonMatchSummary {
   result: "V" | "D" | "E";
   map: string;
   agent: string;
+  // Valor bruto de Match.modo (ex.: "Competitive"/"Unrated") — o front
+  // resolve pro label em português (ver MODO_LABELS em SeasonFilters.tsx).
+  modo: string;
+  // Ícone do elo que a pessoa estava QUANDO jogou essa partida (não o elo
+  // atual) — vem do mmr-history capturado no momento da sincronização (ver
+  // MatchPlayer.rankTierId); `null` em partidas sem RR ou de antes desse
+  // campo existir/fora da janela de ~20 partidas ranqueadas mais recentes
+  // que a HenrikDev cobre.
+  rankIconUrl: string | null;
   score: string;
   kda: string;
   kdaRatio: number;
@@ -302,6 +311,9 @@ export interface SeasonMatchSummary {
   // Maior ACS do próprio time na partida (não dos 10 jogadores) — mesmo
   // critério do MVP em RecentMatchSummary/ParticipanteEquipeMatch.
   mvp: boolean;
+  // Posição (1º-5º) por ACS dentro do próprio time — 1 quando `mvp` é true;
+  // front só mostra essa flag quando NÃO foi MVP (2º-5º).
+  position: number | null;
   // Mesma fórmula do calloutIndex agregado (ver CalloutIndex), só que
   // aplicada a essa partida específica — substitui o "TRS" por partida do
   // concorrente.

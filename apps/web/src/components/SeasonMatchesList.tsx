@@ -4,7 +4,7 @@ import { Crown } from 'lucide-react';
 import type { MatchBadge, SeasonMatchesPage, SeasonMatchSummary } from '@callout/shared';
 import { LoadingFill } from './Spinner';
 import { cardStyle, fmtNum, fmtDelta, plural } from './statsPrimitives';
-import { PageControls } from './SeasonFilters';
+import { PageControls, MODO_LABELS } from './SeasonFilters';
 
 const WIN = 'var(--pos, #18AAB7)';
 const LOSS = 'var(--neg, #EF4958)';
@@ -132,7 +132,6 @@ function StatCol({ label, value, color, bold, width = 46 }: { label: string; val
 function SeasonMatchRow({ m, agentIcon, mapIcon, compact }: { m: SeasonMatchSummary; agentIcon: string | null; mapIcon: string | null; compact: boolean }) {
   const navigate = useNavigate();
   const resultColor = m.result === 'V' ? WIN : m.result === 'D' ? LOSS : DRAW;
-  const [ownScore, oppScore] = m.score.split('—');
 
   return (
     <div
@@ -157,11 +156,12 @@ function SeasonMatchRow({ m, agentIcon, mapIcon, compact }: { m: SeasonMatchSumm
       )}
 
       <div style={{ flex: '0 1 auto', minWidth: 0, maxWidth: 230 }}>
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
           <span style={{ fontSize: 12.5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {m.map} <span style={{ color: 'var(--text-faint)' }}>· {m.agent}</span>
+            {m.map} <span style={{ color: 'var(--text-faint)' }}>· {MODO_LABELS[m.modo] ?? m.modo}</span>
           </span>
-          {m.mvp && (
+          {m.rankIconUrl && <img src={m.rankIconUrl} alt="" title="Elo na hora dessa partida" style={{ width: 16, height: 16, objectFit: 'contain', flex: 'none' }} />}
+          {m.mvp ? (
             <span
               style={{
                 display: 'inline-flex',
@@ -181,6 +181,15 @@ function SeasonMatchRow({ m, agentIcon, mapIcon, compact }: { m: SeasonMatchSumm
               <Crown size={11} strokeWidth={2.5} fill="#141415" />
               MVP
             </span>
+          ) : (
+            m.position !== null && (
+              <span
+                title="Posição no próprio time por ACS"
+                style={{ fontSize: 9.5, fontWeight: 700, borderRadius: 5, padding: '2px 6px', whiteSpace: 'nowrap', color: 'var(--text-3)', background: 'var(--track)' }}
+              >
+                {m.position}º
+              </span>
+            )
           )}
           {groupBadges(m.badges).map(({ badge, count }, i) => (
             <span key={i} style={{ fontSize: 8.5, fontWeight: 700, borderRadius: 4, padding: '1px 5px', whiteSpace: 'nowrap', color: badgeColor(badge), background: `color-mix(in srgb, ${badgeColor(badge)} 18%, transparent)` }}>
@@ -192,13 +201,7 @@ function SeasonMatchRow({ m, agentIcon, mapIcon, compact }: { m: SeasonMatchSumm
         {!compact && <div style={{ fontSize: 10.5, color: 'var(--text-dim)', marginTop: 2 }}>{m.playedAtLabel}</div>}
       </div>
 
-      <div style={{ flex: 1, display: 'flex', justifyContent: 'center', minWidth: 20 }}>
-        <span style={{ display: 'flex', alignItems: 'baseline', gap: 5, fontFamily: 'Poppins,sans-serif', fontWeight: 700, fontSize: 16 }}>
-          <span style={{ color: resultColor }}>{ownScore}</span>
-          <span style={{ fontSize: 11, color: 'var(--text-faint)', fontWeight: 400 }}>·</span>
-          <span style={{ color: 'var(--text-3)' }}>{oppScore}</span>
-        </span>
-      </div>
+      <StatCol label="PLACAR" value={m.score} bold />
 
       {!compact && (
         <>

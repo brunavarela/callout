@@ -1,4 +1,4 @@
-import { valorantApiAgentsResponseSchema, valorantApiMapsResponseSchema } from "@callout/shared";
+import { valorantApiAgentsResponseSchema, valorantApiCompetitiveTiersResponseSchema, valorantApiMapsResponseSchema } from "@callout/shared";
 import type { ValorantApiAgent, ValorantApiMap } from "@callout/shared";
 import { prisma } from "./prisma.js";
 
@@ -98,6 +98,30 @@ export async function seedAgents(): Promise<string[]> {
     const existing = await prisma.agentAsset.findUnique({ where: { uuid: agent.uuid } });
     await prisma.agentAsset.upsert({ where: { uuid: agent.uuid }, update: data, create: data });
     results.push(`${agent.displayName}: ${existing ? "atualizado" : "criado"}`);
+  }
+
+  return results;
+}
+
+// Ícone de cada tier competitivo (Ferro 1 .. Radiante) — usado pra mostrar
+// o elo que a pessoa estava numa partida específica (ver
+// MatchPlayer.rankTierId). Só a ÚLTIMA tabela do array importa (ato
+// vigente na hora do seed); atos anteriores têm suas próprias tabelas mas
+// a numeração de `tier` já é estável entre elas, então re-rodar o seed
+// depois de uma virada de ato só atualiza o estilo do ícone, não muda o
+// que cada tierId significa.
+export async function seedRankTiers(): Promise<string[]> {
+  const json = await fetchJson("/competitivetiers");
+  const tables = valorantApiCompetitiveTiersResponseSchema.parse(json).data;
+  const current = tables.at(-1);
+  if (!current) return [];
+
+  const results: string[] = [];
+  for (const tier of current.tiers) {
+    const data = { tierName: tier.tierName, smallIcon: tier.smallIcon };
+    const existing = await prisma.rankTierAsset.findUnique({ where: { tierId: tier.tier } });
+    await prisma.rankTierAsset.upsert({ where: { tierId: tier.tier }, update: data, create: { tierId: tier.tier, ...data } });
+    results.push(`${tier.tierName} (${tier.tier}): ${existing ? "atualizado" : "criado"}`);
   }
 
   return results;

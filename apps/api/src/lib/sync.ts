@@ -61,16 +61,22 @@ export async function syncUserMatches(userId: string, puuid: string, region: str
     progressByUser.set(userId, { state: "syncing", progress: { done, total: matches.length } });
 
     // O endpoint mmr-history só cobre as ~20 partidas ranqueadas mais
-    // recentes da conta — depois disso o RR some da API pra sempre. Por
-    // isso capturamos aqui, no momento do sync (quando a partida ainda tá
-    // bem dentro da janela), em vez de buscar sob demanda depois.
+    // recentes da conta — depois disso o RR (e o tier de então) some da API
+    // pra sempre. Por isso capturamos aqui, no momento do sync (quando a
+    // partida ainda tá bem dentro da janela), em vez de buscar sob demanda
+    // depois. `tier.id` é o elo que a pessoa estava NESSA partida — usado
+    // pro ícone de elo na lista de partidas (ver RankTierAsset).
     const rrByMatchId = new Map<string, number>();
+    const rankTierByMatchId = new Map<string, number>();
     if (newMatches.length > 0) {
       try {
         const history = await getMmrHistory(region, puuid);
-        for (const h of history) rrByMatchId.set(h.match_id, h.last_change);
+        for (const h of history) {
+          rrByMatchId.set(h.match_id, h.last_change);
+          rankTierByMatchId.set(h.match_id, h.tier.id);
+        }
       } catch {
-        // sem histórico de RR agora — as partidas novas ficam com rr null
+        // sem histórico de RR agora — as partidas novas ficam com rr/rankTierId null
       }
     }
 
@@ -86,7 +92,12 @@ export async function syncUserMatches(userId: string, puuid: string, region: str
     async function worker() {
       while (cursor < newMatches.length) {
         const match = newMatches[cursor++]!;
-        await persistMatch(match, puuid, rrByMatchId.get(match.metadata.match_id) ?? null);
+        await persistMatch(
+          match,
+          puuid,
+          rrByMatchId.get(match.metadata.match_id) ?? null,
+          rankTierByMatchId.get(match.metadata.match_id) ?? null,
+        );
         done++;
         progressByUser.set(userId, { state: "syncing", progress: { done, total: matches.length } });
       }
@@ -107,7 +118,7 @@ export async function syncUserMatches(userId: string, puuid: string, region: str
   }
 }
 
-async function persistMatch(match: MatchV4Data, selfPuuid: string, selfRr: number | null) {
+async function persistMatch(match: MatchV4Data, selfPuuid: string, selfRr: number | null, selfRankTierId: number | null) {
   const roundCount = match.rounds.length;
   const modo = match.metadata.queue.name ?? match.metadata.queue.id;
   // Deathmatch (e Team Deathmatch) vem com `rounds` de 1 item cobrindo a
@@ -174,6 +185,7 @@ async function persistMatch(match: MatchV4Data, selfPuuid: string, selfRr: numbe
             damageDealt: p.stats.damage.dealt,
             damageReceived: p.stats.damage.received,
             rr: p.puuid === selfPuuid ? selfRr : null,
+            rankTierId: p.puuid === selfPuuid ? selfRankTierId : null,
             accountLevel: p.account_level,
             weaponKills: playerReplay?.weaponKills ?? {},
             multiKills: playerReplay?.multiKills ?? {},
