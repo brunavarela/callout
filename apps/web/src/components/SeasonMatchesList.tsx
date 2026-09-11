@@ -156,7 +156,7 @@ function SeasonMatchRow({ m, agentIcon, mapIcon, compact }: { m: SeasonMatchSumm
         <span style={{ width: 32, height: 32, borderRadius: 7, background: 'var(--track)', flex: 'none' }} />
       )}
 
-      <div style={{ flex: 1, minWidth: 0 }}>
+      <div style={{ flex: '0 1 auto', minWidth: 0, maxWidth: 230 }}>
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, flexWrap: 'wrap' }}>
           <span style={{ fontSize: 12.5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {m.map} <span style={{ color: 'var(--text-faint)' }}>· {m.agent}</span>
@@ -192,11 +192,13 @@ function SeasonMatchRow({ m, agentIcon, mapIcon, compact }: { m: SeasonMatchSumm
         {!compact && <div style={{ fontSize: 10.5, color: 'var(--text-dim)', marginTop: 2 }}>{m.playedAtLabel}</div>}
       </div>
 
-      <span style={{ display: 'flex', alignItems: 'baseline', gap: 5, flex: 'none', width: 54, justifyContent: 'center', fontFamily: 'Poppins,sans-serif', fontWeight: 700, fontSize: 16 }}>
-        <span style={{ color: resultColor }}>{ownScore}</span>
-        <span style={{ fontSize: 11, color: 'var(--text-faint)', fontWeight: 400 }}>·</span>
-        <span style={{ color: 'var(--text-3)' }}>{oppScore}</span>
-      </span>
+      <div style={{ flex: 1, display: 'flex', justifyContent: 'center', minWidth: 20 }}>
+        <span style={{ display: 'flex', alignItems: 'baseline', gap: 5, fontFamily: 'Poppins,sans-serif', fontWeight: 700, fontSize: 16 }}>
+          <span style={{ color: resultColor }}>{ownScore}</span>
+          <span style={{ fontSize: 11, color: 'var(--text-faint)', fontWeight: 400 }}>·</span>
+          <span style={{ color: 'var(--text-3)' }}>{oppScore}</span>
+        </span>
+      </div>
 
       {!compact && (
         <>
