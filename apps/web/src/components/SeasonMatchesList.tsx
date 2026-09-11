@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Crown } from 'lucide-react';
 import type { MatchBadge, SeasonMatchesPage, SeasonMatchSummary } from '@callout/shared';
 import { LoadingFill } from './Spinner';
 import { cardStyle, fmtNum, fmtDelta, plural } from './statsPrimitives';
@@ -161,7 +162,23 @@ function SeasonMatchRow({ m, agentIcon, mapIcon, compact }: { m: SeasonMatchSumm
             {m.map} <span style={{ color: 'var(--text-faint)' }}>· {m.agent}</span>
           </span>
           {m.mvp && (
-            <span style={{ fontSize: 8.5, fontWeight: 700, borderRadius: 4, padding: '1px 5px', whiteSpace: 'nowrap', color: GOLD, background: `color-mix(in srgb, ${GOLD} 18%, transparent)` }}>
+            <span
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 3,
+                fontSize: 9.5,
+                fontWeight: 800,
+                letterSpacing: '.02em',
+                borderRadius: 5,
+                padding: '2px 7px 2px 5px',
+                whiteSpace: 'nowrap',
+                color: '#141415',
+                background: GOLD,
+                boxShadow: `0 0 0 1px color-mix(in srgb, ${GOLD} 55%, transparent), 0 1px 4px color-mix(in srgb, ${GOLD} 45%, transparent)`,
+              }}
+            >
+              <Crown size={11} strokeWidth={2.5} fill="#141415" />
               MVP
             </span>
           )}
