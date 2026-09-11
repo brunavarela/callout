@@ -117,22 +117,22 @@ function DayHeaderRow({ label, matches }: { label: string; matches: SeasonMatchS
   );
 }
 
-function StatCol({ label, value, color, bold, width = 40 }: { label: string; value: string; color?: string; bold?: boolean; width?: number }) {
+function StatCol({ label, value, color, bold, width = 46 }: { label: string; value: string; color?: string; bold?: boolean; width?: number }) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1, width, flex: 'none' }} title={label}>
-      <span style={{ fontSize: 8.5, letterSpacing: '.04em', color: 'var(--text-faint)' }}>{label}</span>
-      <span style={{ fontSize: 12, fontWeight: bold ? 700 : 500, color: color ?? 'var(--text-2)', whiteSpace: 'nowrap' }}>{value}</span>
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, width, flex: 'none' }} title={label}>
+      <span style={{ fontSize: 10, letterSpacing: '.04em', color: 'var(--text-faint)' }}>{label}</span>
+      <span style={{ fontSize: 14, fontWeight: bold ? 700 : 500, color: color ?? 'var(--text-2)', whiteSpace: 'nowrap' }}>{value}</span>
     </div>
   );
 }
 
 // Uma linha de partida do ato — ícone de agente preenchendo o "quadrado"
-// (mapa como fallback), badges de clutch/multi-kill, e o Índice callout
-// dessa partida (calculado com a mesma fórmula do agregado, só que com o
-// resultado 0/100 dessa partida) no lugar do "TRS" do concorrente.
+// (mapa como fallback), badges de clutch/multi-kill, fundo tingido na cor
+// do resultado (mais vivo que só a borda esquerda) e o placar em destaque.
 function SeasonMatchRow({ m, agentIcon, mapIcon, compact }: { m: SeasonMatchSummary; agentIcon: string | null; mapIcon: string | null; compact: boolean }) {
   const navigate = useNavigate();
   const resultColor = m.result === 'V' ? WIN : m.result === 'D' ? LOSS : DRAW;
+  const [ownScore, oppScore] = m.score.split('—');
 
   return (
     <div
@@ -147,7 +147,7 @@ function SeasonMatchRow({ m, agentIcon, mapIcon, compact }: { m: SeasonMatchSumm
         borderRadius: 8,
         cursor: 'pointer',
         borderLeft: `3px solid ${resultColor}`,
-        background: 'var(--surface-2, rgba(255,255,255,.02))',
+        background: `color-mix(in srgb, ${resultColor} 14%, var(--surface-2, rgba(255,255,255,.02)))`,
       }}
     >
       {agentIcon || mapIcon ? (
@@ -202,25 +202,13 @@ function SeasonMatchRow({ m, agentIcon, mapIcon, compact }: { m: SeasonMatchSumm
         </>
       )}
 
-      <span style={{ fontSize: 11.5, color: 'var(--text-3)', whiteSpace: 'nowrap', flex: 'none', width: 42, textAlign: 'center' }}>{m.score}</span>
-      <span style={{ fontSize: 11.5, fontWeight: 600, textAlign: 'right', width: 32, flex: 'none', color: m.rr === null ? 'var(--text-faint)' : m.rr >= 0 ? WIN : LOSS }}>
-        {m.rr === null ? '—' : fmtRr(m.rr)}
+      <span style={{ display: 'flex', alignItems: 'baseline', gap: 5, flex: 'none', width: 54, justifyContent: 'center', fontFamily: 'Poppins,sans-serif', fontWeight: 700, fontSize: 16 }}>
+        <span style={{ color: resultColor }}>{ownScore}</span>
+        <span style={{ fontSize: 11, color: 'var(--text-faint)', fontWeight: 400 }}>·</span>
+        <span style={{ color: 'var(--text-3)' }}>{oppScore}</span>
       </span>
-      <span
-        title="Índice callout dessa partida"
-        style={{
-          fontSize: 12.5,
-          fontWeight: 700,
-          textAlign: 'center',
-          width: 30,
-          flex: 'none',
-          padding: '3px 0',
-          borderRadius: 6,
-          color: 'var(--acc, #EF4958)',
-          background: 'color-mix(in srgb, var(--acc, #EF4958) 12%, transparent)',
-        }}
-      >
-        {m.calloutIndex}
+      <span style={{ fontSize: 13, fontWeight: 600, textAlign: 'right', width: 36, flex: 'none', color: m.rr === null ? 'var(--text-faint)' : m.rr >= 0 ? WIN : LOSS }}>
+        {m.rr === null ? '—' : fmtRr(m.rr)}
       </span>
     </div>
   );
@@ -262,9 +250,7 @@ export function SeasonMatchesList({
       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
         <div>
           <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 16 }}>{title}</div>
-          <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>
-            {plural(matchesPage.total, 'partida')} no ato · número em destaque é o Índice callout
-          </div>
+          <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>{plural(matchesPage.total, 'partida')} no ato</div>
         </div>
         <div style={{ display: 'flex', gap: 4, background: 'var(--input-bg)', border: '1px solid var(--surface-border)', borderRadius: 9, padding: 3 }}>
           {(['Detalhado', 'Compacto'] as const).map((opt) => (
