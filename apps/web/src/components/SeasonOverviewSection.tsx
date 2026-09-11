@@ -271,20 +271,6 @@ export function SeasonOverviewSection({
 
           {compact && (
             <div className="season-rise-grid">
-              <div ref={registerCard('mapa')} style={{ gridColumn: 1, gridRow: 1 }}>
-                <RankingBlock
-                  title="Mapa"
-                  sub="Vitórias no ato"
-                  rows={data.topMaps.map((m) => ({
-                    key: m.map,
-                    name: m.map,
-                    value: `${m.wins}V · ${m.total - m.wins}D`,
-                    caption: `${m.winratePercent}% de winrate`,
-                    icon: data.mapIcons[m.map],
-                  }))}
-                  maxHeight={agentesHeight}
-                />
-              </div>
               <div ref={registerCard('funcoes')} style={{ gridColumn: 2, gridRow: 1 }}>
                 <RateBlock
                   title="Funções"
@@ -299,6 +285,20 @@ export function SeasonOverviewSection({
                   title="Armas mais usadas"
                   sub="Abates por arma no ato"
                   rows={data.topWeapons.map((w) => ({ key: w.weapon, name: w.weapon, value: plural(w.kills, 'abate') }))}
+                  maxHeight={agentesHeight}
+                />
+              </div>
+              <div ref={registerCard('mapa')} style={{ gridColumn: 2, gridRow: 3 }}>
+                <RankingBlock
+                  title="Mapa"
+                  sub="Vitórias no ato"
+                  rows={data.topMaps.map((m) => ({
+                    key: m.map,
+                    name: m.map,
+                    value: `${m.wins}V · ${m.total - m.wins}D`,
+                    caption: `${m.winratePercent}% de winrate`,
+                    icon: data.mapIcons[m.map],
+                  }))}
                   maxHeight={agentesHeight}
                 />
               </div>
