@@ -192,6 +192,12 @@ function SeasonMatchRow({ m, agentIcon, mapIcon, compact }: { m: SeasonMatchSumm
         {!compact && <div style={{ fontSize: 10.5, color: 'var(--text-dim)', marginTop: 2 }}>{m.playedAtLabel}</div>}
       </div>
 
+      <span style={{ display: 'flex', alignItems: 'baseline', gap: 5, flex: 'none', width: 54, justifyContent: 'center', fontFamily: 'Poppins,sans-serif', fontWeight: 700, fontSize: 16 }}>
+        <span style={{ color: resultColor }}>{ownScore}</span>
+        <span style={{ fontSize: 11, color: 'var(--text-faint)', fontWeight: 400 }}>·</span>
+        <span style={{ color: 'var(--text-3)' }}>{oppScore}</span>
+      </span>
+
       {!compact && (
         <>
           <StatCol label="K/D" value={fmtNum(m.kdaRatio, 1)} />
@@ -201,12 +207,6 @@ function SeasonMatchRow({ m, agentIcon, mapIcon, compact }: { m: SeasonMatchSumm
           <StatCol label="ACS" value={String(m.acs)} bold />
         </>
       )}
-
-      <span style={{ display: 'flex', alignItems: 'baseline', gap: 5, flex: 'none', width: 54, justifyContent: 'center', fontFamily: 'Poppins,sans-serif', fontWeight: 700, fontSize: 16 }}>
-        <span style={{ color: resultColor }}>{ownScore}</span>
-        <span style={{ fontSize: 11, color: 'var(--text-faint)', fontWeight: 400 }}>·</span>
-        <span style={{ color: 'var(--text-3)' }}>{oppScore}</span>
-      </span>
       <span style={{ fontSize: 13, fontWeight: 600, textAlign: 'right', width: 36, flex: 'none', color: m.rr === null ? 'var(--text-faint)' : m.rr >= 0 ? WIN : LOSS }}>
         {m.rr === null ? '—' : fmtRr(m.rr)}
       </span>
