@@ -213,6 +213,17 @@ export function SeasonOverviewSection({
         </div>
       </div>
 
+      <RrHistoryCard
+        rrHistory={rrHistory}
+        rrHistoryLoading={rrHistoryLoading}
+        formInsights={rrFormInsights}
+        matchCountFilter={matchCountFilter}
+        setMatchCountFilter={setMatchCountFilter}
+        subject={subject}
+        noRankedHistory={modoFilter === 'Unrated'}
+        currentRank={data.currentRank}
+      />
+
       <div className="grid-responsive-season">
         <SeasonMatchesList
           matchesPage={matchesPage}
@@ -240,17 +251,6 @@ export function SeasonOverviewSection({
           <AttackDefenseCard sides={data.attackDefense} />
         </div>
       </div>
-
-      <RrHistoryCard
-        rrHistory={rrHistory}
-        rrHistoryLoading={rrHistoryLoading}
-        formInsights={rrFormInsights}
-        matchCountFilter={matchCountFilter}
-        setMatchCountFilter={setMatchCountFilter}
-        subject={subject}
-        noRankedHistory={modoFilter === 'Unrated'}
-        currentRank={data.currentRank}
-      />
 
       {/* Cards adicionais — sobram depois da lista de partidas, "encaixados"
           lado a lado em vez de ficarem perdidos no fim da página. */}
