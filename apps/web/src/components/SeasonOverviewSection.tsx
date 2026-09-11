@@ -27,9 +27,9 @@ function InfoDot({ text }: { text: string }) {
 // Ataque/defesa — % de rounds ganhos em cada lado, no ato (e sob o filtro
 // de mapa/agente atual). Mesmo visual do card que já existia no dashboard
 // de 30 dias, só que alimentado por SeasonOverview.attackDefense.
-function AttackDefenseCard({ sides, grow = true }: { sides: SeasonOverview['attackDefense']; grow?: boolean }) {
+function AttackDefenseCard({ sides }: { sides: SeasonOverview['attackDefense'] }) {
   return (
-    <div style={{ ...cardStyle, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 12, flex: grow ? 1 : '0 0 auto', justifyContent: 'center' }}>
+    <div style={{ ...cardStyle, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 12, flex: 1, justifyContent: 'center' }}>
       <div>
         <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 15 }}>Ataque ou defesa</div>
         <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 3 }}>% de rounds ganhos em cada lado, no ato</div>
@@ -89,14 +89,14 @@ function BodySilhouette({ headColor, bodyColor, legColor }: { headColor: string;
 
 // Precisão cabeça/corpo/perna — visualizada como silhueta em vez da barra
 // empilhada antiga, cada parte com sua cor e %.
-function AccuracyBar({ accuracy, grow = true }: { accuracy: SeasonOverview['accuracy']; grow?: boolean }) {
+function AccuracyBar({ accuracy }: { accuracy: SeasonOverview['accuracy'] }) {
   const segments = [
     { label: 'Cabeça', percent: accuracy.headPercent, hits: accuracy.headHits, color: 'var(--pos, #18AAB7)' },
     { label: 'Corpo', percent: accuracy.bodyPercent, hits: accuracy.bodyHits, color: 'var(--text-muted)' },
     { label: 'Perna', percent: accuracy.legPercent, hits: accuracy.legHits, color: 'var(--neg, #EF4958)' },
   ];
   return (
-    <div style={{ ...cardStyle, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 12, flex: grow ? 1 : '0 0 auto', justifyContent: 'center' }}>
+    <div style={{ ...cardStyle, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 12, flex: 1, justifyContent: 'center' }}>
       <div>
         <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 15 }}>Precisão</div>
         <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 3 }}>Onde seus tiros acertaram no ato — cabeça, corpo ou perna.</div>
@@ -156,11 +156,11 @@ export function SeasonOverviewSection({
   const registerCard = useFlip(compact);
 
   // Mapa/Armas/Funções, no modo compacto, ganham a mesma altura do card de
-  // Agentes (medida ao vivo, já que a altura dele é dinâmica -- depende de
-  // quantos agentes distintos a pessoa jogou) -- com scroll por dentro se o
-  // conteúdo não couber. Ref callback (não useEffect com []) porque esse
-  // card só existe de fato depois que `data` chega -- um efeito de
-  // montagem rodaria antes disso, com a ref ainda nula, e nunca mais.
+  // Agentes (medida ao vivo num clone invisível dele, não no card real --
+  // ver o clone mais abaixo) -- com scroll por dentro se o conteúdo não
+  // couber. Ref callback (não useEffect com []) porque esse card só existe
+  // de fato depois que `data` chega -- um efeito de montagem rodaria antes
+  // disso, com a ref ainda nula, e nunca mais.
   const agentesObserver = useRef<ResizeObserver | null>(null);
   const [agentesHeight, setAgentesHeight] = useState<number | undefined>(undefined);
   const setAgentesRef = (el: HTMLDivElement | null) => {
@@ -307,16 +307,39 @@ export function SeasonOverviewSection({
         </div>
 
         {/* Sidebar fixa -- nunca se move nem redimensiona com o toggle
-            Detalhado/Compacto. Só o `flex`/height de esticar (que serve pra
-            somar a altura dos 3 cards com a altura da lista de partidas no
-            modo normal) é desligado no compacto -- senão o card de Agentes
-            fica maior do que seu conteúdo natural (esticado pra preencher a
-            linha do grid), e como Mapa/Armas/Funções copiam a altura DELE,
-            isso cria um ciclo (a altura deles cresce, o que estica Agentes
-            de novo, e por aí vai) até estabilizar num valor errado. Sem
-            esticar, a altura medida de Agentes é sempre a de verdade. */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16, height: compact ? undefined : '100%' }}>
-          <div ref={setAgentesRef} style={{ display: 'flex', flexDirection: 'column', flex: compact ? '0 0 auto' : 1 }}>
+            Detalhado/Compacto, em nenhuma hipótese (nem o flex/height de
+            esticar muda). A altura usada por Mapa/Armas/Funções vem de um
+            clone invisível do card de Agentes (ver `agentesMeasureRef`
+            abaixo), não deste aqui -- assim a medida nunca depende do
+            quanto esse card real está esticado. */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16, height: '100%' }}>
+          <RankingBlock
+            title="Agentes"
+            sub="Winrate no ato"
+            rows={data.topAgents.slice(0, 6).map((a) => ({
+              key: a.agent,
+              name: a.agent,
+              value: `${a.winratePercent}%`,
+              caption: `${plural(a.matches, 'partida')} · KD ${fmtNum(a.kda, 2)}`,
+              icon: data.agentIcons[a.agent],
+              dot: a.color,
+            }))}
+            style={{ flex: 1 }}
+          />
+          <AccuracyBar accuracy={data.accuracy} />
+          <AttackDefenseCard sides={data.attackDefense} />
+        </div>
+      </div>
+
+      {/* Clone invisível do card de Agentes, fora do fluxo (position:
+          absolute + visibility:hidden) e sem nenhum flex/stretch de pai --
+          existe só pra medir a altura NATURAL do conteúdo (a mesma largura
+          320px da sidebar), sem sofrer (nem causar) qualquer influência do
+          layout visível. É o que dá a altura de Mapa/Armas/Funções no modo
+          compacto. */}
+      {compact && (
+        <div style={{ position: 'absolute', top: 0, left: 0, width: 320, height: 0, overflow: 'hidden', visibility: 'hidden', pointerEvents: 'none', zIndex: -1 }} aria-hidden="true">
+          <div ref={setAgentesRef}>
             <RankingBlock
               title="Agentes"
               sub="Winrate no ato"
@@ -328,13 +351,10 @@ export function SeasonOverviewSection({
                 icon: data.agentIcons[a.agent],
                 dot: a.color,
               }))}
-              style={{ flex: compact ? undefined : 1 }}
             />
           </div>
-          <AccuracyBar accuracy={data.accuracy} grow={!compact} />
-          <AttackDefenseCard sides={data.attackDefense} grow={!compact} />
         </div>
-      </div>
+      )}
 
       {/* Fora do modo compacto, Mapa/Armas/Funções ficam abaixo, em vez de
           "em cima" ao lado da lista de partidas encolhida. */}
