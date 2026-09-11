@@ -60,8 +60,32 @@ function AttackDefenseCard({ sides }: { sides: SeasonOverview['attackDefense'] }
   );
 }
 
-// Barra de precisão cabeça/corpo/perna — mesma lógica de barra empilhada que
-// o resto do app usa pra winrate, só com 3 segmentos em vez de 1.
+// Silhueta humana — cabeça/corpo/pernas com a mesma cor de sempre (teal/
+// cinza/vermelho, ver AccuracyBreakdown), cada parte com sua % de tiros ao
+// lado. Os 3 recortes (cabeça, "parte superior", "parte inferior") vieram
+// prontos da Bruna — só empilha e recolore via `fill`.
+function BodySilhouette({ headColor, bodyColor, legColor }: { headColor: string; bodyColor: string; legColor: string }) {
+  return (
+    <svg viewBox="0 0 140 306" width={78} height={170} aria-hidden="true">
+      <circle cx="70" cy="27.5" r="27.5" fill={headColor} />
+      <g transform="translate(10, 44)">
+        <path
+          d="M58.0001 133H61.0341H91.5001V36.0003C91.5001 34.5005 95.5001 33.5001 96.5001 36.0003V126C96.5001 131.5 112 139.5 119 126V36.0003C119.5 24.5002 114.7 1.2 91.5001 0H59.5332H59.501H27.5341C4.33411 1.2 -0.46589 24.5002 0.0341103 36.0003V126C7.03411 139.5 22.5341 131.5 22.5341 126V36.0003C23.5341 33.5001 27.5341 34.5005 27.5341 36.0003V133H58.0001Z"
+          fill={bodyColor}
+        />
+      </g>
+      <g transform="translate(38, 166)">
+        <path
+          d="M0 126.265V0H64V126.265C55.8195 149.222 36.0902 135.747 36.0902 126.265L35.609 11.4786C35.609 10.4805 35.3684 8 32 8C29.2779 8 28.5514 10.1478 28.391 11.4786V126.265C23.5789 147.226 0 138.742 0 126.265Z"
+          fill={legColor}
+        />
+      </g>
+    </svg>
+  );
+}
+
+// Precisão cabeça/corpo/perna — visualizada como silhueta em vez da barra
+// empilhada antiga, cada parte com sua cor e %.
 function AccuracyBar({ accuracy }: { accuracy: SeasonOverview['accuracy'] }) {
   const segments = [
     { label: 'Cabeça', percent: accuracy.headPercent, hits: accuracy.headHits, color: 'var(--pos, #18AAB7)' },
@@ -74,23 +98,21 @@ function AccuracyBar({ accuracy }: { accuracy: SeasonOverview['accuracy'] }) {
         <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 15 }}>Precisão</div>
         <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 3 }}>Onde seus tiros acertaram no ato — cabeça, corpo ou perna.</div>
       </div>
-      <div style={{ height: 10, borderRadius: 5, display: 'flex', overflow: 'hidden', background: 'var(--track)' }}>
-        {segments.map((s) => (
-          <div key={s.label} style={{ width: `${s.percent}%`, background: s.color }} title={`${s.label}: ${s.percent}%`} />
-        ))}
-      </div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
-        {segments.map((s) => (
-          <div key={s.label} style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--text-3)' }}>
-              <span style={{ width: 8, height: 8, borderRadius: 2, background: s.color }} />
-              {s.label}
-            </span>
-            <span style={{ fontSize: 13, fontWeight: 600 }}>
-              {fmtNum(s.percent, 1)}% <span style={{ fontSize: 10.5, color: 'var(--text-faint)', fontWeight: 400 }}>({plural(s.hits, 'tiro')})</span>
-            </span>
-          </div>
-        ))}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
+        <BodySilhouette headColor={segments[0]!.color} bodyColor={segments[1]!.color} legColor={segments[2]!.color} />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, flex: 1, minWidth: 0 }}>
+          {segments.map((s) => (
+            <div key={s.label} style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--text-3)' }}>
+                <span style={{ width: 8, height: 8, borderRadius: 2, background: s.color, flex: 'none' }} />
+                {s.label}
+              </span>
+              <span style={{ fontSize: 15, fontWeight: 600 }}>
+                {fmtNum(s.percent, 1)}% <span style={{ fontSize: 10.5, color: 'var(--text-faint)', fontWeight: 400 }}>({plural(s.hits, 'tiro')})</span>
+              </span>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
@@ -203,17 +225,7 @@ export function SeasonOverviewSection({
               dot: a.color,
             }))}
           />
-          <RankingBlock
-            title="Mapa"
-            sub="Vitórias no ato"
-            rows={data.topMaps.map((m) => ({
-              key: m.map,
-              name: m.map,
-              value: `${m.wins}V · ${m.total - m.wins}D`,
-              caption: `${m.winratePercent}% de winrate`,
-              icon: data.mapIcons[m.map],
-            }))}
-          />
+          <AccuracyBar accuracy={data.accuracy} />
           <AttackDefenseCard sides={data.attackDefense} />
         </div>
       </div>
@@ -221,7 +233,17 @@ export function SeasonOverviewSection({
       {/* Cards adicionais — sobram depois da lista de partidas, "encaixados"
           lado a lado em vez de ficarem perdidos no fim da página. */}
       <div className="grid-responsive-3">
-        <AccuracyBar accuracy={data.accuracy} />
+        <RankingBlock
+          title="Mapa"
+          sub="Vitórias no ato"
+          rows={data.topMaps.map((m) => ({
+            key: m.map,
+            name: m.map,
+            value: `${m.wins}V · ${m.total - m.wins}D`,
+            caption: `${m.winratePercent}% de winrate`,
+            icon: data.mapIcons[m.map],
+          }))}
+        />
         <RankingBlock
           title="Armas mais usadas"
           sub="Abates por arma no ato"
