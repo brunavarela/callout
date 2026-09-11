@@ -54,6 +54,7 @@ function EloReinforcement({ currentRank }: { currentRank: NonNullable<SeasonOver
 const MATCH_COUNTS: Array<{ key: MatchCountFilter; label: string }> = [
   { key: 7, label: 'Últimas 7' },
   { key: 20, label: 'Últimas 20' },
+  { key: 30, label: 'Últimas 30' },
 ];
 
 // Ticks "redondos" cobrindo [min,max] garantindo que 0 caia exatamente numa
@@ -88,7 +89,14 @@ function RrLineChart({ points }: { points: RrHistoryPoint[] }) {
 
   let running = 0;
   const cum = points.map((p) => (running += p.delta));
-  const ticks = niceTicks(Math.min(...cum, 0), Math.max(...cum, 0));
+  const rawMin = Math.min(...cum, 0);
+  const rawMax = Math.max(...cum, 0);
+  // Preenchia a régua inteira com a variação real, o que faz até uma
+  // oscilação pequena de RR parecer um zigue-zague enorme. Uma margem de
+  // ~35% acima/abaixo (mínimo de 20 RR) deixa a linha "mais afastada",
+  // sem esticar pra cobrir cada pixel do card.
+  const padding = Math.max(20, (rawMax - rawMin) * 0.35);
+  const ticks = niceTicks(rawMin - padding, rawMax + padding);
   const [niceMin, niceMax] = [ticks[0]!, ticks[ticks.length - 1]!];
 
   const plotW = w - pad.l - pad.r;
@@ -243,6 +251,16 @@ export function RrHistoryCard({
         <b style={{ color: rrBalance >= 0 ? WIN : LOSS, fontWeight: 600 }}>{fmtDelta(rrBalance, 0)}</b>.
       </span>,
     );
+    if (formInsights.topWeapon) {
+      bullets.push(
+        <span key="topWeapon">
+          Nas últimas {formInsights.matchesAnalyzed} partidas a arma mais usada por {subject} foi{' '}
+          <b style={{ color: 'var(--text-2)', fontWeight: 600 }}>{formInsights.topWeapon.weapon}</b>, com{' '}
+          <b style={{ color: 'var(--text-2)', fontWeight: 600 }}>{formInsights.topWeapon.hsPercent}%</b> de HS no período{' '}
+          <span style={{ color: 'var(--text-faint)' }}>(aproximado)</span>.
+        </span>,
+      );
+    }
   }
   const half = Math.ceil(bullets.length / 2);
   const columns = [bullets.slice(0, half), bullets.slice(half)];

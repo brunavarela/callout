@@ -155,7 +155,7 @@ export type MatchModeFilter = "all" | "Competitive" | "Unrated";
 // Janela de partidas usada pelo gráfico de RR e pelos tópicos de análise
 // (mapa/agente mais jogado, KDA negativo, MVP) — os dois precisam usar a
 // mesma janela pra os números baterem entre si.
-export type MatchCountFilter = 7 | 20;
+export type MatchCountFilter = 7 | 20 | 30;
 
 export interface KpiValue {
   value: number;
@@ -207,6 +207,10 @@ export interface RecentFormInsights {
   topAgent: { agent: string; total: number; wins: number } | null;
   negativeKdaMatches: number;
   mvpMatches: number;
+  // Arma com mais abates no recorte + o HS% do período (aproximado — a
+  // HenrikDev não liga cada tiro a uma arma específica, só os abates; ver
+  // mesma aproximação em WeaponStat/topWeapons no painel do ato).
+  topWeapon: { weapon: string; kills: number; hsPercent: number } | null;
 }
 
 export interface DashboardSummary {

@@ -34,7 +34,7 @@ function parseModoFilter(raw: unknown): "Competitive" | "Unrated" | undefined {
 }
 
 function parseMatchCount(raw: unknown): MatchCountFilter {
-  return raw === "7" ? 7 : 20;
+  return raw === "7" ? 7 : raw === "30" ? 30 : 20;
 }
 
 // String vazia/ausente vira `undefined` — sem filtro de mapa. Não valida

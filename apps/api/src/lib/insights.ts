@@ -15,13 +15,17 @@ function mapNameFrom(rawJson: unknown): string {
 // winrate por mapa/agente, calculado sobre outra janela).
 function buildFormInsights(rows: Row[], maxAcsByMatchTeam: Map<string, number>): RecentFormInsights {
   if (rows.length === 0) {
-    return { matchesAnalyzed: 0, topMap: null, topAgent: null, negativeKdaMatches: 0, mvpMatches: 0 };
+    return { matchesAnalyzed: 0, topMap: null, topAgent: null, negativeKdaMatches: 0, mvpMatches: 0, topWeapon: null };
   }
 
   const mapCounts = new Map<string, { total: number; wins: number }>();
   const agentCounts = new Map<string, { total: number; wins: number }>();
+  const weaponKillCounts = new Map<string, number>();
   let negativeKdaMatches = 0;
   let mvpMatches = 0;
+  let headshots = 0;
+  let bodyshots = 0;
+  let legshots = 0;
 
   for (const r of rows) {
     const map = mapNameFrom(r.match.rawJson);
@@ -37,6 +41,14 @@ function buildFormInsights(rows: Row[], maxAcsByMatchTeam: Map<string, number>):
 
     if (r.kills + r.assists < r.deaths) negativeKdaMatches++;
     if (r.acs === maxAcsByMatchTeam.get(`${r.match.id}:${r.teamId}`)) mvpMatches++;
+
+    headshots += r.headshots;
+    bodyshots += r.bodyshots;
+    legshots += r.legshots;
+    const weaponKills = (r.weaponKills as Record<string, number> | null) ?? {};
+    for (const [weapon, count] of Object.entries(weaponKills)) {
+      weaponKillCounts.set(weapon, (weaponKillCounts.get(weapon) ?? 0) + count);
+    }
   }
 
   const mostPlayed = (counts: Map<string, { total: number; wins: number }>) => {
@@ -50,12 +62,22 @@ function buildFormInsights(rows: Row[], maxAcsByMatchTeam: Map<string, number>):
   const topMap = mostPlayed(mapCounts);
   const topAgent = mostPlayed(agentCounts);
 
+  // HS% do recorte inteiro (aproximado — a HenrikDev não liga tiro a arma,
+  // só abate; ver mesmo aviso em WeaponStat/topWeapons do painel do ato).
+  const shotsTotal = headshots + bodyshots + legshots;
+  const hsPercent = shotsTotal > 0 ? Math.round((headshots / shotsTotal) * 1000) / 10 : 0;
+  let topWeaponEntry: [string, number] | null = null;
+  for (const entry of weaponKillCounts) {
+    if (!topWeaponEntry || entry[1] > topWeaponEntry[1]) topWeaponEntry = entry;
+  }
+
   return {
     matchesAnalyzed: rows.length,
     topMap: topMap ? { map: topMap[0], total: topMap[1].total, wins: topMap[1].wins } : null,
     topAgent: topAgent ? { agent: topAgent[0], total: topAgent[1].total, wins: topAgent[1].wins } : null,
     negativeKdaMatches,
     mvpMatches,
+    topWeapon: topWeaponEntry ? { weapon: topWeaponEntry[0], kills: topWeaponEntry[1], hsPercent } : null,
   };
 }
 
