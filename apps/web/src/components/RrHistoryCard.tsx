@@ -1,7 +1,55 @@
 import { useNavigate } from 'react-router-dom';
-import type { MatchCountFilter, RecentFormInsights, RrHistoryPoint } from '@callout/shared';
+import type { MatchCountFilter, RecentFormInsights, RrHistoryPoint, SeasonOverview } from '@callout/shared';
 import { SnakeSpinner } from './Spinner';
 import { cardStyle, WIN, LOSS, DRAW, fmtDelta } from './statsPrimitives';
+
+// Escada de ranques (sem contar Unranked/Radiant, que não seguem o padrão
+// "nome N") — usada só pra descobrir o próximo ranque a partir do atual.
+const RANK_LADDER = ['Iron', 'Bronze', 'Silver', 'Gold', 'Platinum', 'Diamond', 'Ascendant', 'Immortal'];
+
+// Nome do próximo ranque a partir do tierLabel atual (ex.: "Platinum 1" ->
+// "Platinum 2", "Immortal 3" -> "Radiant"). `null` quando já é Radiant (não
+// tem próximo) ou quando o texto não bate no formato esperado.
+function nextTierLabel(tierLabel: string): string | null {
+  if (tierLabel === 'Radiant') return null;
+  const match = /^(.+)\s+(\d)$/.exec(tierLabel);
+  if (!match) return null;
+  const [, tier, numStr] = match;
+  const num = Number(numStr);
+  if (num < 3) return `${tier} ${num + 1}`;
+  const idx = RANK_LADDER.indexOf(tier!);
+  if (idx === -1) return null;
+  return idx === RANK_LADDER.length - 1 ? 'Radiant' : `${RANK_LADDER[idx + 1]} 1`;
+}
+
+// Reforço do elo atual — ícone + ranque + quanto falta de RR pro próximo.
+// Cada tier tem 100 RR (0-100); assume isso pra Immortal 3 -> Radiant
+// também, já que não temos como saber o corte de percentil do Radiant.
+function EloReinforcement({ currentRank }: { currentRank: NonNullable<SeasonOverview['currentRank']> }) {
+  const next = nextTierLabel(currentRank.tierLabel);
+  const missing = 100 - currentRank.rr;
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10, flex: 'none', minWidth: 160, paddingLeft: 20, borderLeft: '1px solid var(--divider)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        {currentRank.iconUrl ? (
+          <img src={currentRank.iconUrl} alt="" style={{ width: 38, height: 38, objectFit: 'contain', flex: 'none' }} />
+        ) : (
+          <span style={{ width: 38, height: 38, borderRadius: 9, background: 'var(--avatar-bg)', flex: 'none' }} />
+        )}
+        <div>
+          <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 700, fontSize: 16 }}>{currentRank.tierLabel}</div>
+          <div style={{ fontSize: 11.5, color: 'var(--text-dim)' }}>{currentRank.rr} RR</div>
+        </div>
+      </div>
+      {next && (
+        <div style={{ fontSize: 12, color: 'var(--text-dim)', lineHeight: 1.4 }}>
+          Faltam <b style={{ color: 'var(--text-2)', fontWeight: 600 }}>{missing}</b> RR pra chegar em{' '}
+          <b style={{ color: 'var(--text-2)', fontWeight: 600 }}>{next}</b>.
+        </div>
+      )}
+    </div>
+  );
+}
 
 const MATCH_COUNTS: Array<{ key: MatchCountFilter; label: string }> = [
   { key: 7, label: 'Últimas 7' },
@@ -139,6 +187,7 @@ export function RrHistoryCard({
   setMatchCountFilter,
   subject,
   noRankedHistory,
+  currentRank,
 }: {
   rrHistory: RrHistoryPoint[];
   rrHistoryLoading: boolean;
@@ -147,25 +196,63 @@ export function RrHistoryCard({
   setMatchCountFilter: (n: MatchCountFilter) => void;
   subject: string;
   noRankedHistory: boolean;
+  currentRank: SeasonOverview['currentRank'];
 }) {
+  const rrBalance = rrHistory.reduce((s, p) => s + p.delta, 0);
+
+  const bullets: React.ReactNode[] = [];
+  if (formInsights?.topMap) {
+    bullets.push(
+      <span key="topMap">
+        Nas últimas {formInsights.matchesAnalyzed} partidas {subject} jogou{' '}
+        <b style={{ color: 'var(--text-2)', fontWeight: 600 }}>{formInsights.topMap.total}</b>{' '}
+        {formInsights.topMap.total === 1 ? 'vez' : 'vezes'} no mapa <b style={{ color: 'var(--text-2)', fontWeight: 600 }}>{formInsights.topMap.map}</b> e
+        ganhou <b style={{ color: 'var(--text-2)', fontWeight: 600 }}>{formInsights.topMap.wins}</b> {formInsights.topMap.wins === 1 ? 'vez' : 'vezes'} nesse
+        mapa.
+      </span>,
+    );
+  }
+  if (formInsights?.topAgent) {
+    bullets.push(
+      <span key="topAgent">
+        Nas últimas {formInsights.matchesAnalyzed} partidas {subject} jogou{' '}
+        <b style={{ color: 'var(--text-2)', fontWeight: 600 }}>{formInsights.topAgent.total}</b>{' '}
+        {formInsights.topAgent.total === 1 ? 'vez' : 'vezes'} com <b style={{ color: 'var(--text-2)', fontWeight: 600 }}>{formInsights.topAgent.agent}</b> e
+        ganhou <b style={{ color: 'var(--text-2)', fontWeight: 600 }}>{formInsights.topAgent.wins}</b> {formInsights.topAgent.wins === 1 ? 'vez' : 'vezes'}.
+      </span>,
+    );
+  }
+  if (formInsights) {
+    bullets.push(
+      <span key="negativeKda">
+        Nas últimas {formInsights.matchesAnalyzed} partidas {subject} ficou com KDA negativo{' '}
+        <b style={{ color: formInsights.negativeKdaMatches > 0 ? LOSS : 'var(--text-2)', fontWeight: 600 }}>{formInsights.negativeKdaMatches}</b>{' '}
+        {formInsights.negativeKdaMatches === 1 ? 'vez' : 'vezes'}.
+      </span>,
+    );
+    bullets.push(
+      <span key="mvp">
+        Nas últimas {formInsights.matchesAnalyzed} partidas {subject} foi MVP{' '}
+        <b style={{ color: formInsights.mvpMatches > 0 ? '#E8B339' : 'var(--text-2)', fontWeight: 600 }}>{formInsights.mvpMatches}</b>{' '}
+        {formInsights.mvpMatches === 1 ? 'vez' : 'vezes'}.
+      </span>,
+    );
+    bullets.push(
+      <span key="rrBalance">
+        Nas últimas {formInsights.matchesAnalyzed} partidas {subject} teve um saldo de RR de{' '}
+        <b style={{ color: rrBalance >= 0 ? WIN : LOSS, fontWeight: 600 }}>{fmtDelta(rrBalance, 0)}</b>.
+      </span>,
+    );
+  }
+  const half = Math.ceil(bullets.length / 2);
+  const columns = [bullets.slice(0, half), bullets.slice(half)];
+
   return (
     <div style={{ ...cardStyle, padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: 4 }}>
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
         <div>
           <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 16 }}>RR ganho e perdido</div>
-          <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 3 }}>
-            Soma acumulada de RR — cada ponto é uma partida.
-            {rrHistory.length > 0 && (
-              <>
-                {' '}
-                Fechou em{' '}
-                <span style={{ color: rrHistory.reduce((s, p) => s + p.delta, 0) >= 0 ? 'var(--pos, #18AAB7)' : 'var(--text-muted-2)' }}>
-                  {fmtDelta(rrHistory.reduce((s, p) => s + p.delta, 0), 0)} RR
-                </span>
-                .
-              </>
-            )}
-          </div>
+          <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 3 }}>Soma acumulada de RR — cada ponto é uma partida.</div>
         </div>
         <MatchCountButtons matchCountFilter={matchCountFilter} setMatchCountFilter={setMatchCountFilter} />
       </div>
@@ -195,51 +282,20 @@ export function RrHistoryCard({
         </div>
       )}
       {formInsights && formInsights.matchesAnalyzed > 0 && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 14, paddingTop: 12, borderTop: '1px solid var(--divider)' }}>
-          {formInsights.topMap && (
-            <div style={{ display: 'flex', gap: 8, fontSize: 12.5, color: 'var(--text-dim)', lineHeight: 1.4 }}>
-              <span style={{ color: 'var(--text-faint)' }}>•</span>
-              <span>
-                Nas últimas {formInsights.matchesAnalyzed} partidas {subject} jogou{' '}
-                <b style={{ color: 'var(--text-2)', fontWeight: 600 }}>{formInsights.topMap.total}</b>{' '}
-                {formInsights.topMap.total === 1 ? 'vez' : 'vezes'} no mapa{' '}
-                <b style={{ color: 'var(--text-2)', fontWeight: 600 }}>{formInsights.topMap.map}</b> e ganhou{' '}
-                <b style={{ color: 'var(--text-2)', fontWeight: 600 }}>{formInsights.topMap.wins}</b>{' '}
-                {formInsights.topMap.wins === 1 ? 'vez' : 'vezes'} nesse mapa.
-              </span>
-            </div>
-          )}
-          {formInsights.topAgent && (
-            <div style={{ display: 'flex', gap: 8, fontSize: 12.5, color: 'var(--text-dim)', lineHeight: 1.4 }}>
-              <span style={{ color: 'var(--text-faint)' }}>•</span>
-              <span>
-                Nas últimas {formInsights.matchesAnalyzed} partidas {subject} jogou{' '}
-                <b style={{ color: 'var(--text-2)', fontWeight: 600 }}>{formInsights.topAgent.total}</b>{' '}
-                {formInsights.topAgent.total === 1 ? 'vez' : 'vezes'} com{' '}
-                <b style={{ color: 'var(--text-2)', fontWeight: 600 }}>{formInsights.topAgent.agent}</b> e ganhou{' '}
-                <b style={{ color: 'var(--text-2)', fontWeight: 600 }}>{formInsights.topAgent.wins}</b>{' '}
-                {formInsights.topAgent.wins === 1 ? 'vez' : 'vezes'}.
-              </span>
-            </div>
-          )}
-          <div style={{ display: 'flex', gap: 8, fontSize: 12.5, color: 'var(--text-dim)', lineHeight: 1.4 }}>
-            <span style={{ color: 'var(--text-faint)' }}>•</span>
-            <span>
-              Nas últimas {formInsights.matchesAnalyzed} partidas {subject} ficou com KDA negativo{' '}
-              <b style={{ color: formInsights.negativeKdaMatches > 0 ? LOSS : 'var(--text-2)', fontWeight: 600 }}>
-                {formInsights.negativeKdaMatches}
-              </b>{' '}
-              {formInsights.negativeKdaMatches === 1 ? 'vez' : 'vezes'}.
-            </span>
+        <div style={{ display: 'flex', gap: 20, marginTop: 14, paddingTop: 12, borderTop: '1px solid var(--divider)' }}>
+          <div style={{ display: 'flex', gap: 20, flex: 1, minWidth: 0 }}>
+            {columns.map((col, i) => (
+              <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: 8, flex: 1, minWidth: 0 }}>
+                {col.map((bullet, j) => (
+                  <div key={j} style={{ display: 'flex', gap: 8, fontSize: 12.5, color: 'var(--text-dim)', lineHeight: 1.4 }}>
+                    <span style={{ color: 'var(--text-faint)' }}>•</span>
+                    {bullet}
+                  </div>
+                ))}
+              </div>
+            ))}
           </div>
-          <div style={{ display: 'flex', gap: 8, fontSize: 12.5, color: 'var(--text-dim)', lineHeight: 1.4 }}>
-            <span style={{ color: 'var(--text-faint)' }}>•</span>
-            <span>
-              Nas últimas {formInsights.matchesAnalyzed} partidas {subject} foi MVP{' '}
-              <b style={{ color: formInsights.mvpMatches > 0 ? '#E8B339' : 'var(--text-2)', fontWeight: 600 }}>{formInsights.mvpMatches}</b>{' '}
-              {formInsights.mvpMatches === 1 ? 'vez' : 'vezes'}.
-            </span>
-          </div>
+          {currentRank && <EloReinforcement currentRank={currentRank} />}
         </div>
       )}
     </div>

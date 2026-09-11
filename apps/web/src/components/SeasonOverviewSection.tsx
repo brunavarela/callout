@@ -249,6 +249,7 @@ export function SeasonOverviewSection({
         setMatchCountFilter={setMatchCountFilter}
         subject={subject}
         noRankedHistory={modoFilter === 'Unrated'}
+        currentRank={data.currentRank}
       />
 
       {/* Cards adicionais — sobram depois da lista de partidas, "encaixados"
