@@ -232,8 +232,9 @@ export function SeasonOverviewSection({
       <div className="grid-responsive-season">
         {/* Coluna da esquerda: a lista de partidas, sozinha (modo normal) ou
             encolhida ao lado dos cards de Mapa/Armas/Funções (modo
-            compacto, sempre quadrados) -- só essa coluna reflui; a sidebar
-            (Agentes/Precisão/Ataque-defesa) ao lado é sempre estática. */}
+            compacto, em 2 colunas do mesmo tamanho da sidebar) -- só essa
+            coluna reflui; a sidebar (Agentes/Precisão/Ataque-defesa) ao
+            lado é sempre estática. */}
         <div className="season-left-row">
           <div ref={registerCard('partidas')} style={{ flex: compact ? '0 0 190px' : '1 1 auto' }}>
             <SeasonMatchesList
@@ -250,8 +251,8 @@ export function SeasonOverviewSection({
           </div>
 
           {compact && (
-            <>
-              <div ref={registerCard('mapa')} className="season-square-card">
+            <div className="season-rise-grid">
+              <div ref={registerCard('mapa')}>
                 <RankingBlock
                   title="Mapa"
                   sub="Vitórias no ato"
@@ -262,27 +263,24 @@ export function SeasonOverviewSection({
                     caption: `${m.winratePercent}% de winrate`,
                     icon: data.mapIcons[m.map],
                   }))}
-                  style={{ flex: 1 }}
                 />
               </div>
-              <div ref={registerCard('armas')} className="season-square-card">
+              <div ref={registerCard('armas')}>
                 <RankingBlock
                   title="Armas mais usadas"
                   sub="Abates por arma no ato"
                   rows={data.topWeapons.map((w) => ({ key: w.weapon, name: w.weapon, value: plural(w.kills, 'abate') }))}
-                  style={{ flex: 1 }}
                 />
               </div>
-              <div ref={registerCard('funcoes')} className="season-square-card">
+              <div ref={registerCard('funcoes')}>
                 <RateBlock
                   title="Funções"
                   sub="Winrate por função no ato"
                   rows={data.roles.map((r) => ({ key: r.role, name: r.role, wins: r.wins, total: r.matches }))}
                   colorFor={rateBarColor}
-                  style={{ flex: 1 }}
                 />
               </div>
-            </>
+            </div>
           )}
         </div>
 

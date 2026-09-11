@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { Crown } from 'lucide-react';
+import { Crown, LayoutGrid, LayoutList } from 'lucide-react';
 import type { MatchBadge, SeasonMatchesPage, SeasonMatchSummary } from '@callout/shared';
 import { LoadingFill } from './Spinner';
 import { cardStyle, fmtNum, fmtDelta, plural } from './statsPrimitives';
@@ -87,6 +87,18 @@ function DayHeaderRow({ label, matches, compact }: { label: string; matches: Sea
   const avgDd = matches.reduce((s, m) => s + m.ddPerRound, 0) / matches.length;
   const kd = d > 0 ? fmtNum(k / d, 1) : String(k);
 
+  if (compact) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 2, padding: '14px 4px 6px', textAlign: 'center' }}>
+        <span style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 13 }}>{label}</span>
+        <span style={{ fontSize: 10.5, color: 'var(--text-faint)' }}>{plural(matches.length, 'partida')}</span>
+        <span style={{ fontSize: 10.5, color: 'var(--text-faint)' }}>
+          {wins}V·{losses}D
+        </span>
+      </div>
+    );
+  }
+
   return (
     <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, padding: '14px 6px 6px', flexWrap: 'wrap' }}>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
@@ -95,25 +107,23 @@ function DayHeaderRow({ label, matches, compact }: { label: string; matches: Sea
           {plural(matches.length, 'partida')} · {wins}V·{losses}D
         </span>
       </div>
-      {!compact && (
-        <div style={{ display: 'flex', gap: 16, fontSize: 11, color: 'var(--text-faint)', whiteSpace: 'nowrap' }}>
-          <span>
-            K/D <b style={{ color: 'var(--text-3)', fontWeight: 600 }}>{kd}</b>
-          </span>
-          <span style={{ color: 'var(--text-2)' }}>
-            {k}/{d}/{a}
-          </span>
-          <span>
-            DDΔ <b style={{ color: avgDd >= 0 ? WIN : LOSS, fontWeight: 600 }}>{fmtDelta(avgDd, 0)}</b>
-          </span>
-          <span>
-            HS <b style={{ color: 'var(--text-3)', fontWeight: 600 }}>{fmtNum(avgHs, 0)}</b>
-          </span>
-          <span>
-            ACS <b style={{ color: 'var(--text-3)', fontWeight: 600 }}>{avgAcs}</b>
-          </span>
-        </div>
-      )}
+      <div style={{ display: 'flex', gap: 16, fontSize: 11, color: 'var(--text-faint)', whiteSpace: 'nowrap' }}>
+        <span>
+          K/D <b style={{ color: 'var(--text-3)', fontWeight: 600 }}>{kd}</b>
+        </span>
+        <span style={{ color: 'var(--text-2)' }}>
+          {k}/{d}/{a}
+        </span>
+        <span>
+          DDΔ <b style={{ color: avgDd >= 0 ? WIN : LOSS, fontWeight: 600 }}>{fmtDelta(avgDd, 0)}</b>
+        </span>
+        <span>
+          HS <b style={{ color: 'var(--text-3)', fontWeight: 600 }}>{fmtNum(avgHs, 0)}</b>
+        </span>
+        <span>
+          ACS <b style={{ color: 'var(--text-3)', fontWeight: 600 }}>{avgAcs}</b>
+        </span>
+      </div>
     </div>
   );
 }
@@ -286,26 +296,25 @@ export function SeasonMatchesList({
           <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 16 }}>{title}</div>
           <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>{plural(matchesPage.total, 'partida')} no ato</div>
         </div>
-        <div style={{ display: 'flex', gap: 4, background: 'var(--input-bg)', border: '1px solid var(--surface-border)', borderRadius: 9, padding: 3 }}>
-          {(['Detalhado', 'Compacto'] as const).map((opt) => (
-            <button
-              key={opt}
-              onClick={() => setCompact(opt === 'Compacto')}
-              style={{
-                padding: '5px 11px',
-                borderRadius: 6,
-                border: 'none',
-                cursor: 'pointer',
-                fontSize: 11.5,
-                whiteSpace: 'nowrap',
-                background: (opt === 'Compacto') === compact ? 'var(--acc, #EF4958)' : 'transparent',
-                color: (opt === 'Compacto') === compact ? 'var(--acc-text, #141415)' : 'var(--text-muted)',
-              }}
-            >
-              {opt}
-            </button>
-          ))}
-        </div>
+        <button
+          onClick={() => setCompact(!compact)}
+          title={compact ? 'Ver detalhado' : 'Ver compacto'}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: 32,
+            height: 32,
+            borderRadius: 8,
+            border: '1px solid var(--surface-border)',
+            cursor: 'pointer',
+            flex: 'none',
+            background: compact ? 'var(--acc, #EF4958)' : 'var(--input-bg)',
+            color: compact ? 'var(--acc-text, #141415)' : 'var(--text-muted)',
+          }}
+        >
+          {compact ? <LayoutList size={16} /> : <LayoutGrid size={16} />}
+        </button>
       </div>
 
       <div className={compact ? undefined : 'scroll-x-mobile'}>
