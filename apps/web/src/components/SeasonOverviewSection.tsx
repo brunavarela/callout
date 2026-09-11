@@ -66,15 +66,15 @@ function AttackDefenseCard({ sides }: { sides: SeasonOverview['attackDefense'] }
 // prontos da Bruna — só empilha e recolore via `fill`.
 function BodySilhouette({ headColor, bodyColor, legColor }: { headColor: string; bodyColor: string; legColor: string }) {
   return (
-    <svg viewBox="0 0 140 306" width={78} height={170} aria-hidden="true">
+    <svg viewBox="0 0 140 340" width={78} height={189} aria-hidden="true">
       <circle cx="70" cy="27.5" r="27.5" fill={headColor} />
-      <g transform="translate(10, 44)">
+      <g transform="translate(10, 59)">
         <path
           d="M58.0001 133H61.0341H91.5001V36.0003C91.5001 34.5005 95.5001 33.5001 96.5001 36.0003V126C96.5001 131.5 112 139.5 119 126V36.0003C119.5 24.5002 114.7 1.2 91.5001 0H59.5332H59.501H27.5341C4.33411 1.2 -0.46589 24.5002 0.0341103 36.0003V126C7.03411 139.5 22.5341 131.5 22.5341 126V36.0003C23.5341 33.5001 27.5341 34.5005 27.5341 36.0003V133H58.0001Z"
           fill={bodyColor}
         />
       </g>
-      <g transform="translate(38, 166)">
+      <g transform="translate(38, 197)">
         <path
           d="M0 126.265V0H64V126.265C55.8195 149.222 36.0902 135.747 36.0902 126.265L35.609 11.4786C35.609 10.4805 35.3684 8 32 8C29.2779 8 28.5514 10.1478 28.391 11.4786V126.265C23.5789 147.226 0 138.742 0 126.265Z"
           fill={legColor}
