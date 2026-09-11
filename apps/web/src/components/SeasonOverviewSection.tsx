@@ -1,9 +1,11 @@
+import { useState } from 'react';
 import type { MatchCountFilter, MatchModeFilter, RecentFormInsights, RrHistoryPoint, SeasonMatchesPage, SeasonOverview } from '@callout/shared';
 import { LoadingFill } from './Spinner';
 import { SeasonMatchesList } from './SeasonMatchesList';
 import { RrHistoryCard } from './RrHistoryCard';
 import { cardStyle, fmtNum, fmtDelta, plural, rateBarColor, RateBlock, RankingBlock } from './statsPrimitives';
 import { formatSeasonShort } from '../lib/seasonFormat';
+import { useFlip } from '../lib/useFlip';
 
 export { formatSeasonShort, formatPlaytime } from '../lib/seasonFormat';
 
@@ -150,6 +152,9 @@ export function SeasonOverviewSection({
   modoFilter: MatchModeFilter;
   subject?: string;
 }) {
+  const [compact, setCompact] = useState(false);
+  const registerCard = useFlip(compact);
+
   if (loading) return <LoadingFill />;
   if (error) return <div style={{ ...cardStyle, padding: 24, textAlign: 'center', color: 'var(--text-muted)', fontSize: 13.5 }}>{error}</div>;
   if (!data) {
@@ -224,17 +229,28 @@ export function SeasonOverviewSection({
         currentRank={data.currentRank}
       />
 
-      <div className="grid-responsive-season">
-        <SeasonMatchesList
-          matchesPage={matchesPage}
-          loading={matchesLoading}
-          error={matchesError}
-          mapIcons={data.mapIcons}
-          agentIcons={data.agentIcons}
-          setPage={setMatchesPageNumber}
-        />
+      {/* Os 7 cards (Partidas + Agentes/Precisão/Ataque-defesa + Mapa/Armas/
+          Funções) vivem num grid só, sempre montados nessa mesma ordem —
+          o toggle Detalhado/Compacto da lista de partidas (que encolhe a
+          linha de cada partida pra um quadradinho) também encolhe esse
+          card pro mesmo tamanho dos outros e o grid reflui (useFlip anima
+          a troca de posição/tamanho de forma fluida, sem remontar nada). */}
+      <div className={`season-cards-grid${compact ? ' compact' : ''}`}>
+        <div className="gc-partidas" ref={registerCard('partidas')}>
+          <SeasonMatchesList
+            matchesPage={matchesPage}
+            loading={matchesLoading}
+            error={matchesError}
+            mapIcons={data.mapIcons}
+            agentIcons={data.agentIcons}
+            setPage={setMatchesPageNumber}
+            compact={compact}
+            setCompact={setCompact}
+            style={{ flex: 1 }}
+          />
+        </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16, height: '100%' }}>
+        <div className="gc-agentes" ref={registerCard('agentes')}>
           <RankingBlock
             title="Agentes"
             sub="Winrate no ato"
@@ -248,36 +264,45 @@ export function SeasonOverviewSection({
             }))}
             style={{ flex: 1 }}
           />
+        </div>
+        <div className="gc-precisao" ref={registerCard('precisao')}>
           <AccuracyBar accuracy={data.accuracy} />
+        </div>
+        <div className="gc-atkdef" ref={registerCard('atkdef')}>
           <AttackDefenseCard sides={data.attackDefense} />
         </div>
-      </div>
 
-      {/* Cards adicionais — sobram depois da lista de partidas, "encaixados"
-          lado a lado em vez de ficarem perdidos no fim da página. */}
-      <div className="grid-responsive-3">
-        <RankingBlock
-          title="Mapa"
-          sub="Vitórias no ato"
-          rows={data.topMaps.map((m) => ({
-            key: m.map,
-            name: m.map,
-            value: `${m.wins}V · ${m.total - m.wins}D`,
-            caption: `${m.winratePercent}% de winrate`,
-            icon: data.mapIcons[m.map],
-          }))}
-        />
-        <RankingBlock
-          title="Armas mais usadas"
-          sub="Abates por arma no ato"
-          rows={data.topWeapons.map((w) => ({ key: w.weapon, name: w.weapon, value: plural(w.kills, 'abate') }))}
-        />
-        <RateBlock
-          title="Funções"
-          sub="Winrate por função no ato"
-          rows={data.roles.map((r) => ({ key: r.role, name: r.role, wins: r.wins, total: r.matches }))}
-          colorFor={rateBarColor}
-        />
+        <div className="gc-mapa" ref={registerCard('mapa')}>
+          <RankingBlock
+            title="Mapa"
+            sub="Vitórias no ato"
+            rows={data.topMaps.map((m) => ({
+              key: m.map,
+              name: m.map,
+              value: `${m.wins}V · ${m.total - m.wins}D`,
+              caption: `${m.winratePercent}% de winrate`,
+              icon: data.mapIcons[m.map],
+            }))}
+            style={{ flex: 1 }}
+          />
+        </div>
+        <div className="gc-armas" ref={registerCard('armas')}>
+          <RankingBlock
+            title="Armas mais usadas"
+            sub="Abates por arma no ato"
+            rows={data.topWeapons.map((w) => ({ key: w.weapon, name: w.weapon, value: plural(w.kills, 'abate') }))}
+            style={{ flex: 1 }}
+          />
+        </div>
+        <div className="gc-funcoes" ref={registerCard('funcoes')}>
+          <RateBlock
+            title="Funções"
+            sub="Winrate por função no ato"
+            rows={data.roles.map((r) => ({ key: r.role, name: r.role, wins: r.wins, total: r.matches }))}
+            colorFor={rateBarColor}
+            style={{ flex: 1 }}
+          />
+        </div>
       </div>
     </div>
   );
