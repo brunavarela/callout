@@ -119,9 +119,9 @@ export interface RankingRow {
 // à direita, destaque dourado no 1º lugar (mesma cor do badge de MVP em
 // MatchRow.tsx/EquipePartidas.tsx). Cobre ACS/MVP/assistências/first
 // blood/clutches/agentes do painel da equipe — uma implementação só.
-export function RankingBlock({ title, sub, rows }: { title: string; sub: string; rows: RankingRow[] }) {
+export function RankingBlock({ title, sub, rows, style }: { title: string; sub: string; rows: RankingRow[]; style?: React.CSSProperties }) {
   return (
-    <div style={{ ...cardStyle, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 11 }}>
+    <div style={{ ...cardStyle, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 11, ...style }}>
       <div>
         <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 15 }}>{title}</div>
         <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 3 }}>{sub}</div>
