@@ -209,7 +209,7 @@ export function RrHistoryCard({
   noRankedHistory: boolean;
   currentRank: SeasonOverview['currentRank'];
 }) {
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(true);
   const rrBalance = rrHistory.reduce((s, p) => s + p.delta, 0);
 
   const bullets: React.ReactNode[] = [];
@@ -270,19 +270,35 @@ export function RrHistoryCard({
   const columns = [bullets.slice(0, half), bullets.slice(half)];
 
   return (
-    <div style={{ ...cardStyle, padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: 4 }}>
+    <div
+      onClick={() => setCollapsed((v) => !v)}
+      style={{ ...cardStyle, padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: 4, cursor: 'pointer' }}
+    >
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
-        <button
-          onClick={() => setCollapsed((v) => !v)}
-          style={{ display: 'flex', alignItems: 'flex-start', gap: 8, background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', padding: 0, font: 'inherit', color: 'inherit' }}
-        >
-          <ChevronDown size={16} strokeWidth={2} style={{ flex: 'none', marginTop: 3, color: 'var(--text-faint)', transition: 'transform .25s ease', transform: collapsed ? 'rotate(-90deg)' : 'none' }} />
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+          <span
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: 26,
+              height: 26,
+              borderRadius: 8,
+              flex: 'none',
+              marginTop: 1,
+              background: 'var(--acc18, rgba(239,73,88,.16))',
+            }}
+          >
+            <ChevronDown size={16} strokeWidth={2.5} style={{ color: 'var(--acc, #EF4958)', transition: 'transform .25s ease', transform: collapsed ? 'rotate(-90deg)' : 'none' }} />
+          </span>
           <div>
             <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 16 }}>RR ganho e perdido</div>
             <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 3 }}>Soma acumulada de RR — cada ponto é uma partida.</div>
           </div>
-        </button>
-        <MatchCountButtons matchCountFilter={matchCountFilter} setMatchCountFilter={setMatchCountFilter} />
+        </div>
+        <div onClick={(e) => e.stopPropagation()}>
+          <MatchCountButtons matchCountFilter={matchCountFilter} setMatchCountFilter={setMatchCountFilter} />
+        </div>
       </div>
       <div style={{ display: 'grid', gridTemplateRows: collapsed ? '0fr' : '1fr', transition: 'grid-template-rows .32s ease' }}>
         <div style={{ overflow: 'hidden', minHeight: 0 }}>
@@ -291,7 +307,7 @@ export function RrHistoryCard({
               <SnakeSpinner size={32} />
             </div>
           ) : rrHistory.length > 0 ? (
-            <>
+            <div onClick={(e) => e.stopPropagation()} style={{ cursor: 'default' }}>
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 14, fontSize: 11.5, color: 'var(--text-dim)', marginTop: 4 }}>
                 <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                   <span style={{ width: 9, height: 9, borderRadius: 2, background: WIN }} /> partida ganhou RR
@@ -305,7 +321,7 @@ export function RrHistoryCard({
                 <span>Vertical: RR acumulado no período (0 = onde {subject} começou)</span>
                 <span>Horizontal: data da partida</span>
               </div>
-            </>
+            </div>
           ) : (
             <div style={{ marginTop: 20, fontSize: 13, color: 'var(--text-dim)' }}>
               {noRankedHistory ? 'Sem histórico de RR em partidas Sem Classificação.' : 'Sem histórico de RR ainda.'}
