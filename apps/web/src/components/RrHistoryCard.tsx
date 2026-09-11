@@ -54,7 +54,6 @@ function EloReinforcement({ currentRank }: { currentRank: NonNullable<SeasonOver
 const MATCH_COUNTS: Array<{ key: MatchCountFilter; label: string }> = [
   { key: 7, label: 'Últimas 7' },
   { key: 20, label: 'Últimas 20' },
-  { key: 30, label: 'Últimas 30' },
 ];
 
 // Ticks "redondos" cobrindo [min,max] garantindo que 0 caia exatamente numa
