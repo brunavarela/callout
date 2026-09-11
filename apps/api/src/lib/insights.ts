@@ -1,6 +1,5 @@
 import type { MatchCountFilter, MatchV4Data, RecentFormInsights, RrHistoryResponse, SidesBreakdown } from "@callout/shared";
 import { prisma } from "./prisma.js";
-import { getMmrHistory } from "./henrikdev.js";
 import { matchResult } from "./match-result.js";
 
 type Row = Awaited<ReturnType<typeof prisma.matchPlayer.findMany<{ include: { match: true } }>>>[number];
@@ -82,10 +81,15 @@ function buildFormInsights(rows: Row[], maxAcsByMatchTeam: Map<string, number>):
 }
 
 // RR e os 4 tópicos de análise vivem no mesmo card na tela e usam a mesma
-// janela de partidas (7/20) — saem numa fetch só. Partidas sem entrada
-// correspondente na mmr-history (deathmatch, unrated etc. não geram RR)
-// ficam de fora só dos pontos do gráfico, não da análise (que conta a
-// partida de qualquer forma).
+// janela de partidas (7/20/30) — saem numa fetch só. `rr` vem da coluna já
+// persistida em cada MatchPlayer (capturada uma vez, no momento da
+// sincronização — ver sync.ts) em vez de chamar getMmrHistory aqui: esse
+// endpoint da HenrikDev só cobre as ~20 partidas ranqueadas MAIS RECENTES
+// da conta (a qualquer momento), então usar ele de novo aqui fazia o
+// gráfico "perder" pontos sempre que a janela pedida (ex.: 30) ultrapassava
+// esse teto vivo — a coluna já salva não tem esse limite. Partidas sem `rr`
+// (deathmatch, unrated etc. não geram RR) ficam de fora só dos pontos do
+// gráfico, não da análise (que conta a partida de qualquer forma).
 export async function buildRrAndInsights(
   affinity: string,
   puuid: string,
@@ -106,32 +110,28 @@ export async function buildRrAndInsights(
   // time adversário). Precisa de todo mundo dessas partidas, não só das
   // linhas do próprio usuário.
   const maxAcsByMatchTeam = new Map<string, number>();
-  const [history, allPlayers] = await Promise.all([
-    getMmrHistory(affinity, puuid),
+  const allPlayers =
     rows.length > 0
-      ? prisma.matchPlayer.findMany({ where: { matchId: { in: rows.map((r) => r.match.id) } }, select: { matchId: true, teamId: true, acs: true } })
-      : Promise.resolve([]),
-  ]);
+      ? await prisma.matchPlayer.findMany({ where: { matchId: { in: rows.map((r) => r.match.id) } }, select: { matchId: true, teamId: true, acs: true } })
+      : [];
   for (const p of allPlayers) {
     const key = `${p.matchId}:${p.teamId}`;
     const current = maxAcsByMatchTeam.get(key) ?? -Infinity;
     if (p.acs > current) maxAcsByMatchTeam.set(key, p.acs);
   }
 
-  const rrByMatch = new Map(history.map((h) => [h.match_id, h.last_change]));
-
   const points = rows
-    .filter((r) => rrByMatch.has(r.match.id))
+    .filter((r) => r.rr !== null)
     .reverse() // volta pra ordem cronológica (mais antiga primeiro) pro gráfico
     .map((r) => {
       const match = r.match.rawJson as unknown as MatchV4Data;
       return {
         matchId: r.match.id,
         label: r.match.startedAt.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }),
-        delta: rrByMatch.get(r.match.id)!,
+        delta: r.rr!,
         map: match.metadata.map.name,
         agent: r.agentName,
-        result: matchResult(r.won, rrByMatch.get(r.match.id)),
+        result: matchResult(r.won, r.rr),
       };
     });
 

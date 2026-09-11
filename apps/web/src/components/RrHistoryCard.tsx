@@ -84,8 +84,8 @@ function pickTickIndices(n: number, count = 5): number[] {
 function RrLineChart({ points }: { points: RrHistoryPoint[] }) {
   const navigate = useNavigate();
   const w = 640;
-  const h = 220;
-  const pad = { l: 34, r: 8, t: 14, b: 26 };
+  const h = 150;
+  const pad = { l: 34, r: 8, t: 12, b: 22 };
 
   let running = 0;
   const cum = points.map((p) => (running += p.delta));
@@ -275,7 +275,7 @@ export function RrHistoryCard({
         <MatchCountButtons matchCountFilter={matchCountFilter} setMatchCountFilter={setMatchCountFilter} />
       </div>
       {rrHistoryLoading ? (
-        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 220 }}>
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 150 }}>
           <SnakeSpinner size={32} />
         </div>
       ) : rrHistory.length > 0 ? (
