@@ -308,12 +308,12 @@ export function SeasonMatchesList({
         </div>
       </div>
 
-      <div className="scroll-x-mobile">
+      <div className={compact ? undefined : 'scroll-x-mobile'}>
         <div style={{ minWidth: compact ? undefined : 560 }}>
           {dayGroups.map((g) => (
             <div key={g.key}>
               <DayHeaderRow label={g.label} matches={g.matches} compact={compact} />
-              <div style={{ display: 'flex', flexDirection: compact ? 'row' : 'column', flexWrap: compact ? 'wrap' : 'nowrap', gap: compact ? 8 : 0, paddingBottom: 6 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: compact ? 'center' : 'stretch', gap: compact ? 6 : 0, paddingBottom: 6 }}>
                 {g.matches.map((m) => (
                   <SeasonMatchRow key={m.id} m={m} agentIcon={agentIcons[m.agent] ?? null} mapIcon={mapIcons[m.map] ?? null} compact={compact} />
                 ))}

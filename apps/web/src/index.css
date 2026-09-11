@@ -539,61 +539,52 @@ button {
   transform: translateY(0);
 }
 
-/* Visão do ato: os 7 cards (Partidas + Agentes/Precisão/Ataque-defesa +
-   Mapa/Armas/Funções) num grid só, pra poder trocar de layout (normal vs.
-   compacto) sem desmontar nenhum card -- o SeasonOverviewSection faz o
-   antes/depois (FLIP) em cima desses mesmos elementos, então eles não
-   podem sumir/remontar na troca, só mudar de área/tamanho no grid. */
-.season-cards-grid {
+/* Visão do ato: lista de partidas + sidebar (Agentes/Precisão/Ataque-
+   defesa) -- a sidebar (coluna da direita) é sempre estática, nunca entra
+   no grid/FLIP de reflow do modo compacto, só a coluna da esquerda muda. */
+.grid-responsive-season {
   display: grid;
+  grid-template-columns: 1fr 320px;
   gap: 16px;
-  grid-template-columns: 1fr 1fr 1fr 320px;
-  grid-template-areas:
-    'partidas partidas partidas agentes'
-    'partidas partidas partidas precisao'
-    'partidas partidas partidas atkdef'
-    'mapa armas funcoes funcoes';
 }
-.season-cards-grid > * {
+@media (max-width: 1000px) {
+  .grid-responsive-season {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Coluna da esquerda da Visão do ato: a lista de partidas sozinha (modo
+   normal) ou, no modo compacto, a lista encolhida ao lado dos cards de
+   Mapa/Armas/Funções (que "sobem" pra esse nível, sempre quadrados). */
+.season-left-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+}
+.season-left-row > * {
   min-width: 0;
   display: flex;
   flex-direction: column;
 }
-.season-cards-grid .gc-partidas {
-  grid-area: partidas;
+.season-square-card {
+  flex: 1 1 0;
+  aspect-ratio: 1 / 1;
 }
-.season-cards-grid .gc-agentes {
-  grid-area: agentes;
+
+/* Trio de cards da Visão do ato (Agentes/Mapas/Funções) */
+.grid-responsive-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
 }
-.season-cards-grid .gc-precisao {
-  grid-area: precisao;
+@media (max-width: 1180px) {
+  .grid-responsive-3 {
+    grid-template-columns: 1fr 1fr;
+  }
 }
-.season-cards-grid .gc-atkdef {
-  grid-area: atkdef;
-}
-.season-cards-grid .gc-mapa {
-  grid-area: mapa;
-}
-.season-cards-grid .gc-armas {
-  grid-area: armas;
-}
-.season-cards-grid .gc-funcoes {
-  grid-area: funcoes;
-}
-/* Compacto: os 7 cards viram do mesmo tamanho, lado a lado, sem área
-   fixa -- a lista de partidas encolhe pra um quadrado e "sobe" pra
-   ocupar uma vaga igual às dos outros cards. */
-.season-cards-grid.compact {
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  grid-template-areas: none;
-}
-.season-cards-grid.compact > * {
-  grid-area: auto;
-}
-@media (max-width: 1000px) {
-  .season-cards-grid {
+@media (max-width: 640px) {
+  .grid-responsive-3 {
     grid-template-columns: 1fr;
-    grid-template-areas: 'partidas' 'agentes' 'precisao' 'atkdef' 'mapa' 'armas' 'funcoes';
   }
 }
 

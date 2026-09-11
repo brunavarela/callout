@@ -229,28 +229,66 @@ export function SeasonOverviewSection({
         currentRank={data.currentRank}
       />
 
-      {/* Os 7 cards (Partidas + Agentes/Precisão/Ataque-defesa + Mapa/Armas/
-          Funções) vivem num grid só, sempre montados nessa mesma ordem —
-          o toggle Detalhado/Compacto da lista de partidas (que encolhe a
-          linha de cada partida pra um quadradinho) também encolhe esse
-          card pro mesmo tamanho dos outros e o grid reflui (useFlip anima
-          a troca de posição/tamanho de forma fluida, sem remontar nada). */}
-      <div className={`season-cards-grid${compact ? ' compact' : ''}`}>
-        <div className="gc-partidas" ref={registerCard('partidas')}>
-          <SeasonMatchesList
-            matchesPage={matchesPage}
-            loading={matchesLoading}
-            error={matchesError}
-            mapIcons={data.mapIcons}
-            agentIcons={data.agentIcons}
-            setPage={setMatchesPageNumber}
-            compact={compact}
-            setCompact={setCompact}
-            style={{ flex: 1 }}
-          />
+      <div className="grid-responsive-season">
+        {/* Coluna da esquerda: a lista de partidas, sozinha (modo normal) ou
+            encolhida ao lado dos cards de Mapa/Armas/Funções (modo
+            compacto, sempre quadrados) -- só essa coluna reflui; a sidebar
+            (Agentes/Precisão/Ataque-defesa) ao lado é sempre estática. */}
+        <div className="season-left-row">
+          <div ref={registerCard('partidas')} style={{ flex: compact ? '0 0 190px' : '1 1 auto' }}>
+            <SeasonMatchesList
+              matchesPage={matchesPage}
+              loading={matchesLoading}
+              error={matchesError}
+              mapIcons={data.mapIcons}
+              agentIcons={data.agentIcons}
+              setPage={setMatchesPageNumber}
+              compact={compact}
+              setCompact={setCompact}
+              style={{ flex: 1 }}
+            />
+          </div>
+
+          {compact && (
+            <>
+              <div ref={registerCard('mapa')} className="season-square-card">
+                <RankingBlock
+                  title="Mapa"
+                  sub="Vitórias no ato"
+                  rows={data.topMaps.map((m) => ({
+                    key: m.map,
+                    name: m.map,
+                    value: `${m.wins}V · ${m.total - m.wins}D`,
+                    caption: `${m.winratePercent}% de winrate`,
+                    icon: data.mapIcons[m.map],
+                  }))}
+                  style={{ flex: 1 }}
+                />
+              </div>
+              <div ref={registerCard('armas')} className="season-square-card">
+                <RankingBlock
+                  title="Armas mais usadas"
+                  sub="Abates por arma no ato"
+                  rows={data.topWeapons.map((w) => ({ key: w.weapon, name: w.weapon, value: plural(w.kills, 'abate') }))}
+                  style={{ flex: 1 }}
+                />
+              </div>
+              <div ref={registerCard('funcoes')} className="season-square-card">
+                <RateBlock
+                  title="Funções"
+                  sub="Winrate por função no ato"
+                  rows={data.roles.map((r) => ({ key: r.role, name: r.role, wins: r.wins, total: r.matches }))}
+                  colorFor={rateBarColor}
+                  style={{ flex: 1 }}
+                />
+              </div>
+            </>
+          )}
         </div>
 
-        <div className="gc-agentes" ref={registerCard('agentes')}>
+        {/* Sidebar fixa -- nunca se move nem redimensiona com o toggle
+            Detalhado/Compacto. */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16, height: '100%' }}>
           <RankingBlock
             title="Agentes"
             sub="Winrate no ato"
@@ -264,15 +302,15 @@ export function SeasonOverviewSection({
             }))}
             style={{ flex: 1 }}
           />
-        </div>
-        <div className="gc-precisao" ref={registerCard('precisao')}>
           <AccuracyBar accuracy={data.accuracy} />
-        </div>
-        <div className="gc-atkdef" ref={registerCard('atkdef')}>
           <AttackDefenseCard sides={data.attackDefense} />
         </div>
+      </div>
 
-        <div className="gc-mapa" ref={registerCard('mapa')}>
+      {/* Fora do modo compacto, Mapa/Armas/Funções ficam abaixo, em vez de
+          "em cima" ao lado da lista de partidas encolhida. */}
+      {!compact && (
+        <div className="grid-responsive-3">
           <RankingBlock
             title="Mapa"
             sub="Vitórias no ato"
@@ -283,27 +321,20 @@ export function SeasonOverviewSection({
               caption: `${m.winratePercent}% de winrate`,
               icon: data.mapIcons[m.map],
             }))}
-            style={{ flex: 1 }}
           />
-        </div>
-        <div className="gc-armas" ref={registerCard('armas')}>
           <RankingBlock
             title="Armas mais usadas"
             sub="Abates por arma no ato"
             rows={data.topWeapons.map((w) => ({ key: w.weapon, name: w.weapon, value: plural(w.kills, 'abate') }))}
-            style={{ flex: 1 }}
           />
-        </div>
-        <div className="gc-funcoes" ref={registerCard('funcoes')}>
           <RateBlock
             title="Funções"
             sub="Winrate por função no ato"
             rows={data.roles.map((r) => ({ key: r.role, name: r.role, wins: r.wins, total: r.matches }))}
             colorFor={rateBarColor}
-            style={{ flex: 1 }}
           />
         </div>
-      </div>
+      )}
     </div>
   );
 }
