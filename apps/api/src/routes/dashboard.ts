@@ -88,7 +88,7 @@ export async function dashboardRoutes(app: FastifyInstance) {
     return buildSeasonOverview(target.riotPuuid!, target.riotRegion!, seasonId || undefined, mapId || undefined, agent || undefined, modo || undefined);
   });
 
-  // Lista paginada (10 por página) das partidas do ato — separada de
+  // Lista paginada (12 por página) das partidas do ato — separada de
   // /dashboard/season pra virar página sem recalcular KPIs/top agentes/
   // mapas/etc de novo. Mesmos filtros de ato/mapa/agente/modo do painel.
   app.get("/dashboard/season/matches", { preHandler: requireAuth }, async (request, reply) => {

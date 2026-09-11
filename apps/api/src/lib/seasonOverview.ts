@@ -543,9 +543,9 @@ function toSeasonMatchSummaries(
   });
 }
 
-const MATCHES_PAGE_SIZE = 10;
+const MATCHES_PAGE_SIZE = 12;
 
-// Lista paginada de partidas do ato (10 por página) — separada de
+// Lista paginada de partidas do ato (12 por página) — separada de
 // buildSeasonOverview de propósito: virar página não deveria recalcular os
 // KPIs/top agentes/mapas/etc. de novo, só a própria lista. Reaplica os
 // mesmos filtros de ato/mapa/agente/modo do painel (ver buildSeasonOverview),

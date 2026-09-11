@@ -79,7 +79,7 @@ export function useAppData(user: SessionUser | null) {
   // pode ser qualquer um, inclusive Deathmatch etc.).
   const [seasonModoFilter, setSeasonModoFilterState] = useState<string | null>(null);
 
-  // Lista paginada (10 por página) de partidas do ato — separada do resto
+  // Lista paginada (12 por página) de partidas do ato — separada do resto
   // da Visão do ato (ver buildSeasonMatchesPage): trocar de página não
   // recarrega KPIs/top agentes/mapas/etc, só a própria lista.
   const [seasonMatchesPage, setSeasonMatchesPage] = useState<SeasonMatchesPage | null>(null);

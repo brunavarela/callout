@@ -145,8 +145,8 @@ export function SeasonModoFilterSelect({
 }
 
 // Controles de paginação — "Página X de Y" + Anterior/Próxima. Usado tanto
-// na lista de partidas do painel quanto nos históricos (individual e da
-// equipe), sempre 10 por página.
+// na lista de partidas do painel quanto no histórico da equipe — cada um
+// com seu próprio tamanho de página (`pageSize` vem do back).
 export function PageControls({ page, pageSize, total, setPage }: { page: number; pageSize: number; total: number; setPage: (page: number) => void }) {
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   if (totalPages <= 1) return null;

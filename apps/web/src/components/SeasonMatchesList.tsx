@@ -210,7 +210,7 @@ function SeasonMatchRow({ m, agentIcon, mapIcon, compact }: { m: SeasonMatchSumm
 }
 
 // Card completo de lista de partidas — cabeçalho (título + toggle
-// Detalhado/Compacto), partidas agrupadas por dia, paginação de 10 em 10.
+// Detalhado/Compacto), partidas agrupadas por dia, paginação de 12 em 12.
 // Usado tanto na Visão do ato (Dashboard) quanto na página de Partidas
 // (histórico individual completo) — mesmo componente, dados diferentes.
 export function SeasonMatchesList({
