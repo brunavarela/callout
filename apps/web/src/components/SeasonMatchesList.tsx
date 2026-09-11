@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import type { MatchBadge, RecentFormInsights, SeasonMatchesPage, SeasonMatchSummary } from '@callout/shared';
+import type { MatchBadge, SeasonMatchesPage, SeasonMatchSummary } from '@callout/shared';
 import { LoadingFill } from './Spinner';
 import { cardStyle, fmtNum, fmtDelta, plural } from './statsPrimitives';
 import { PageControls } from './SeasonFilters';
@@ -209,53 +209,6 @@ function SeasonMatchRow({ m, agentIcon, mapIcon, compact }: { m: SeasonMatchSumm
   );
 }
 
-// Mesmas 4 análises que o dashboard de 30 dias já tinha — agora sobre as
-// partidas do ato sob o filtro atual, não uma janela fixa de 7/20. Ocupa o
-// espaço que sobra embaixo da lista/paginação em vez de ficar vazio.
-function FormInsightsBlock({ insights, subject }: { insights: RecentFormInsights; subject: string }) {
-  if (insights.matchesAnalyzed === 0) return null;
-
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, margin: '14px 0', paddingTop: 12, borderTop: '1px solid var(--divider)' }}>
-      {insights.topMap && (
-        <div style={{ display: 'flex', gap: 8, fontSize: 12.5, color: 'var(--text-dim)', lineHeight: 1.4 }}>
-          <span style={{ color: 'var(--text-faint)' }}>•</span>
-          <span>
-            Nesse ato, {subject} jogou <b style={{ color: 'var(--text-2)', fontWeight: 600 }}>{insights.topMap.total}</b>{' '}
-            {insights.topMap.total === 1 ? 'vez' : 'vezes'} no mapa <b style={{ color: 'var(--text-2)', fontWeight: 600 }}>{insights.topMap.map}</b> e ganhou{' '}
-            <b style={{ color: 'var(--text-2)', fontWeight: 600 }}>{insights.topMap.wins}</b> {insights.topMap.wins === 1 ? 'vez' : 'vezes'}.
-          </span>
-        </div>
-      )}
-      {insights.topAgent && (
-        <div style={{ display: 'flex', gap: 8, fontSize: 12.5, color: 'var(--text-dim)', lineHeight: 1.4 }}>
-          <span style={{ color: 'var(--text-faint)' }}>•</span>
-          <span>
-            Nesse ato, {subject} jogou <b style={{ color: 'var(--text-2)', fontWeight: 600 }}>{insights.topAgent.total}</b>{' '}
-            {insights.topAgent.total === 1 ? 'vez' : 'vezes'} com <b style={{ color: 'var(--text-2)', fontWeight: 600 }}>{insights.topAgent.agent}</b> e ganhou{' '}
-            <b style={{ color: 'var(--text-2)', fontWeight: 600 }}>{insights.topAgent.wins}</b> {insights.topAgent.wins === 1 ? 'vez' : 'vezes'}.
-          </span>
-        </div>
-      )}
-      <div style={{ display: 'flex', gap: 8, fontSize: 12.5, color: 'var(--text-dim)', lineHeight: 1.4 }}>
-        <span style={{ color: 'var(--text-faint)' }}>•</span>
-        <span>
-          Nesse ato, {subject} ficou com KDA negativo{' '}
-          <b style={{ color: insights.negativeKdaMatches > 0 ? LOSS : 'var(--text-2)', fontWeight: 600 }}>{insights.negativeKdaMatches}</b>{' '}
-          {insights.negativeKdaMatches === 1 ? 'vez' : 'vezes'}.
-        </span>
-      </div>
-      <div style={{ display: 'flex', gap: 8, fontSize: 12.5, color: 'var(--text-dim)', lineHeight: 1.4 }}>
-        <span style={{ color: 'var(--text-faint)' }}>•</span>
-        <span>
-          Nesse ato, {subject} foi MVP <b style={{ color: insights.mvpMatches > 0 ? GOLD : 'var(--text-2)', fontWeight: 600 }}>{insights.mvpMatches}</b>{' '}
-          {insights.mvpMatches === 1 ? 'vez' : 'vezes'}.
-        </span>
-      </div>
-    </div>
-  );
-}
-
 // Card completo de lista de partidas — cabeçalho (título + toggle
 // Detalhado/Compacto), partidas agrupadas por dia, paginação de 10 em 10.
 // Usado tanto na Visão do ato (Dashboard) quanto na página de Partidas
@@ -268,8 +221,6 @@ export function SeasonMatchesList({
   agentIcons,
   setPage,
   title = 'Partidas',
-  formInsights,
-  subject = 'você',
 }: {
   matchesPage: SeasonMatchesPage | null;
   loading: boolean;
@@ -278,8 +229,6 @@ export function SeasonMatchesList({
   agentIcons: Record<string, string>;
   setPage: (page: number) => void;
   title?: string;
-  formInsights?: RecentFormInsights;
-  subject?: string;
 }) {
   const [compact, setCompact] = useState(false);
 
@@ -338,7 +287,6 @@ export function SeasonMatchesList({
       </div>
 
       <PageControls page={matchesPage.page} pageSize={matchesPage.pageSize} total={matchesPage.total} setPage={setPage} />
-      {formInsights && <FormInsightsBlock insights={formInsights} subject={subject} />}
     </div>
   );
 }

@@ -347,10 +347,6 @@ export interface SeasonOverview {
   topWeapons: WeaponStat[];
   mapIcons: Record<string, string>; // nome do mapa -> url do ícone (valorant-api.com)
   agentIcons: Record<string, string>; // nome do agente -> url do ícone
-  // Mesmas 4 análises que o dashboard de 30 dias já tinha (ver
-  // RecentFormInsights), agora sobre as partidas do ato sob o filtro atual
-  // em vez de uma janela fixa de 7/20 partidas.
-  formInsights: RecentFormInsights;
 }
 
 // Resposta de GET /dashboard/season/matches — lista paginada (10 por

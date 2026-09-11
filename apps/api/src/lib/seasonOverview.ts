@@ -1,4 +1,4 @@
-import type { AccuracyBreakdown, MapWinrate, MatchBadge, RecentFormInsights, RoleStat, SeasonMatchesPage, SeasonMatchSummary, SeasonOption, SeasonOverview, SidesBreakdown, TopAgentStat, WeaponStat } from "@callout/shared";
+import type { AccuracyBreakdown, MapWinrate, MatchBadge, RoleStat, SeasonMatchesPage, SeasonMatchSummary, SeasonOption, SeasonOverview, SidesBreakdown, TopAgentStat, WeaponStat } from "@callout/shared";
 import { prisma } from "./prisma.js";
 import { getMmr, getMmrHistory } from "./henrikdev.js";
 import { getCurrentSeasonId } from "./dashboard.js";
@@ -98,59 +98,6 @@ function emptySides(): SidesBreakdown {
     attack: { winratePercent: 0, wins: 0, total: 0 },
     defense: { winratePercent: 0, wins: 0, total: 0 },
     overtime: { wins: 0, total: 0 },
-  };
-}
-
-function emptyFormInsights(): RecentFormInsights {
-  return { matchesAnalyzed: 0, topMap: null, topAgent: null, negativeKdaMatches: 0, mvpMatches: 0 };
-}
-
-// Mapa/agente "principal" das partidas sob o filtro atual (não
-// necessariamente o de maior winrate) — mesmo critério de
-// buildFormInsights em insights.ts (dashboard de 30 dias), só que a
-// "janela" aqui é o próprio filtro do ato em vez de uma janela fixa de
-// 7/20 partidas.
-function buildFormInsights(rows: Row[], maxAcsByMatchTeam: Map<string, number>): RecentFormInsights {
-  if (rows.length === 0) return emptyFormInsights();
-
-  const mapCounts = new Map<string, { total: number; wins: number }>();
-  const agentCounts = new Map<string, { total: number; wins: number }>();
-  let negativeKdaMatches = 0;
-  let mvpMatches = 0;
-
-  for (const r of rows) {
-    const map = r.match.map?.nome ?? "—";
-    const mEntry = mapCounts.get(map) ?? { total: 0, wins: 0 };
-    mEntry.total++;
-    if (r.won) mEntry.wins++;
-    mapCounts.set(map, mEntry);
-
-    const aEntry = agentCounts.get(r.agentName) ?? { total: 0, wins: 0 };
-    aEntry.total++;
-    if (r.won) aEntry.wins++;
-    agentCounts.set(r.agentName, aEntry);
-
-    if (r.kills + r.assists < r.deaths) negativeKdaMatches++;
-    if (r.acs === maxAcsByMatchTeam.get(`${r.matchId}:${r.teamId}`)) mvpMatches++;
-  }
-
-  const mostPlayed = (counts: Map<string, { total: number; wins: number }>) => {
-    let best: [string, { total: number; wins: number }] | null = null;
-    for (const entry of counts) {
-      if (!best || entry[1].total > best[1].total) best = entry;
-    }
-    return best;
-  };
-
-  const topMap = mostPlayed(mapCounts);
-  const topAgent = mostPlayed(agentCounts);
-
-  return {
-    matchesAnalyzed: rows.length,
-    topMap: topMap ? { map: topMap[0], total: topMap[1].total, wins: topMap[1].wins } : null,
-    topAgent: topAgent ? { agent: topAgent[0], total: topAgent[1].total, wins: topAgent[1].wins } : null,
-    negativeKdaMatches,
-    mvpMatches,
   };
 }
 
@@ -310,7 +257,6 @@ export async function buildSeasonOverview(
       topWeapons: [],
       mapIcons: {},
       agentIcons: {},
-      formInsights: emptyFormInsights(),
     };
   }
 
@@ -377,7 +323,6 @@ export async function buildSeasonOverview(
       topWeapons: [],
       mapIcons,
       agentIcons,
-      formInsights: emptyFormInsights(),
     };
   }
 
@@ -431,11 +376,6 @@ export async function buildSeasonOverview(
     return selfAdr - othersAdr;
   });
   const ddPerRound = round1(perMatchDelta.reduce((s, d) => s + d, 0) / perMatchDelta.length);
-
-  // As mesmas 4 análises do dashboard de 30 dias (ver buildFormInsights em
-  // insights.ts), agora sobre `filteredStatRows` — reusa o `allPlayers` já
-  // buscado pro DDΔ/round, sem query nova.
-  const formInsights = buildFormInsights(filteredStatRows, buildMaxAcsByMatchTeam(allPlayers));
 
   // Funções — agentName -> AgentAsset.funcao (em inglês) -> label pt-BR.
   const roleByAgent = new Map(agentAssets.map((a) => [a.nome, a.funcao]));
@@ -550,7 +490,6 @@ export async function buildSeasonOverview(
     topWeapons,
     mapIcons,
     agentIcons,
-    formInsights,
   };
 }
 

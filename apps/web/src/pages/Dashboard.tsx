@@ -29,6 +29,12 @@ export function Dashboard() {
     seasonMatchesLoading,
     seasonMatchesError,
     setSeasonMatchesPageNumber,
+    rrHistory,
+    rrHistoryLoading,
+    formInsights,
+    matchCountFilter,
+    setMatchCountFilter,
+    modoFilter,
     equipe,
     selectedMemberId,
     setSelectedMemberId,
@@ -86,6 +92,12 @@ export function Dashboard() {
           matchesLoading={seasonMatchesLoading}
           matchesError={seasonMatchesError}
           setMatchesPageNumber={setSeasonMatchesPageNumber}
+          rrHistory={rrHistory}
+          rrHistoryLoading={rrHistoryLoading}
+          rrFormInsights={formInsights}
+          matchCountFilter={matchCountFilter}
+          setMatchCountFilter={setMatchCountFilter}
+          modoFilter={modoFilter}
           subject={subject}
         />
       )}

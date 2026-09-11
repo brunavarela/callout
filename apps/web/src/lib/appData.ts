@@ -4,7 +4,9 @@ import type {
   DashboardSummary,
   Lado,
   MapAsset,
+  MatchCountFilter,
   MatchModeFilter,
+  RrHistoryResponse,
   SessionUser,
   Spot,
   Strategy,
@@ -30,6 +32,10 @@ function dashboardQuery(modo: MatchModeFilter, memberId: string | null, mapId: s
   return qs ? `?${qs}` : '';
 }
 
+function rrCacheKey(modo: MatchModeFilter, matchCount: MatchCountFilter, memberId: string | null, mapId: string | null): string {
+  return `${modo}:${matchCount}:${memberId ?? 'self'}:${mapId ?? 'all-maps'}`;
+}
+
 // Estado do dashboard/equipe vive aqui, não dentro das páginas — assim ele
 // sobrevive a trocar de aba e voltar (React desmonta a página, não o shell).
 // Só rebusca quando a sincronização termina ou quando algo pede explicitamente.
@@ -48,6 +54,7 @@ export function useAppData(user: SessionUser | null) {
   const [seasonOverviewLoading, setSeasonOverviewLoading] = useState(true);
 
   const [modoFilter, setModoFilterState] = useState<MatchModeFilter>('all');
+  const [matchCountFilter, setMatchCountFilterState] = useState<MatchCountFilter>(20);
 
   // Filtro "ver painel de outro membro" — null = o próprio usuário logado.
   const [selectedMemberId, setSelectedMemberIdState] = useState<string | null>(null);
@@ -80,6 +87,13 @@ export function useAppData(user: SessionUser | null) {
   const [seasonMatchesLoading, setSeasonMatchesLoading] = useState(true);
   const [seasonMatchesPageNumber, setSeasonMatchesPageNumberState] = useState(1);
 
+  // RR ganho/perdido + as 4 análises de forma recente — volta como card
+  // próprio abaixo da lista de partidas do ato (não é a mesma coisa que a
+  // Visão do ato: usa modoFilter/mapFilter "antigos" e uma janela de
+  // partidas 7/20, não o ato inteiro).
+  const [rrHistoryCache, setRrHistoryCache] = useState<Record<string, RrHistoryResponse>>({});
+  const [rrHistoryLoading, setRrHistoryLoading] = useState(true);
+
   const wasSyncing = useRef(false);
 
   const loadEquipe = useCallback(async () => {
@@ -100,6 +114,21 @@ export function useAppData(user: SessionUser | null) {
       setDashboardError('Falha ao carregar o dashboard.');
     } finally {
       setDashboardLoading(false);
+    }
+  }, []);
+
+  // RR ganho/perdido + as 4 análises de forma recente — fetch separada de
+  // /dashboard (mesmo endpoint de antes, /dashboard/rr-history), trocar só
+  // a janela de partidas (7/20) não deve recarregar o resto da página.
+  const loadRrHistory = useCallback(async (modo: MatchModeFilter, matchCount: MatchCountFilter, memberId: string | null, mapId: string | null) => {
+    setRrHistoryLoading(true);
+    try {
+      const response = await apiFetch<RrHistoryResponse>(`/dashboard/rr-history${dashboardQuery(modo, memberId, mapId, { matches: String(matchCount) })}`);
+      setRrHistoryCache((prev) => ({ ...prev, [rrCacheKey(modo, matchCount, memberId, mapId)]: response }));
+    } catch {
+      // idem — o card mostra "sem histórico" se não tiver nada em cache
+    } finally {
+      setRrHistoryLoading(false);
     }
   }, []);
 
@@ -156,6 +185,10 @@ export function useAppData(user: SessionUser | null) {
 
   const setModoFilter = useCallback((modo: MatchModeFilter) => {
     setModoFilterState(modo);
+  }, []);
+
+  const setMatchCountFilter = useCallback((count: MatchCountFilter) => {
+    setMatchCountFilterState(count);
   }, []);
 
   // Trocar de membro reseta o filtro de mapa — a lista de mapas filtráveis
@@ -384,6 +417,15 @@ export function useAppData(user: SessionUser | null) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [riotId, modoFilter, selectedMemberId, mapFilter]);
 
+  // RR + tópicos de análise: além do modo, do membro e do mapa, dependem da
+  // janela de partidas (7/20). Efeito separado do de cima de propósito —
+  // trocar só essa janela não pode disparar o loading do resto da página.
+  useEffect(() => {
+    if (!riotId) return;
+    loadRrHistory(modoFilter, matchCountFilter, selectedMemberId, mapFilter);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [riotId, modoFilter, matchCountFilter, selectedMemberId, mapFilter]);
+
   // Visão do ato — depende de trocar de membro, do ato selecionado e dos
   // filtros de mapa/agente/modo do próprio painel.
   useEffect(() => {
@@ -424,6 +466,7 @@ export function useAppData(user: SessionUser | null) {
       wasSyncing.current = false;
       loadDashboard(modoFilter, selectedMemberId, mapFilter);
       loadEquipe();
+      loadRrHistory(modoFilter, matchCountFilter, selectedMemberId, mapFilter);
       loadSeasonOverview(selectedMemberId, selectedSeasonId, seasonMapFilter, seasonAgentFilter, seasonModoFilter);
       loadSeasonMatches(selectedMemberId, selectedSeasonId, seasonMapFilter, seasonAgentFilter, seasonModoFilter, seasonMatchesPageNumber);
     }
@@ -442,6 +485,8 @@ export function useAppData(user: SessionUser | null) {
     () => loadDashboard(modoFilter, selectedMemberId, mapFilter),
     [loadDashboard, modoFilter, selectedMemberId, mapFilter],
   );
+
+  const rrCached = rrHistoryCache[rrCacheKey(modoFilter, matchCountFilter, selectedMemberId, mapFilter)];
 
   return {
     sync,
@@ -480,6 +525,11 @@ export function useAppData(user: SessionUser | null) {
     reloadDashboard,
     modoFilter,
     setModoFilter,
+    matchCountFilter,
+    setMatchCountFilter,
+    rrHistory: rrCached?.points ?? [],
+    formInsights: rrCached?.formInsights ?? null,
+    rrHistoryLoading,
     selectedMemberId,
     setSelectedMemberId,
     mapFilter,

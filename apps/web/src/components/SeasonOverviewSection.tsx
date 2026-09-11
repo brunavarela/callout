@@ -1,6 +1,7 @@
-import type { SeasonMatchesPage, SeasonOverview } from '@callout/shared';
+import type { MatchCountFilter, MatchModeFilter, RecentFormInsights, RrHistoryPoint, SeasonMatchesPage, SeasonOverview } from '@callout/shared';
 import { LoadingFill } from './Spinner';
 import { SeasonMatchesList } from './SeasonMatchesList';
+import { RrHistoryCard } from './RrHistoryCard';
 import { cardStyle, fmtNum, fmtDelta, plural, rateBarColor, RateBlock, RankingBlock } from './statsPrimitives';
 import { formatSeasonShort } from '../lib/seasonFormat';
 
@@ -126,6 +127,12 @@ export function SeasonOverviewSection({
   matchesLoading,
   matchesError,
   setMatchesPageNumber,
+  rrHistory,
+  rrHistoryLoading,
+  rrFormInsights,
+  matchCountFilter,
+  setMatchCountFilter,
+  modoFilter,
   subject = 'você',
 }: {
   data: SeasonOverview | null;
@@ -135,6 +142,12 @@ export function SeasonOverviewSection({
   matchesLoading: boolean;
   matchesError: string | null;
   setMatchesPageNumber: (page: number) => void;
+  rrHistory: RrHistoryPoint[];
+  rrHistoryLoading: boolean;
+  rrFormInsights: RecentFormInsights | null;
+  matchCountFilter: MatchCountFilter;
+  setMatchCountFilter: (n: MatchCountFilter) => void;
+  modoFilter: MatchModeFilter;
   subject?: string;
 }) {
   if (loading) return <LoadingFill />;
@@ -208,8 +221,6 @@ export function SeasonOverviewSection({
           mapIcons={data.mapIcons}
           agentIcons={data.agentIcons}
           setPage={setMatchesPageNumber}
-          formInsights={data.formInsights}
-          subject={subject}
         />
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -229,6 +240,16 @@ export function SeasonOverviewSection({
           <AttackDefenseCard sides={data.attackDefense} />
         </div>
       </div>
+
+      <RrHistoryCard
+        rrHistory={rrHistory}
+        rrHistoryLoading={rrHistoryLoading}
+        formInsights={rrFormInsights}
+        matchCountFilter={matchCountFilter}
+        setMatchCountFilter={setMatchCountFilter}
+        subject={subject}
+        noRankedHistory={modoFilter === 'Unrated'}
+      />
 
       {/* Cards adicionais — sobram depois da lista de partidas, "encaixados"
           lado a lado em vez de ficarem perdidos no fim da página. */}
