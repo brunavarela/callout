@@ -11,8 +11,9 @@ import type {
   StratItem,
   SyncStatus,
   EquipePainelSummary,
-  PartidaEquipeSummary,
+  EquipePartidasPage,
   EquipeOverview,
+  SeasonMatchesPage,
   SeasonOverview,
 } from '@callout/shared';
 import { apiFetch } from './api';
@@ -71,6 +72,14 @@ export function useAppData(user: SessionUser | null) {
   // pode ser qualquer um, inclusive Deathmatch etc.).
   const [seasonModoFilter, setSeasonModoFilterState] = useState<string | null>(null);
 
+  // Lista paginada (10 por página) de partidas do ato — separada do resto
+  // da Visão do ato (ver buildSeasonMatchesPage): trocar de página não
+  // recarrega KPIs/top agentes/mapas/etc, só a própria lista.
+  const [seasonMatchesPage, setSeasonMatchesPage] = useState<SeasonMatchesPage | null>(null);
+  const [seasonMatchesError, setSeasonMatchesError] = useState<string | null>(null);
+  const [seasonMatchesLoading, setSeasonMatchesLoading] = useState(true);
+  const [seasonMatchesPageNumber, setSeasonMatchesPageNumberState] = useState(1);
+
   const wasSyncing = useRef(false);
 
   const loadEquipe = useCallback(async () => {
@@ -120,6 +129,31 @@ export function useAppData(user: SessionUser | null) {
     [],
   );
 
+  // Lista paginada de partidas do ato — separada de loadSeasonOverview de
+  // propósito (ver buildSeasonMatchesPage): virar página não recalcula os
+  // KPIs/top agentes/mapas de novo.
+  const loadSeasonMatches = useCallback(
+    async (memberId: string | null, seasonId: string | null, mapId: string | null, agent: string | null, modo: string | null, page: number) => {
+      setSeasonMatchesLoading(true);
+      try {
+        const params = new URLSearchParams();
+        if (memberId) params.set('userId', memberId);
+        if (seasonId) params.set('seasonId', seasonId);
+        if (mapId) params.set('mapId', mapId);
+        if (agent) params.set('agent', agent);
+        if (modo) params.set('modo', modo);
+        params.set('page', String(page));
+        setSeasonMatchesPage(await apiFetch<SeasonMatchesPage>(`/dashboard/season/matches?${params.toString()}`));
+        setSeasonMatchesError(null);
+      } catch {
+        setSeasonMatchesError('Falha ao carregar as partidas do ato.');
+      } finally {
+        setSeasonMatchesLoading(false);
+      }
+    },
+    [],
+  );
+
   const setModoFilter = useCallback((modo: MatchModeFilter) => {
     setModoFilterState(modo);
   }, []);
@@ -127,7 +161,8 @@ export function useAppData(user: SessionUser | null) {
   // Trocar de membro reseta o filtro de mapa — a lista de mapas filtráveis
   // vem dos mapas que ESSA pessoa jogou (mapWinrates dela), então um mapa
   // selecionado pode nem existir mais na lista de quem você acabou de trocar.
-  // Reseta o ato/mapa/agente selecionados da Visão do ato pelo mesmo motivo.
+  // Reseta o ato/mapa/agente/modo/página selecionados da Visão do ato pelo
+  // mesmo motivo — a página 3 de um filtro pode nem existir no outro.
   const setSelectedMemberId = useCallback((memberId: string | null) => {
     setSelectedMemberIdState(memberId);
     setMapFilterState(null);
@@ -135,43 +170,59 @@ export function useAppData(user: SessionUser | null) {
     setSeasonMapFilterState(null);
     setSeasonAgentFilterState(null);
     setSeasonModoFilterState(null);
+    setSeasonMatchesPageNumberState(1);
   }, []);
 
   const setMapFilter = useCallback((mapId: string | null) => {
     setMapFilterState(mapId);
   }, []);
 
+  // Qualquer filtro da Visão do ato reseta a página de partidas pra 1 — a
+  // página em que você estava pode não existir mais sob o filtro novo.
   const setSelectedSeasonId = useCallback((seasonId: string | null) => {
     setSelectedSeasonIdState(seasonId);
+    setSeasonMatchesPageNumberState(1);
   }, []);
 
   const setSeasonMapFilter = useCallback((mapId: string | null) => {
     setSeasonMapFilterState(mapId);
+    setSeasonMatchesPageNumberState(1);
   }, []);
 
   const setSeasonAgentFilter = useCallback((agent: string | null) => {
     setSeasonAgentFilterState(agent);
+    setSeasonMatchesPageNumberState(1);
   }, []);
 
   const setSeasonModoFilter = useCallback((modo: string | null) => {
     setSeasonModoFilterState(modo);
+    setSeasonMatchesPageNumberState(1);
+  }, []);
+
+  const setSeasonMatchesPageNumber = useCallback((page: number) => {
+    setSeasonMatchesPageNumberState(page);
   }, []);
 
   const updateEquipeMembroNota = useCallback((userId: string, note: string) => {
     setEquipe((prev) => (prev ? { ...prev, members: prev.members.map((m) => (m.userId === userId ? { ...m, note } : m)) } : prev));
   }, []);
 
-  const [equipePartidas, setEquipePartidas] = useState<PartidaEquipeSummary[] | null>(null);
+  const [equipePartidas, setEquipePartidas] = useState<EquipePartidasPage | null>(null);
   const [equipePartidasError, setEquipePartidasError] = useState<string | null>(null);
   const [equipePartidasLoading, setEquipePartidasLoading] = useState(false);
 
-  // Histórico completo (>=5 da equipe juntos) — carrega sob demanda, só
-  // quando a tela de histórico da equipe é aberta (pode envolver bastante
-  // chamada à HenrikDev pra resolver RR de cada membro).
-  const loadEquipePartidas = useCallback(async () => {
+  // Histórico da equipe — escopado por ato e paginado (10 por página, ver
+  // buildEquipeMatches). Carrega sob demanda, só quando a tela de histórico
+  // da equipe é aberta (pode envolver bastante chamada à HenrikDev pra
+  // resolver RR de cada membro); `EquipePartidas.tsx` chama de novo a cada
+  // troca de ato/página.
+  const loadEquipePartidas = useCallback(async (seasonId?: string | null, page = 1) => {
     setEquipePartidasLoading(true);
     try {
-      setEquipePartidas(await apiFetch<PartidaEquipeSummary[]>('/equipe/partidas'));
+      const params = new URLSearchParams();
+      if (seasonId) params.set('seasonId', seasonId);
+      params.set('page', String(page));
+      setEquipePartidas(await apiFetch<EquipePartidasPage>(`/equipe/partidas?${params.toString()}`));
       setEquipePartidasError(null);
     } catch {
       setEquipePartidasError('Falha ao carregar o histórico de partidas da equipe.');
@@ -341,6 +392,15 @@ export function useAppData(user: SessionUser | null) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [riotId, selectedMemberId, selectedSeasonId, seasonMapFilter, seasonAgentFilter, seasonModoFilter]);
 
+  // Lista paginada de partidas do ato — mesmos filtros da Visão do ato,
+  // mais a página. Efeito separado do de cima de propósito — trocar só a
+  // página não pode recarregar KPIs/top agentes/mapas de novo.
+  useEffect(() => {
+    if (!riotId) return;
+    loadSeasonMatches(selectedMemberId, selectedSeasonId, seasonMapFilter, seasonAgentFilter, seasonModoFilter, seasonMatchesPageNumber);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [riotId, selectedMemberId, selectedSeasonId, seasonMapFilter, seasonAgentFilter, seasonModoFilter, seasonMatchesPageNumber]);
+
   // Poll enquanto a sincronização está rolando.
   useEffect(() => {
     if (sync?.state !== 'syncing') return;
@@ -365,6 +425,7 @@ export function useAppData(user: SessionUser | null) {
       loadDashboard(modoFilter, selectedMemberId, mapFilter);
       loadEquipe();
       loadSeasonOverview(selectedMemberId, selectedSeasonId, seasonMapFilter, seasonAgentFilter, seasonModoFilter);
+      loadSeasonMatches(selectedMemberId, selectedSeasonId, seasonMapFilter, seasonAgentFilter, seasonModoFilter, seasonMatchesPageNumber);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sync?.state]);
@@ -396,6 +457,11 @@ export function useAppData(user: SessionUser | null) {
     setSeasonAgentFilter,
     seasonModoFilter,
     setSeasonModoFilter,
+    seasonMatchesPage,
+    seasonMatchesError,
+    seasonMatchesLoading,
+    seasonMatchesPageNumber,
+    setSeasonMatchesPageNumber,
     equipe,
     equipeError,
     reloadEquipe: loadEquipe,

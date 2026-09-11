@@ -2,10 +2,12 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useOutletContext } from 'react-router-dom';
 import { ArrowLeft, BarChart3, ChevronRight } from 'lucide-react';
 import type { ParticipanteEquipeMatch, PartidaEquipeSummary } from '@callout/shared';
-import { MIN_TEAM_MATCH_PLAYERS, MAX_EQUIPE_MATCHES } from '@callout/shared';
+import { MIN_TEAM_MATCH_PLAYERS } from '@callout/shared';
 import type { OutletContext } from '../components/AppShell';
 import { LoadingFill } from '../components/Spinner';
 import { AgentAvatar } from '../components/AgentAvatar';
+import { SeasonFilterSelect, PageControls } from '../components/SeasonFilters';
+import { formatSeasonShort } from '../lib/seasonFormat';
 
 const cardStyle: React.CSSProperties = { borderRadius: 'var(--radius-lg)', background: 'var(--surface)', border: '1px solid var(--surface-border)' };
 const WIN = 'var(--pos, #18AAB7)';
@@ -129,9 +131,20 @@ export function EquipePartidas() {
   const navigate = useNavigate();
   const { equipePartidas, equipePartidasError, equipePartidasLoading, loadEquipePartidas } = useOutletContext<OutletContext>();
 
+  // null = ato atual (o back resolve sozinho) — equipePartidas.seasonId
+  // devolve qual foi escolhido de fato, igual ao seletor da Visão do ato.
+  const [seasonId, setSeasonId] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+
   useEffect(() => {
-    if (equipePartidas === null && !equipePartidasLoading) loadEquipePartidas();
-  }, [equipePartidas, equipePartidasLoading, loadEquipePartidas]);
+    loadEquipePartidas(seasonId, page);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [seasonId, page]);
+
+  function changeSeason(id: string | null) {
+    setSeasonId(id);
+    setPage(1);
+  }
 
   return (
     <div style={{ padding: 26, display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -146,33 +159,39 @@ export function EquipePartidas() {
           </button>
           <h1 style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 700, fontSize: 32, letterSpacing: '-.025em', margin: 0 }}>Histórico de partidas da equipe</h1>
           <div style={{ fontSize: 14, color: 'var(--text-muted)', marginTop: 6 }}>
-            Últimas {MAX_EQUIPE_MATCHES} partidas com pelo menos {MIN_TEAM_MATCH_PLAYERS} membros da equipe juntos — os números de cada um aparecem separados.
+            Partidas {equipePartidas?.seasonShort ? `de ${formatSeasonShort(equipePartidas.seasonShort)}` : 'do ato'} com pelo menos {MIN_TEAM_MATCH_PLAYERS} membros da equipe juntos — os números de cada um aparecem separados.
           </div>
         </div>
-        <button className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: 9 }} onClick={() => navigate('/equipe/painel')}>
-          <BarChart3 size={15} strokeWidth={1.75} />
-          Painel da equipe
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          {equipePartidas && (
+            <SeasonFilterSelect availableSeasons={equipePartidas.availableSeasons} seasonId={equipePartidas.seasonId} setSelectedSeasonId={changeSeason} />
+          )}
+          <button className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: 9 }} onClick={() => navigate('/equipe/painel')}>
+            <BarChart3 size={15} strokeWidth={1.75} />
+            Painel da equipe
+          </button>
+        </div>
       </div>
 
       {equipePartidasError ? (
         <div style={{ ...cardStyle, padding: 22, display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'flex-start' }}>
           <div style={{ fontSize: 14, color: 'var(--text-3)' }}>{equipePartidasError}</div>
-          <button className="btn-secondary" onClick={loadEquipePartidas}>
+          <button className="btn-secondary" onClick={() => loadEquipePartidas(seasonId, page)}>
             Tentar de novo
           </button>
         </div>
-      ) : equipePartidas === null ? (
+      ) : equipePartidasLoading || equipePartidas === null ? (
         <LoadingFill />
-      ) : equipePartidas.length === 0 ? (
+      ) : equipePartidas.matches.length === 0 ? (
         <div style={{ ...cardStyle, padding: 40, textAlign: 'center', color: 'var(--text-muted)', fontSize: 14 }}>
           Nenhuma partida ainda com {MIN_TEAM_MATCH_PLAYERS}+ membros da equipe juntos.
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {equipePartidas.map((m) => (
+          {equipePartidas.matches.map((m) => (
             <EquipeMatchCard key={m.id} match={m} />
           ))}
+          <PageControls page={equipePartidas.page} pageSize={equipePartidas.pageSize} total={equipePartidas.total} setPage={setPage} />
         </div>
       )}
     </div>
