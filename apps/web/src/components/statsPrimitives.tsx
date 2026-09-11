@@ -121,9 +121,24 @@ export interface RankingRow {
 // à direita, destaque dourado no 1º lugar (mesma cor do badge de MVP em
 // MatchRow.tsx/EquipePartidas.tsx). Cobre ACS/MVP/assistências/first
 // blood/clutches/agentes do painel da equipe — uma implementação só.
-export function RankingBlock({ title, sub, rows, style }: { title: string; sub: string; rows: RankingRow[]; style?: React.CSSProperties }) {
+// Opcional: `maxHeight` -- quando passado, o card vira altura fixa e só a
+// lista de linhas rola por dentro (título/legenda continuam sempre
+// visíveis), mesmo padrão do `maxHeight` de RateBlock.
+export function RankingBlock({
+  title,
+  sub,
+  rows,
+  style,
+  maxHeight,
+}: {
+  title: string;
+  sub: string;
+  rows: RankingRow[];
+  style?: React.CSSProperties;
+  maxHeight?: number;
+}) {
   return (
-    <div style={{ ...cardStyle, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 11, ...style }}>
+    <div style={{ ...cardStyle, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 11, ...(maxHeight ? { height: maxHeight } : {}), ...style }}>
       <div>
         <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 15 }}>{title}</div>
         <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 3 }}>{sub}</div>
@@ -131,7 +146,7 @@ export function RankingBlock({ title, sub, rows, style }: { title: string; sub: 
       {rows.length === 0 ? (
         <div style={{ fontSize: 12.5, color: 'var(--text-faint)' }}>Sem dados ainda.</div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 2, ...(maxHeight ? { flex: 1, minHeight: 0, overflowY: 'auto' } : {}) }}>
           {rows.map((r, i) => {
             const isFirst = i === 0;
             return (

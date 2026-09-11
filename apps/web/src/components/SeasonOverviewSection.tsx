@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { MatchCountFilter, MatchModeFilter, RecentFormInsights, RrHistoryPoint, SeasonMatchesPage, SeasonOverview } from '@callout/shared';
 import { LoadingFill } from './Spinner';
 import { SeasonMatchesList } from './SeasonMatchesList';
@@ -155,6 +155,22 @@ export function SeasonOverviewSection({
   const [compact, setCompact] = useState(false);
   const registerCard = useFlip(compact);
 
+  // Mapa/Armas/Funções, no modo compacto, ganham a mesma altura do card de
+  // Agentes (medida ao vivo, já que a altura dele é dinâmica -- depende de
+  // quantos agentes distintos a pessoa jogou) -- com scroll por dentro se o
+  // conteúdo não couber.
+  const agentesRef = useRef<HTMLDivElement>(null);
+  const [agentesHeight, setAgentesHeight] = useState<number | undefined>(undefined);
+  useEffect(() => {
+    const el = agentesRef.current;
+    if (!el) return;
+    const observer = new ResizeObserver(([entry]) => {
+      if (entry) setAgentesHeight(entry.contentRect.height);
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
   if (loading) return <LoadingFill />;
   if (error) return <div style={{ ...cardStyle, padding: 24, textAlign: 'center', color: 'var(--text-muted)', fontSize: 13.5 }}>{error}</div>;
   if (!data) {
@@ -252,7 +268,7 @@ export function SeasonOverviewSection({
 
           {compact && (
             <div className="season-rise-grid">
-              <div ref={registerCard('mapa')}>
+              <div ref={registerCard('mapa')} style={{ gridColumn: 1, gridRow: 1 }}>
                 <RankingBlock
                   title="Mapa"
                   sub="Vitórias no ato"
@@ -263,21 +279,24 @@ export function SeasonOverviewSection({
                     caption: `${m.winratePercent}% de winrate`,
                     icon: data.mapIcons[m.map],
                   }))}
+                  maxHeight={agentesHeight}
                 />
               </div>
-              <div ref={registerCard('armas')}>
-                <RankingBlock
-                  title="Armas mais usadas"
-                  sub="Abates por arma no ato"
-                  rows={data.topWeapons.map((w) => ({ key: w.weapon, name: w.weapon, value: plural(w.kills, 'abate') }))}
-                />
-              </div>
-              <div ref={registerCard('funcoes')}>
+              <div ref={registerCard('funcoes')} style={{ gridColumn: 2, gridRow: 1 }}>
                 <RateBlock
                   title="Funções"
                   sub="Winrate por função no ato"
                   rows={data.roles.map((r) => ({ key: r.role, name: r.role, wins: r.wins, total: r.matches }))}
                   colorFor={rateBarColor}
+                  maxHeight={agentesHeight}
+                />
+              </div>
+              <div ref={registerCard('armas')} style={{ gridColumn: 2, gridRow: 2 }}>
+                <RankingBlock
+                  title="Armas mais usadas"
+                  sub="Abates por arma no ato"
+                  rows={data.topWeapons.map((w) => ({ key: w.weapon, name: w.weapon, value: plural(w.kills, 'abate') }))}
+                  maxHeight={agentesHeight}
                 />
               </div>
             </div>
@@ -287,19 +306,21 @@ export function SeasonOverviewSection({
         {/* Sidebar fixa -- nunca se move nem redimensiona com o toggle
             Detalhado/Compacto. */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16, height: '100%' }}>
-          <RankingBlock
-            title="Agentes"
-            sub="Winrate no ato"
-            rows={data.topAgents.slice(0, 6).map((a) => ({
-              key: a.agent,
-              name: a.agent,
-              value: `${a.winratePercent}%`,
-              caption: `${plural(a.matches, 'partida')} · KD ${fmtNum(a.kda, 2)}`,
-              icon: data.agentIcons[a.agent],
-              dot: a.color,
-            }))}
-            style={{ flex: 1 }}
-          />
+          <div ref={agentesRef} style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+            <RankingBlock
+              title="Agentes"
+              sub="Winrate no ato"
+              rows={data.topAgents.slice(0, 6).map((a) => ({
+                key: a.agent,
+                name: a.agent,
+                value: `${a.winratePercent}%`,
+                caption: `${plural(a.matches, 'partida')} · KD ${fmtNum(a.kda, 2)}`,
+                icon: data.agentIcons[a.agent],
+                dot: a.color,
+              }))}
+              style={{ flex: 1 }}
+            />
+          </div>
           <AccuracyBar accuracy={data.accuracy} />
           <AttackDefenseCard sides={data.attackDefense} />
         </div>
