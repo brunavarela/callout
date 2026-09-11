@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import type { MatchCountFilter, MatchModeFilter, RecentFormInsights, RrHistoryPoint, SeasonMatchesPage, SeasonOverview } from '@callout/shared';
 import { LoadingFill } from './Spinner';
 import { SeasonMatchesList } from './SeasonMatchesList';
@@ -158,18 +158,21 @@ export function SeasonOverviewSection({
   // Mapa/Armas/Funções, no modo compacto, ganham a mesma altura do card de
   // Agentes (medida ao vivo, já que a altura dele é dinâmica -- depende de
   // quantos agentes distintos a pessoa jogou) -- com scroll por dentro se o
-  // conteúdo não couber.
-  const agentesRef = useRef<HTMLDivElement>(null);
+  // conteúdo não couber. Ref callback (não useEffect com []) porque esse
+  // card só existe de fato depois que `data` chega -- um efeito de
+  // montagem rodaria antes disso, com a ref ainda nula, e nunca mais.
+  const agentesObserver = useRef<ResizeObserver | null>(null);
   const [agentesHeight, setAgentesHeight] = useState<number | undefined>(undefined);
-  useEffect(() => {
-    const el = agentesRef.current;
+  const setAgentesRef = (el: HTMLDivElement | null) => {
+    agentesObserver.current?.disconnect();
+    agentesObserver.current = null;
     if (!el) return;
     const observer = new ResizeObserver(([entry]) => {
       if (entry) setAgentesHeight(entry.contentRect.height);
     });
     observer.observe(el);
-    return () => observer.disconnect();
-  }, []);
+    agentesObserver.current = observer;
+  };
 
   if (loading) return <LoadingFill />;
   if (error) return <div style={{ ...cardStyle, padding: 24, textAlign: 'center', color: 'var(--text-muted)', fontSize: 13.5 }}>{error}</div>;
@@ -306,7 +309,7 @@ export function SeasonOverviewSection({
         {/* Sidebar fixa -- nunca se move nem redimensiona com o toggle
             Detalhado/Compacto. */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16, height: '100%' }}>
-          <div ref={agentesRef} style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+          <div ref={setAgentesRef} style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
             <RankingBlock
               title="Agentes"
               sub="Winrate no ato"
