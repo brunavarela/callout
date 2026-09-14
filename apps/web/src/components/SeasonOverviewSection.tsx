@@ -657,10 +657,10 @@ export function SeasonOverviewSection({
           <div style={{ display: 'flex', flexDirection: 'column', gap: SEASON_CARD_GAP }}>
             <MapBlock maps={data.topMaps} maxHeight={SEASON_CARD_HEIGHT} />
             <AgentBlock agents={data.topAgents} agentIcons={data.agentIcons} maxHeight={SEASON_CARD_HEIGHT} />
-            <AccuracyBar accuracy={data.accuracy} height={SEASON_CARD_HEIGHT} />
+            <AttackDefenseCard sides={data.attackDefense} height={SEASON_CARD_HEIGHT} />
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: SEASON_CARD_GAP }}>
-            <AttackDefenseCard sides={data.attackDefense} height={SEASON_CARD_HEIGHT} />
+            <AccuracyBar accuracy={data.accuracy} height={SEASON_CARD_HEIGHT} />
             <WeaponBlock weapons={data.topWeapons} maxHeight={SEASON_CARD_HEIGHT} />
             <RoleBlock roles={data.roles} maxHeight={SEASON_CARD_HEIGHT} />
           </div>
