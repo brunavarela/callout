@@ -1,6 +1,4 @@
-import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronDown } from 'lucide-react';
 import type { MatchCountFilter, RecentFormInsights, RrHistoryPoint, SeasonOverview } from '@callout/shared';
 import { SnakeSpinner } from './Spinner';
 import { cardStyle, WIN, LOSS, DRAW, fmtDelta } from './statsPrimitives';
@@ -186,10 +184,10 @@ function MatchCountButtons({ matchCountFilter, setMatchCountFilter }: { matchCou
 }
 
 // Card de RR ganho/perdido + análises de forma recente (mapa/agente mais
-// jogado, KDA negativo, MVP, saldo de RR, arma mais usada) — largura
-// inteira, acima da lista de partidas do ato. Recolhível/expansível (seta
-// no canto) via grid-template-rows 0fr/1fr, mesmo truque de transição
-// suave já usado em EquipePartidas.tsx/Matches.tsx.
+// jogado, KDA negativo, MVP, saldo de RR, arma mais usada) — mesma largura
+// da lista de partidas, logo abaixo dela. Sempre expandido (sem toggle);
+// `height` (quando passado) trava a altura total pra bater com a coluna de
+// cards ao lado, com scroll por dentro se o conteúdo não couber.
 export function RrHistoryCard({
   rrHistory,
   rrHistoryLoading,
@@ -199,6 +197,7 @@ export function RrHistoryCard({
   subject,
   noRankedHistory,
   currentRank,
+  height,
 }: {
   rrHistory: RrHistoryPoint[];
   rrHistoryLoading: boolean;
@@ -208,8 +207,8 @@ export function RrHistoryCard({
   subject: string;
   noRankedHistory: boolean;
   currentRank: SeasonOverview['currentRank'];
+  height?: number;
 }) {
-  const [collapsed, setCollapsed] = useState(true);
   const rrBalance = rrHistory.reduce((s, p) => s + p.delta, 0);
 
   const bullets: React.ReactNode[] = [];
@@ -266,86 +265,53 @@ export function RrHistoryCard({
       );
     }
   }
-  const half = Math.ceil(bullets.length / 2);
-  const columns = [bullets.slice(0, half), bullets.slice(half)];
-
   return (
-    <div
-      onClick={() => setCollapsed((v) => !v)}
-      style={{ ...cardStyle, padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: 4, cursor: 'pointer' }}
-    >
+    <div style={{ ...cardStyle, padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: 4, ...(height ? { height, overflowY: 'auto' } : {}) }}>
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-          <span
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              width: 26,
-              height: 26,
-              borderRadius: 8,
-              flex: 'none',
-              marginTop: 1,
-              background: 'var(--acc18, rgba(239,73,88,.16))',
-            }}
-          >
-            <ChevronDown size={16} strokeWidth={2.5} style={{ color: 'var(--acc, #EF4958)', transition: 'transform .25s ease', transform: collapsed ? 'rotate(-90deg)' : 'none' }} />
-          </span>
-          <div>
-            <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 16 }}>RR ganho e perdido</div>
-            <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 3 }}>Soma acumulada de RR — cada ponto é uma partida.</div>
+        <div>
+          <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 16 }}>RR ganho e perdido</div>
+          <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 3 }}>Soma acumulada de RR — cada ponto é uma partida.</div>
+        </div>
+        <MatchCountButtons matchCountFilter={matchCountFilter} setMatchCountFilter={setMatchCountFilter} />
+      </div>
+      {rrHistoryLoading ? (
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 150 }}>
+          <SnakeSpinner size={32} />
+        </div>
+      ) : rrHistory.length > 0 ? (
+        <div>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 14, fontSize: 11.5, color: 'var(--text-dim)', marginTop: 4 }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ width: 9, height: 9, borderRadius: 2, background: WIN }} /> partida ganhou RR
+            </span>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ width: 9, height: 9, borderRadius: 2, background: LOSS }} /> partida perdeu RR
+            </span>
+          </div>
+          <RrLineChart points={rrHistory} />
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, fontSize: 10.5, color: 'var(--text-faint)', borderTop: '1px solid var(--divider)', paddingTop: 8 }}>
+            <span>Vertical: RR acumulado no período (0 = onde {subject} começou)</span>
+            <span>Horizontal: data da partida</span>
           </div>
         </div>
-        <div onClick={(e) => e.stopPropagation()}>
-          <MatchCountButtons matchCountFilter={matchCountFilter} setMatchCountFilter={setMatchCountFilter} />
+      ) : (
+        <div style={{ marginTop: 20, fontSize: 13, color: 'var(--text-dim)' }}>
+          {noRankedHistory ? 'Sem histórico de RR em partidas Sem Classificação.' : 'Sem histórico de RR ainda.'}
         </div>
-      </div>
-      <div style={{ display: 'grid', gridTemplateRows: collapsed ? '0fr' : '1fr', transition: 'grid-template-rows .32s ease' }}>
-        <div style={{ overflow: 'hidden', minHeight: 0 }}>
-          {rrHistoryLoading ? (
-            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 150 }}>
-              <SnakeSpinner size={32} />
-            </div>
-          ) : rrHistory.length > 0 ? (
-            <div onClick={(e) => e.stopPropagation()} style={{ cursor: 'default' }}>
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 14, fontSize: 11.5, color: 'var(--text-dim)', marginTop: 4 }}>
-                <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <span style={{ width: 9, height: 9, borderRadius: 2, background: WIN }} /> partida ganhou RR
-                </span>
-                <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <span style={{ width: 9, height: 9, borderRadius: 2, background: LOSS }} /> partida perdeu RR
-                </span>
+      )}
+      {formInsights && formInsights.matchesAnalyzed > 0 && (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 20, marginTop: 14, paddingTop: 12, borderTop: '1px solid var(--divider)' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flex: 1, minWidth: 220 }}>
+            {bullets.map((bullet, j) => (
+              <div key={j} style={{ display: 'flex', gap: 8, fontSize: 12.5, color: 'var(--text-dim)', lineHeight: 1.4 }}>
+                <span style={{ color: 'var(--text-faint)' }}>•</span>
+                {bullet}
               </div>
-              <RrLineChart points={rrHistory} />
-              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, fontSize: 10.5, color: 'var(--text-faint)', borderTop: '1px solid var(--divider)', paddingTop: 8 }}>
-                <span>Vertical: RR acumulado no período (0 = onde {subject} começou)</span>
-                <span>Horizontal: data da partida</span>
-              </div>
-            </div>
-          ) : (
-            <div style={{ marginTop: 20, fontSize: 13, color: 'var(--text-dim)' }}>
-              {noRankedHistory ? 'Sem histórico de RR em partidas Sem Classificação.' : 'Sem histórico de RR ainda.'}
-            </div>
-          )}
-          {formInsights && formInsights.matchesAnalyzed > 0 && (
-            <div style={{ display: 'flex', gap: 20, marginTop: 14, paddingTop: 12, borderTop: '1px solid var(--divider)' }}>
-              <div style={{ display: 'flex', gap: 20, flex: 1, minWidth: 0 }}>
-                {columns.map((col, i) => (
-                  <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: 8, flex: 1, minWidth: 0 }}>
-                    {col.map((bullet, j) => (
-                      <div key={j} style={{ display: 'flex', gap: 8, fontSize: 12.5, color: 'var(--text-dim)', lineHeight: 1.4 }}>
-                        <span style={{ color: 'var(--text-faint)' }}>•</span>
-                        {bullet}
-                      </div>
-                    ))}
-                  </div>
-                ))}
-              </div>
-              {currentRank && <EloReinforcement currentRank={currentRank} />}
-            </div>
-          )}
+            ))}
+          </div>
+          {currentRank && <EloReinforcement currentRank={currentRank} />}
         </div>
-      </div>
+      )}
     </div>
   );
 }

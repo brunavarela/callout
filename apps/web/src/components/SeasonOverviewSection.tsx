@@ -1,4 +1,3 @@
-import { useRef, useState } from 'react';
 import type { MatchCountFilter, MatchModeFilter, RecentFormInsights, RrHistoryPoint, SeasonMatchesPage, SeasonOverview } from '@callout/shared';
 import { LoadingFill } from './Spinner';
 import { SeasonMatchesList } from './SeasonMatchesList';
@@ -11,6 +10,16 @@ export { formatSeasonShort, formatPlaytime } from '../lib/seasonFormat';
 const WIN = 'var(--pos, #18AAB7)';
 const LOSS = 'var(--neg, #EF4958)';
 const UNDER_50 = 'color-mix(in srgb, var(--neg, #EF4958) 42%, var(--track))';
+
+// Grid novo da Visão do ato: os 6 cards (Mapa/Agentes/Precisão/Ataque-
+// defesa/Armas/Funções) em 2 colunas de 3, todos com essa mesma altura fixa
+// (com scroll por dentro quando não couber) -- Partidas + RR, empilhados na
+// coluna da esquerda, dividem entre si a altura total dessas 3 linhas.
+const SEASON_CARD_HEIGHT = 320;
+const SEASON_CARD_GAP = 16;
+const SEASON_COL_HEIGHT = 3 * SEASON_CARD_HEIGHT + 2 * SEASON_CARD_GAP;
+const SEASON_MATCHES_HEIGHT = Math.round((SEASON_COL_HEIGHT - SEASON_CARD_GAP) / 2);
+const SEASON_RR_HEIGHT = SEASON_COL_HEIGHT - SEASON_CARD_GAP - SEASON_MATCHES_HEIGHT;
 
 // Cor de referência por função — mesma linguagem visual usada no resto do
 // app (vitória/teal, derrota/vermelho), sem depender de uma cor de agente
@@ -62,9 +71,9 @@ function InfoDot({ text }: { text: string }) {
 // Ataque/defesa — % de rounds ganhos em cada lado, no ato (e sob o filtro
 // de mapa/agente atual). Mesmo visual do card que já existia no dashboard
 // de 30 dias, só que alimentado por SeasonOverview.attackDefense.
-function AttackDefenseCard({ sides }: { sides: SeasonOverview['attackDefense'] }) {
+function AttackDefenseCard({ sides, height }: { sides: SeasonOverview['attackDefense']; height?: number }) {
   return (
-    <div style={{ ...cardStyle, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 12, flex: 1 }}>
+    <div style={{ ...cardStyle, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 12, flex: 1, ...(height ? { height, overflow: 'hidden' } : {}) }}>
       <div>
         <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 15 }}>Ataque ou defesa</div>
         <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 3 }}>% de rounds ganhos em cada lado, no ato</div>
@@ -143,14 +152,14 @@ function BodySilhouette({
 
 // Precisão cabeça/corpo/perna — visualizada como silhueta em vez da barra
 // empilhada antiga, cada parte com sua cor e %.
-function AccuracyBar({ accuracy }: { accuracy: SeasonOverview['accuracy'] }) {
+function AccuracyBar({ accuracy, height }: { accuracy: SeasonOverview['accuracy']; height?: number }) {
   const segments = [
     { label: 'Cabeça', percent: accuracy.headPercent, hits: accuracy.headHits, color: 'var(--pos, #18AAB7)' },
     { label: 'Corpo', percent: accuracy.bodyPercent, hits: accuracy.bodyHits, color: 'var(--text-muted)' },
     { label: 'Perna', percent: accuracy.legPercent, hits: accuracy.legHits, color: 'var(--neg, #EF4958)' },
   ];
   return (
-    <div style={{ ...cardStyle, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 12, flex: 1 }}>
+    <div style={{ ...cardStyle, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 12, flex: 1, ...(height ? { height, overflow: 'hidden' } : {}) }}>
       <div>
         <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 15 }}>Precisão</div>
         <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 3 }}>Onde seus tiros acertaram no ato — cabeça, corpo ou perna.</div>
@@ -179,9 +188,9 @@ function AccuracyBar({ accuracy }: { accuracy: SeasonOverview['accuracy'] }) {
 // assistências absolutos ao lado) e uma barra de progresso colorida pela
 // própria função, em vez da lista compacta genérica que os outros cards
 // (Mapa/Armas) usam -- tem informação demais aqui pra caber numa linha só.
-function RoleBlock({ roles }: { roles: SeasonOverview['roles'] }) {
+function RoleBlock({ roles, maxHeight }: { roles: SeasonOverview['roles']; maxHeight?: number }) {
   return (
-    <div style={{ ...cardStyle, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 11 }}>
+    <div style={{ ...cardStyle, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 11, ...(maxHeight ? { height: maxHeight, overflow: 'hidden' } : {}) }}>
       <div>
         <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 15 }}>Funções</div>
         <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 3 }}>Winrate por função no ato</div>
@@ -189,7 +198,7 @@ function RoleBlock({ roles }: { roles: SeasonOverview['roles'] }) {
       {roles.length === 0 ? (
         <div style={{ fontSize: 12.5, color: 'var(--text-faint)' }}>Sem dados ainda.</div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', ...(maxHeight ? { flex: 1, minHeight: 0, overflowY: 'auto' } : {}) }}>
           {roles.map((r, i) => {
             const color = ROLE_COLORS[r.role] ?? 'var(--text-2)';
             const lowSample = r.matches < MIN_SAMPLE;
@@ -244,11 +253,11 @@ function RoleBlock({ roles }: { roles: SeasonOverview['roles'] }) {
 // silhueta pequena (mesma da Precisão) mostrando a distribuição de acertos
 // daquela arma via opacidade de cada parte, e abates com barra relativa à
 // arma mais usada.
-function WeaponBlock({ weapons }: { weapons: SeasonOverview['topWeapons'] }) {
+function WeaponBlock({ weapons, maxHeight }: { weapons: SeasonOverview['topWeapons']; maxHeight?: number }) {
   const maxKills = Math.max(1, ...weapons.map((w) => w.kills));
 
   return (
-    <div style={{ ...cardStyle, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 11 }}>
+    <div style={{ ...cardStyle, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 11, ...(maxHeight ? { height: maxHeight, overflow: 'hidden' } : {}) }}>
       <div>
         <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 15 }}>Armas mais usadas</div>
         <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 3 }}>Abates e distribuição de acertos por arma no ato</div>
@@ -256,7 +265,7 @@ function WeaponBlock({ weapons }: { weapons: SeasonOverview['topWeapons'] }) {
       {weapons.length === 0 ? (
         <div style={{ fontSize: 12.5, color: 'var(--text-faint)' }}>Sem dados ainda.</div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', ...(maxHeight ? { flex: 1, minHeight: 0, overflowY: 'auto' } : {}) }}>
           {weapons.map((w, i) => {
             const isFirst = i === 0;
             const color = isFirst ? GOLD : 'var(--pos, #18AAB7)';
@@ -527,24 +536,6 @@ export function SeasonOverviewSection({
   modoFilter: MatchModeFilter;
   subject?: string;
 }) {
-  // Agentes, na linha de baixo (ao lado de Armas/Funções), ganha a mesma
-  // altura de Armas -- pra não crescer mais que os outros dois, com scroll
-  // por dentro pra caber os agentes que faltarem. Ref callback (não
-  // useEffect com []) porque esse card só existe de fato depois que `data`
-  // chega -- um efeito de montagem rodaria antes disso, com a ref nula.
-  const weaponBlockObserver = useRef<ResizeObserver | null>(null);
-  const [weaponBlockHeight, setWeaponBlockHeight] = useState<number | undefined>(undefined);
-  const setWeaponBlockRef = (el: HTMLDivElement | null) => {
-    weaponBlockObserver.current?.disconnect();
-    weaponBlockObserver.current = null;
-    if (!el) return;
-    const observer = new ResizeObserver(([entry]) => {
-      if (entry) setWeaponBlockHeight(entry.contentRect.height);
-    });
-    observer.observe(el);
-    weaponBlockObserver.current = observer;
-  };
-
   if (loading) return <LoadingFill />;
   if (error) return <div style={{ ...cardStyle, padding: 24, textAlign: 'center', color: 'var(--text-muted)', fontSize: 13.5 }}>{error}</div>;
   if (!data) {
@@ -632,44 +623,48 @@ export function SeasonOverviewSection({
         </div>
       </div>
 
-      <RrHistoryCard
-        rrHistory={rrHistory}
-        rrHistoryLoading={rrHistoryLoading}
-        formInsights={rrFormInsights}
-        matchCountFilter={matchCountFilter}
-        setMatchCountFilter={setMatchCountFilter}
-        subject={subject}
-        noRankedHistory={modoFilter === 'Unrated'}
-        currentRank={data.currentRank}
-      />
-
+      {/* Duas colunas iguais (1fr 1fr): à esquerda Partidas + RR empilhados
+          (juntos somam a mesma altura da coluna de cards, ver constantes
+          SEASON_* acima); à direita os 6 cards em 2 sub-colunas de 3, gap
+          bem pequeno (4px) entre elas -- como as duas colunas externas têm
+          exatamente a mesma largura (1fr cada), a largura de Partidas/RR
+          bate com a soma das 2 sub-colunas de cards + esse gap de 4px. */}
       <div className="grid-responsive-season">
-        <SeasonMatchesList
-          matchesPage={matchesPage}
-          loading={matchesLoading}
-          error={matchesError}
-          mapIcons={data.mapIcons}
-          agentIcons={data.agentIcons}
-          setPage={setMatchesPageNumber}
-        />
-
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16, height: '100%' }}>
-          <MapBlock maps={data.topMaps} />
-          <AccuracyBar accuracy={data.accuracy} />
-          <AttackDefenseCard sides={data.attackDefense} />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: SEASON_CARD_GAP }}>
+          <SeasonMatchesList
+            matchesPage={matchesPage}
+            loading={matchesLoading}
+            error={matchesError}
+            mapIcons={data.mapIcons}
+            agentIcons={data.agentIcons}
+            setPage={setMatchesPageNumber}
+            height={SEASON_MATCHES_HEIGHT}
+          />
+          <RrHistoryCard
+            rrHistory={rrHistory}
+            rrHistoryLoading={rrHistoryLoading}
+            formInsights={rrFormInsights}
+            matchCountFilter={matchCountFilter}
+            setMatchCountFilter={setMatchCountFilter}
+            subject={subject}
+            noRankedHistory={modoFilter === 'Unrated'}
+            currentRank={data.currentRank}
+            height={SEASON_RR_HEIGHT}
+          />
         </div>
-      </div>
 
-      {/* Cards adicionais — sobram depois da lista de partidas, "encaixados"
-          lado a lado em vez de ficarem perdidos no fim da página. Agentes
-          ganha a mesma altura de Armas (medida ao vivo) + scroll, pra não
-          esticar Armas/Funções (align-items:start no grid cuida do resto). */}
-      <div className="grid-responsive-3">
-        <AgentBlock agents={data.topAgents} agentIcons={data.agentIcons} maxHeight={weaponBlockHeight} />
-        <div ref={setWeaponBlockRef}>
-          <WeaponBlock weapons={data.topWeapons} />
+        <div className="season-cards-grid">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: SEASON_CARD_GAP }}>
+            <MapBlock maps={data.topMaps} maxHeight={SEASON_CARD_HEIGHT} />
+            <AgentBlock agents={data.topAgents} agentIcons={data.agentIcons} maxHeight={SEASON_CARD_HEIGHT} />
+            <AccuracyBar accuracy={data.accuracy} height={SEASON_CARD_HEIGHT} />
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: SEASON_CARD_GAP }}>
+            <AttackDefenseCard sides={data.attackDefense} height={SEASON_CARD_HEIGHT} />
+            <WeaponBlock weapons={data.topWeapons} maxHeight={SEASON_CARD_HEIGHT} />
+            <RoleBlock roles={data.roles} maxHeight={SEASON_CARD_HEIGHT} />
+          </div>
         </div>
-        <RoleBlock roles={data.roles} />
       </div>
     </div>
   );

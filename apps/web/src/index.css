@@ -539,14 +539,33 @@ button {
   transform: translateY(0);
 }
 
-/* Visão do ato: lista de partidas + sidebar (Agentes/Mapas/Funções) */
+/* Visão do ato: Partidas+RR (empilhados) à esquerda, os 6 cards (2 sub-
+   colunas de 3) à direita -- as duas colunas têm a mesma largura (1fr
+   cada), então Partidas/RR sempre bate com a largura da coluna de cards
+   inteira (as 2 sub-colunas + o gap de 4px entre elas, ver
+   .season-cards-grid abaixo). */
 .grid-responsive-season {
   display: grid;
-  grid-template-columns: 1fr 320px;
+  grid-template-columns: 1fr 1fr;
+  align-items: start;
   gap: 16px;
 }
 @media (max-width: 1000px) {
   .grid-responsive-season {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* As 2 sub-colunas de cards dentro da coluna direita da Visão do ato --
+   gap propositalmente bem pequeno (4px), diferente do gap de 16px do
+   resto do layout. */
+.season-cards-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+}
+@media (max-width: 720px) {
+  .season-cards-grid {
     grid-template-columns: 1fr;
   }
 }
@@ -559,26 +578,6 @@ button {
 }
 @media (max-width: 900px) {
   .grid-responsive-2 {
-    grid-template-columns: 1fr;
-  }
-}
-
-/* Trio de cards da Visão do ato (Agentes/Armas/Funções) -- align-items:
-   start pra Agentes (que tem altura fixa + scroll) não esticar os outros
-   dois, que devem crescer só com o próprio conteúdo. */
-.grid-responsive-3 {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  align-items: start;
-  gap: 16px;
-}
-@media (max-width: 1180px) {
-  .grid-responsive-3 {
-    grid-template-columns: 1fr 1fr;
-  }
-}
-@media (max-width: 640px) {
-  .grid-responsive-3 {
     grid-template-columns: 1fr;
   }
 }

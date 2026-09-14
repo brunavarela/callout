@@ -192,8 +192,8 @@ function SeasonMatchRow({
           display: 'flex',
           alignItems: 'center',
           gap: 10,
-          padding: '8px 8px 8px 10px',
-          margin: '2px 0',
+          padding: '13px 10px 13px 12px',
+          margin: '3px 0',
           borderRadius: 8,
           cursor: 'pointer',
           borderLeft: `3px solid ${resultColor}`,
@@ -211,9 +211,7 @@ function SeasonMatchRow({
 
         <div style={{ flex: '1 1 auto', minWidth: 0, overflow: 'hidden' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'nowrap', overflow: 'hidden' }}>
-            <span style={{ fontSize: 12.5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {m.map} <span style={{ color: 'var(--text-faint)' }}>· {MODO_LABELS[m.modo] ?? m.modo}</span>
-            </span>
+            <span style={{ fontSize: 12.5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.map}</span>
             {m.rankIconUrl && <img src={m.rankIconUrl} alt="" title="Elo na hora dessa partida" style={{ width: 16, height: 16, objectFit: 'contain', flex: 'none' }} />}
             {m.mvp ? (
               <span
@@ -252,7 +250,11 @@ function SeasonMatchRow({
               </span>
             ))}
           </div>
-          {!compact && <div style={{ fontSize: 10.5, color: 'var(--text-dim)', marginTop: 2 }}>{m.playedAtLabel}</div>}
+          {!compact && (
+            <div style={{ fontSize: 10.5, color: 'var(--text-dim)', marginTop: 3 }}>
+              {m.playedAtLabel} <span style={{ color: 'var(--text-faint)' }}>· {MODO_LABELS[m.modo] ?? m.modo}</span>
+            </div>
+          )}
         </div>
 
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10, flex: 'none' }}>
@@ -304,6 +306,7 @@ export function SeasonMatchesList({
   title = 'Partidas',
   expandable = false,
   autoExpandMatchId = null,
+  height,
 }: {
   matchesPage: SeasonMatchesPage | null;
   loading: boolean;
@@ -318,6 +321,10 @@ export function SeasonMatchesList({
   // específica de cara, pra chegar direto expandida vindo daquele link.
   expandable?: boolean;
   autoExpandMatchId?: string | null;
+  // Trava a altura total do card (cabeçalho e paginação sempre visíveis) e
+  // faz só a lista de partidas rolar por dentro -- usado na Visão do ato,
+  // onde essa coluna precisa bater com a altura de RR logo abaixo.
+  height?: number;
 }) {
   const [compact, setCompact] = useState(false);
 
@@ -330,7 +337,7 @@ export function SeasonMatchesList({
   const dayGroups = groupByDay(matchesPage.matches);
 
   return (
-    <div style={{ ...cardStyle, padding: '16px 18px 8px', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ ...cardStyle, padding: '16px 18px 8px', display: 'flex', flexDirection: 'column', ...(height ? { height } : {}) }}>
       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
         <div>
           <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 16 }}>{title}</div>
@@ -358,7 +365,7 @@ export function SeasonMatchesList({
         </div>
       </div>
 
-      <div className="scroll-x-mobile">
+      <div className="scroll-x-mobile" style={height ? { flex: 1, minHeight: 0, overflowY: 'auto' } : undefined}>
         <div style={{ minWidth: compact ? undefined : 560 }}>
           {dayGroups.map((g) => (
             <div key={g.key}>
