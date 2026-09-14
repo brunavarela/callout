@@ -1,7 +1,10 @@
+import { useState } from 'react';
+import type { ReactNode } from 'react';
 import type { MatchCountFilter, MatchModeFilter, RecentFormInsights, RrHistoryPoint, SeasonMatchesPage, SeasonOverview } from '@callout/shared';
 import { LoadingFill } from './Spinner';
 import { SeasonMatchesList } from './SeasonMatchesList';
 import { RrHistoryCard } from './RrHistoryCard';
+import { Modal, ModalHeader } from './Modal';
 import { cardStyle, fmtNum, fmtDelta, plural, LOW_SAMPLE, MIN_SAMPLE, GOLD } from './statsPrimitives';
 import { formatSeasonShort, formatPlaytime } from '../lib/seasonFormat';
 
@@ -184,68 +187,128 @@ function AccuracyBar({ accuracy, height }: { accuracy: SeasonOverview['accuracy'
   );
 }
 
+// Casca genérica pros 4 cards com scroll (Mapa/Agentes/Armas/Funções) --
+// título/sub/resumo, o botão "Ver tudo" (só aparece quando `maxHeight` é
+// passado) e o modal que reaproveita o mesmo `children`, só que chamado com
+// `scrollable=false` (lista completa, sem limite de altura/scroll). Cada
+// card só precisa passar sua lista como uma função de `scrollable`.
+function ExpandableCard({
+  title,
+  sub,
+  headerExtra,
+  maxHeight,
+  footer,
+  children,
+}: {
+  title: string;
+  sub: string;
+  headerExtra?: ReactNode;
+  maxHeight?: number;
+  footer?: ReactNode;
+  children: (scrollable: boolean) => ReactNode;
+}) {
+  const [showAll, setShowAll] = useState(false);
+  return (
+    <>
+      <div style={{ ...cardStyle, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 11, ...(maxHeight ? { height: maxHeight, overflow: 'hidden' } : {}) }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+          <div>
+            <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 15 }}>{title}</div>
+            <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 3 }}>{sub}</div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            {headerExtra}
+            {maxHeight && (
+              <button
+                onClick={() => setShowAll(true)}
+                style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontSize: 11.5, fontWeight: 600, color: 'var(--acc, #EF4958)', whiteSpace: 'nowrap' }}
+              >
+                Ver tudo
+              </button>
+            )}
+          </div>
+        </div>
+        {children(true)}
+        {footer}
+      </div>
+
+      {showAll && (
+        <Modal onClose={() => setShowAll(false)} width={620}>
+          <ModalHeader title={title} onClose={() => setShowAll(false)} />
+          {children(false)}
+          {footer}
+        </Modal>
+      )}
+    </>
+  );
+}
+
 // Funções — cada uma com seu winrate (V–D), KDA (com os abates/mortes/
 // assistências absolutos ao lado) e uma barra de progresso colorida pela
 // própria função, em vez da lista compacta genérica que os outros cards
 // (Mapa/Armas) usam -- tem informação demais aqui pra caber numa linha só.
 function RoleBlock({ roles, maxHeight }: { roles: SeasonOverview['roles']; maxHeight?: number }) {
   return (
-    <div style={{ ...cardStyle, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 11, ...(maxHeight ? { height: maxHeight, overflow: 'hidden' } : {}) }}>
-      <div>
-        <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 15 }}>Funções</div>
-        <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 3 }}>Winrate por função no ato</div>
-      </div>
-      {roles.length === 0 ? (
-        <div style={{ fontSize: 12.5, color: 'var(--text-faint)' }}>Sem dados ainda.</div>
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', ...(maxHeight ? { flex: 1, minHeight: 0, overflowY: 'auto' } : {}) }}>
-          {roles.map((r, i) => {
-            const color = ROLE_COLORS[r.role] ?? 'var(--text-2)';
-            const lowSample = r.matches < MIN_SAMPLE;
-            const wrColor = lowSample ? LOW_SAMPLE : r.winratePercent >= 50 ? WIN : UNDER_50;
-            return (
-              <div key={r.role} style={{ padding: '12px 0', borderTop: i > 0 ? '1px solid var(--divider)' : 'none' }}>
-                <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-                    <span style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 700, fontSize: 14, color }}>{r.role}</span>
-                    <span style={{ fontSize: 10, letterSpacing: '.06em', color: 'var(--text-faint)' }}>WR</span>
-                    <span style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 700, fontSize: 17, color: wrColor }}>{r.winratePercent}%</span>
-                    <span style={{ fontSize: 11.5, color: 'var(--text-faint)' }}>
-                      {r.wins}V–{r.losses}D
-                    </span>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-                    <span style={{ fontSize: 10, letterSpacing: '.06em', color: 'var(--text-faint)' }}>KDA</span>
-                    <span style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 700, fontSize: 15 }}>{fmtNum(r.kda, 2)}</span>
-                    <span style={{ fontSize: 11, color: 'var(--text-faint)' }}>
-                      {r.kills} / {r.deaths} / {r.assists}
-                    </span>
-                  </div>
-                </div>
-                <div style={{ height: 5, borderRadius: 3, background: 'var(--track)', marginTop: 8 }}>
-                  <div style={{ height: '100%', width: `${r.winratePercent}%`, borderRadius: 3, background: lowSample ? LOW_SAMPLE : color }} />
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 5, marginTop: 4 }}>
-                  {lowSample && <span style={{ width: 6, height: 6, borderRadius: '50%', background: LOW_SAMPLE, flex: 'none' }} />}
-                  <span style={{ fontSize: 10.5, color: 'var(--text-faint)' }}>{plural(r.matches, 'partida')}</span>
-                </div>
-              </div>
-            );
-          })}
+    <ExpandableCard
+      title="Funções"
+      sub="Winrate por função no ato"
+      maxHeight={maxHeight}
+      footer={
+        <div style={{ borderTop: '1px solid var(--divider)', paddingTop: 9, display: 'flex', flexWrap: 'wrap', gap: 14, fontSize: 11, color: 'var(--text-faint)' }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+            <span style={{ width: 9, height: 5, borderRadius: 3, background: LOW_SAMPLE, flex: 'none' }} />
+            menos de {MIN_SAMPLE} partidas: amostra pequena
+          </span>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+            <span style={{ width: 9, height: 5, borderRadius: 3, background: UNDER_50, flex: 'none' }} />
+            abaixo de 50%
+          </span>
+          <span>KDA: abates / mortes / assistências</span>
         </div>
-      )}
-      <div style={{ borderTop: '1px solid var(--divider)', paddingTop: 9, display: 'flex', flexWrap: 'wrap', gap: 14, fontSize: 11, color: 'var(--text-faint)' }}>
-        <span style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-          <span style={{ width: 9, height: 5, borderRadius: 3, background: LOW_SAMPLE, flex: 'none' }} />
-          menos de {MIN_SAMPLE} partidas: amostra pequena
-        </span>
-        <span style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-          <span style={{ width: 9, height: 5, borderRadius: 3, background: UNDER_50, flex: 'none' }} />
-          abaixo de 50%
-        </span>
-        <span>KDA: abates / mortes / assistências</span>
-      </div>
-    </div>
+      }
+    >
+      {(scrollable) =>
+        roles.length === 0 ? (
+          <div style={{ fontSize: 12.5, color: 'var(--text-faint)' }}>Sem dados ainda.</div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', ...(scrollable ? { flex: 1, minHeight: 0, overflowY: 'auto' } : {}) }}>
+            {roles.map((r, i) => {
+              const color = ROLE_COLORS[r.role] ?? 'var(--text-2)';
+              const lowSample = r.matches < MIN_SAMPLE;
+              const wrColor = lowSample ? LOW_SAMPLE : r.winratePercent >= 50 ? WIN : UNDER_50;
+              return (
+                <div key={r.role} style={{ padding: '12px 0', borderTop: i > 0 ? '1px solid var(--divider)' : 'none' }}>
+                  <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+                      <span style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 700, fontSize: 14, color }}>{r.role}</span>
+                      <span style={{ fontSize: 10, letterSpacing: '.06em', color: 'var(--text-faint)' }}>WR</span>
+                      <span style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 700, fontSize: 17, color: wrColor }}>{r.winratePercent}%</span>
+                      <span style={{ fontSize: 11.5, color: 'var(--text-faint)' }}>
+                        {r.wins}V–{r.losses}D
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+                      <span style={{ fontSize: 10, letterSpacing: '.06em', color: 'var(--text-faint)' }}>KDA</span>
+                      <span style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 700, fontSize: 15 }}>{fmtNum(r.kda, 2)}</span>
+                      <span style={{ fontSize: 11, color: 'var(--text-faint)' }}>
+                        {r.kills} / {r.deaths} / {r.assists}
+                      </span>
+                    </div>
+                  </div>
+                  <div style={{ height: 5, borderRadius: 3, background: 'var(--track)', marginTop: 8 }}>
+                    <div style={{ height: '100%', width: `${r.winratePercent}%`, borderRadius: 3, background: lowSample ? LOW_SAMPLE : color }} />
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 5, marginTop: 4 }}>
+                    {lowSample && <span style={{ width: 6, height: 6, borderRadius: '50%', background: LOW_SAMPLE, flex: 'none' }} />}
+                    <span style={{ fontSize: 10.5, color: 'var(--text-faint)' }}>{plural(r.matches, 'partida')}</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )
+      }
+    </ExpandableCard>
   );
 }
 
@@ -257,188 +320,28 @@ function WeaponBlock({ weapons, maxHeight }: { weapons: SeasonOverview['topWeapo
   const maxKills = Math.max(1, ...weapons.map((w) => w.kills));
 
   return (
-    <div style={{ ...cardStyle, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 11, ...(maxHeight ? { height: maxHeight, overflow: 'hidden' } : {}) }}>
-      <div>
-        <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 15 }}>Armas mais usadas</div>
-        <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 3 }}>Abates e distribuição de acertos por arma no ato</div>
-      </div>
-      {weapons.length === 0 ? (
-        <div style={{ fontSize: 12.5, color: 'var(--text-faint)' }}>Sem dados ainda.</div>
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', ...(maxHeight ? { flex: 1, minHeight: 0, overflowY: 'auto' } : {}) }}>
-          {weapons.map((w, i) => {
-            const isFirst = i === 0;
-            const color = isFirst ? GOLD : 'var(--pos, #18AAB7)';
-            const killRatio = w.kills / maxKills;
-            return (
-              <div key={w.weapon} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '12px 0', borderTop: i > 0 ? '1px solid var(--divider)' : 'none' }}>
-                <span
-                  style={{
-                    width: 22,
-                    height: 22,
-                    flex: 'none',
-                    borderRadius: 6,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: 10.5,
-                    fontWeight: 700,
-                    color: isFirst ? GOLD : 'var(--text-faint)',
-                    background: isFirst ? `color-mix(in srgb, ${GOLD} 18%, transparent)` : 'var(--track)',
-                  }}
-                >
-                  {i + 1}
-                </span>
-                <div style={{ minWidth: 0 }}>
-                  <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 700, fontSize: 14, color: isFirst ? GOLD : 'var(--text)' }}>{w.weapon}</div>
-                  <div style={{ fontSize: 11, color: 'var(--text-faint)' }}>{WEAPON_CATEGORY[w.weapon] ?? 'Arma'}</div>
-                </div>
-
-                <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 16, flex: 'none' }}>
-                  <BodySilhouette
-                    width={22}
-                    headColor={color}
-                    bodyColor={color}
-                    legColor={color}
-                    headOpacity={Math.max(0.22, w.headPercent / 100)}
-                    bodyOpacity={Math.max(0.22, w.bodyPercent / 100)}
-                    legOpacity={Math.max(0.22, w.legPercent / 100)}
-                  />
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 1, fontSize: 11.5, color: 'var(--text-faint)', flex: 'none' }}>
-                    <span>
-                      {fmtNum(w.headPercent, 0)}% <span style={{ color: 'var(--text-3)' }}>cabeça</span>
-                    </span>
-                    <span>
-                      {fmtNum(w.bodyPercent, 0)}% <span style={{ color: 'var(--text-3)' }}>corpo</span>
-                    </span>
-                    <span>
-                      {fmtNum(w.legPercent, 0)}% <span style={{ color: 'var(--text-3)' }}>pernas</span>
-                    </span>
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-end', width: 78, flex: 'none' }}>
-                    <span style={{ fontSize: 9.5, letterSpacing: '.08em', color: 'var(--text-faint)' }}>ABATES</span>
-                    <span style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 700, fontSize: 20 }}>{w.kills}</span>
-                    <div style={{ width: '100%', height: 4, borderRadius: 2, background: 'var(--track)' }}>
-                      <div style={{ height: '100%', width: `${killRatio * 100}%`, borderRadius: 2, background: color }} />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
+    <ExpandableCard
+      title="Armas mais usadas"
+      sub="Abates e distribuição de acertos por arma no ato"
+      maxHeight={maxHeight}
+      footer={
+        <div style={{ borderTop: '1px solid var(--divider)', paddingTop: 9, display: 'flex', flexWrap: 'wrap', gap: 14, fontSize: 11, color: 'var(--text-faint)' }}>
+          <span>Barra: abates relativos à arma mais usada</span>
+          <span>Boneco: intensidade por região de acerto</span>
         </div>
-      )}
-      <div style={{ borderTop: '1px solid var(--divider)', paddingTop: 9, display: 'flex', flexWrap: 'wrap', gap: 14, fontSize: 11, color: 'var(--text-faint)' }}>
-        <span>Barra: abates relativos à arma mais usada</span>
-        <span>Boneco: intensidade por região de acerto</span>
-      </div>
-    </div>
-  );
-}
-
-// Mapa — ranking numerado (destaque dourado no 1º), nome, barra de
-// progresso pela % de vitória e V–D à direita. Cabeçalho ganha o resumo
-// geral (V–D total · nº de partidas) ao lado do título, como Agentes.
-function MapBlock({ maps, maxHeight }: { maps: SeasonOverview['topMaps']; maxHeight?: number }) {
-  const totalWins = maps.reduce((s, m) => s + m.wins, 0);
-  const totalMatches = maps.reduce((s, m) => s + m.total, 0);
-
-  return (
-    <div style={{ ...cardStyle, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 11, flex: maxHeight ? '0 0 auto' : 1, ...(maxHeight ? { height: maxHeight, overflow: 'hidden' } : {}) }}>
-      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-        <div>
-          <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 15 }}>Mapa</div>
-          <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 3 }}>Vitórias no ato</div>
-        </div>
-        <span style={{ fontSize: 11, color: 'var(--text-faint)', whiteSpace: 'nowrap' }}>
-          {totalWins}V–{totalMatches - totalWins}D · {plural(totalMatches, 'partida')}
-        </span>
-      </div>
-      {maps.length === 0 ? (
-        <div style={{ fontSize: 12.5, color: 'var(--text-faint)' }}>Sem dados ainda.</div>
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, ...(maxHeight ? { flex: 1, minHeight: 0, overflowY: 'auto' } : {}) }}>
-          {maps.map((m, i) => {
-            const isFirst = i === 0;
-            const lowSample = m.total < MIN_SAMPLE;
-            const color = isFirst ? GOLD : lowSample ? LOW_SAMPLE : m.winratePercent >= 50 ? WIN : UNDER_50;
-            return (
-              <div key={m.map} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <span
-                  style={{
-                    width: 22,
-                    height: 22,
-                    flex: 'none',
-                    borderRadius: 6,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: 10.5,
-                    fontWeight: 700,
-                    color: isFirst ? GOLD : 'var(--text-faint)',
-                    background: isFirst ? `color-mix(in srgb, ${GOLD} 18%, transparent)` : 'var(--track)',
-                  }}
-                >
-                  {i + 1}
-                </span>
-                <span style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 700, fontSize: 13.5, color: isFirst ? GOLD : 'var(--text)', flex: 'none', width: 62, overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  {m.map}
-                </span>
-                <div style={{ flex: 1, minWidth: 0, height: 6, borderRadius: 3, background: 'var(--track)' }}>
-                  <div style={{ height: '100%', width: `${m.winratePercent}%`, borderRadius: 3, background: color }} />
-                </div>
-                <span style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 700, fontSize: 14, color, width: 36, textAlign: 'right', flex: 'none' }}>{m.winratePercent}%</span>
-                <span style={{ fontSize: 11, color: 'var(--text-faint)', flex: 'none', width: 52, textAlign: 'right' }}>
-                  {m.wins}V · {m.total - m.wins}D
-                </span>
-              </div>
-            );
-          })}
-        </div>
-      )}
-      <div style={{ borderTop: '1px solid var(--divider)', paddingTop: 9, display: 'flex', flexWrap: 'wrap', gap: 14, fontSize: 11, color: 'var(--text-faint)' }}>
-        <span style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-          <span style={{ width: 9, height: 5, borderRadius: 3, background: LOW_SAMPLE, flex: 'none' }} />
-          menos de {MIN_SAMPLE} partidas: amostra pequena
-        </span>
-        <span style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-          <span style={{ width: 9, height: 5, borderRadius: 3, background: UNDER_50, flex: 'none' }} />
-          abaixo de 50%
-        </span>
-      </div>
-    </div>
-  );
-}
-
-// Agentes — mesmo padrão do Mapa (ranking, barra de WR), com um mini-grid
-// K/D · ADR · ACS · DDΔ · melhor mapa abaixo de cada linha. Aceita
-// `maxHeight` porque, na posição "de baixo" (ao lado de Armas/Funções),
-// não deve crescer mais que os outros dois — rola por dentro.
-function AgentBlock({ agents, agentIcons, maxHeight }: { agents: SeasonOverview['topAgents']; agentIcons: Record<string, string>; maxHeight?: number }) {
-  const totalMatches = agents.reduce((s, a) => s + a.matches, 0);
-
-  return (
-    <div style={{ ...cardStyle, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 11, ...(maxHeight ? { height: maxHeight, overflow: 'hidden' } : {}) }}>
-      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-        <div>
-          <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 15 }}>Agentes</div>
-          <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 3 }}>Winrate e desempenho por agente no ato</div>
-        </div>
-        <span style={{ fontSize: 11, color: 'var(--text-faint)', whiteSpace: 'nowrap' }}>
-          {plural(agents.length, 'agente')} · {plural(totalMatches, 'partida')}
-        </span>
-      </div>
-      {agents.length === 0 ? (
-        <div style={{ fontSize: 12.5, color: 'var(--text-faint)' }}>Sem dados ainda.</div>
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, ...(maxHeight ? { flex: 1, minHeight: 0, overflowY: 'auto' } : {}) }}>
-          {agents.map((a, i) => {
-            const isFirst = i === 0;
-            const lowSample = a.matches < MIN_SAMPLE;
-            const color = isFirst ? GOLD : lowSample ? LOW_SAMPLE : a.winratePercent >= 50 ? WIN : UNDER_50;
-            return (
-              <div key={a.agent} style={{ padding: '10px 0', borderTop: i > 0 ? '1px solid var(--divider)' : 'none' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+      }
+    >
+      {(scrollable) =>
+        weapons.length === 0 ? (
+          <div style={{ fontSize: 12.5, color: 'var(--text-faint)' }}>Sem dados ainda.</div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', ...(scrollable ? { flex: 1, minHeight: 0, overflowY: 'auto' } : {}) }}>
+            {weapons.map((w, i) => {
+              const isFirst = i === 0;
+              const color = isFirst ? GOLD : 'var(--pos, #18AAB7)';
+              const killRatio = w.kills / maxKills;
+              return (
+                <div key={w.weapon} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '12px 0', borderTop: i > 0 ? '1px solid var(--divider)' : 'none' }}>
                   <span
                     style={{
                       width: 22,
@@ -456,52 +359,226 @@ function AgentBlock({ agents, agentIcons, maxHeight }: { agents: SeasonOverview[
                   >
                     {i + 1}
                   </span>
-                  {agentIcons[a.agent] && <img src={agentIcons[a.agent]} alt="" style={{ width: 22, height: 22, borderRadius: 5, objectFit: 'contain', background: 'var(--track)', flex: 'none' }} />}
-                  <div style={{ minWidth: 110, flex: 'none' }}>
-                    <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 700, fontSize: 13.5, color: isFirst ? GOLD : 'var(--text)' }}>{a.agent}</div>
-                    <div style={{ fontSize: 10.5, color: 'var(--text-faint)' }}>
-                      {plural(a.matches, 'partida')} · {formatPlaytime(a.playtimeMs)}
-                    </div>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 700, fontSize: 14, color: isFirst ? GOLD : 'var(--text)' }}>{w.weapon}</div>
+                    <div style={{ fontSize: 11, color: 'var(--text-faint)' }}>{WEAPON_CATEGORY[w.weapon] ?? 'Arma'}</div>
                   </div>
-                  <div style={{ flex: 1, minWidth: 0, height: 6, borderRadius: 3, background: 'var(--track)' }}>
-                    <div style={{ height: '100%', width: `${a.winratePercent}%`, borderRadius: 3, background: color }} />
-                  </div>
-                  <span style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 700, fontSize: 14, color, width: 36, textAlign: 'right', flex: 'none' }}>{a.winratePercent}%</span>
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 8, marginTop: 9 }}>
-                  {[
-                    { label: 'K/D', value: fmtNum(a.kd, 2) },
-                    { label: 'ADR', value: fmtNum(a.adr, 1) },
-                    { label: 'ACS', value: fmtNum(a.acs, 1) },
-                    { label: 'DDΔ', value: fmtDelta(a.ddPerRound, 0), color: a.ddPerRound >= 0 ? WIN : LOSS },
-                    { label: 'Melhor mapa', value: a.bestMap ? `${a.bestMap.map} ${a.bestMap.winratePercent}%` : '—' },
-                  ].map((s) => (
-                    <div key={s.label} style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
-                      <span style={{ fontSize: 9, letterSpacing: '.06em', color: 'var(--text-faint)', whiteSpace: 'nowrap' }}>{s.label.toUpperCase()}</span>
-                      <span
-                        style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 13, color: s.color ?? 'var(--text-2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
-                      >
-                        {s.value}
+
+                  <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 16, flex: 'none' }}>
+                    <BodySilhouette
+                      width={22}
+                      headColor={color}
+                      bodyColor={color}
+                      legColor={color}
+                      headOpacity={Math.max(0.22, w.headPercent / 100)}
+                      bodyOpacity={Math.max(0.22, w.bodyPercent / 100)}
+                      legOpacity={Math.max(0.22, w.legPercent / 100)}
+                    />
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 1, fontSize: 11.5, color: 'var(--text-faint)', flex: 'none' }}>
+                      <span>
+                        {fmtNum(w.headPercent, 0)}% <span style={{ color: 'var(--text-3)' }}>cabeça</span>
+                      </span>
+                      <span>
+                        {fmtNum(w.bodyPercent, 0)}% <span style={{ color: 'var(--text-3)' }}>corpo</span>
+                      </span>
+                      <span>
+                        {fmtNum(w.legPercent, 0)}% <span style={{ color: 'var(--text-3)' }}>pernas</span>
                       </span>
                     </div>
-                  ))}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-end', width: 78, flex: 'none' }}>
+                      <span style={{ fontSize: 9.5, letterSpacing: '.08em', color: 'var(--text-faint)' }}>ABATES</span>
+                      <span style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 700, fontSize: 20 }}>{w.kills}</span>
+                      <div style={{ width: '100%', height: 4, borderRadius: 2, background: 'var(--track)' }}>
+                        <div style={{ height: '100%', width: `${killRatio * 100}%`, borderRadius: 2, background: color }} />
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
+        )
+      }
+    </ExpandableCard>
+  );
+}
+
+// Mapa — ranking numerado (destaque dourado no 1º), nome, barra de
+// progresso pela % de vitória e V–D à direita. Cabeçalho ganha o resumo
+// geral (V–D total · nº de partidas) ao lado do título, como Agentes.
+function MapBlock({ maps, maxHeight }: { maps: SeasonOverview['topMaps']; maxHeight?: number }) {
+  const totalWins = maps.reduce((s, m) => s + m.wins, 0);
+  const totalMatches = maps.reduce((s, m) => s + m.total, 0);
+
+  return (
+    <ExpandableCard
+      title="Mapa"
+      sub="Vitórias no ato"
+      maxHeight={maxHeight}
+      headerExtra={
+        <span style={{ fontSize: 11, color: 'var(--text-faint)', whiteSpace: 'nowrap' }}>
+          {totalWins}V–{totalMatches - totalWins}D · {plural(totalMatches, 'partida')}
+        </span>
+      }
+      footer={
+        <div style={{ borderTop: '1px solid var(--divider)', paddingTop: 9, display: 'flex', flexWrap: 'wrap', gap: 14, fontSize: 11, color: 'var(--text-faint)' }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+            <span style={{ width: 9, height: 5, borderRadius: 3, background: LOW_SAMPLE, flex: 'none' }} />
+            menos de {MIN_SAMPLE} partidas: amostra pequena
+          </span>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+            <span style={{ width: 9, height: 5, borderRadius: 3, background: UNDER_50, flex: 'none' }} />
+            abaixo de 50%
+          </span>
         </div>
-      )}
-      <div style={{ borderTop: '1px solid var(--divider)', paddingTop: 9, display: 'flex', flexWrap: 'wrap', gap: 14, fontSize: 11, color: 'var(--text-faint)' }}>
-        <span style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-          <span style={{ width: 9, height: 5, borderRadius: 3, background: LOW_SAMPLE, flex: 'none' }} />
-          menos de {MIN_SAMPLE} partidas: amostra pequena
+      }
+    >
+      {(scrollable) =>
+        maps.length === 0 ? (
+          <div style={{ fontSize: 12.5, color: 'var(--text-faint)' }}>Sem dados ainda.</div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, ...(scrollable ? { flex: 1, minHeight: 0, overflowY: 'auto' } : {}) }}>
+            {maps.map((m, i) => {
+              const isFirst = i === 0;
+              const lowSample = m.total < MIN_SAMPLE;
+              const color = isFirst ? GOLD : lowSample ? LOW_SAMPLE : m.winratePercent >= 50 ? WIN : UNDER_50;
+              return (
+                <div key={m.map} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span
+                    style={{
+                      width: 22,
+                      height: 22,
+                      flex: 'none',
+                      borderRadius: 6,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: 10.5,
+                      fontWeight: 700,
+                      color: isFirst ? GOLD : 'var(--text-faint)',
+                      background: isFirst ? `color-mix(in srgb, ${GOLD} 18%, transparent)` : 'var(--track)',
+                    }}
+                  >
+                    {i + 1}
+                  </span>
+                  <span
+                    style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 700, fontSize: 13.5, color: isFirst ? GOLD : 'var(--text)', flex: 'none', width: 62, overflow: 'hidden', textOverflow: 'ellipsis' }}
+                  >
+                    {m.map}
+                  </span>
+                  <div style={{ flex: 1, minWidth: 0, height: 6, borderRadius: 3, background: 'var(--track)' }}>
+                    <div style={{ height: '100%', width: `${m.winratePercent}%`, borderRadius: 3, background: color }} />
+                  </div>
+                  <span style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 700, fontSize: 14, color, width: 36, textAlign: 'right', flex: 'none' }}>{m.winratePercent}%</span>
+                  <span style={{ fontSize: 11, color: 'var(--text-faint)', flex: 'none', width: 52, textAlign: 'right' }}>
+                    {m.wins}V · {m.total - m.wins}D
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        )
+      }
+    </ExpandableCard>
+  );
+}
+
+// Agentes — mesmo padrão do Mapa (ranking, barra de WR), com um mini-grid
+// K/D · ADR · ACS · DDΔ · melhor mapa abaixo de cada linha. Aceita
+// `maxHeight` porque, na posição "de baixo" (ao lado de Armas/Funções),
+// não deve crescer mais que os outros dois — rola por dentro.
+function AgentBlock({ agents, agentIcons, maxHeight }: { agents: SeasonOverview['topAgents']; agentIcons: Record<string, string>; maxHeight?: number }) {
+  const totalMatches = agents.reduce((s, a) => s + a.matches, 0);
+
+  return (
+    <ExpandableCard
+      title="Agentes"
+      sub="Winrate e desempenho por agente no ato"
+      maxHeight={maxHeight}
+      headerExtra={
+        <span style={{ fontSize: 11, color: 'var(--text-faint)', whiteSpace: 'nowrap' }}>
+          {plural(agents.length, 'agente')} · {plural(totalMatches, 'partida')}
         </span>
-        <span style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-          <span style={{ width: 9, height: 5, borderRadius: 3, background: UNDER_50, flex: 'none' }} />
-          abaixo de 50%
-        </span>
-      </div>
-    </div>
+      }
+      footer={
+        <div style={{ borderTop: '1px solid var(--divider)', paddingTop: 9, display: 'flex', flexWrap: 'wrap', gap: 14, fontSize: 11, color: 'var(--text-faint)' }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+            <span style={{ width: 9, height: 5, borderRadius: 3, background: LOW_SAMPLE, flex: 'none' }} />
+            menos de {MIN_SAMPLE} partidas: amostra pequena
+          </span>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+            <span style={{ width: 9, height: 5, borderRadius: 3, background: UNDER_50, flex: 'none' }} />
+            abaixo de 50%
+          </span>
+        </div>
+      }
+    >
+      {(scrollable) =>
+        agents.length === 0 ? (
+          <div style={{ fontSize: 12.5, color: 'var(--text-faint)' }}>Sem dados ainda.</div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, ...(scrollable ? { flex: 1, minHeight: 0, overflowY: 'auto' } : {}) }}>
+            {agents.map((a, i) => {
+              const isFirst = i === 0;
+              const lowSample = a.matches < MIN_SAMPLE;
+              const color = isFirst ? GOLD : lowSample ? LOW_SAMPLE : a.winratePercent >= 50 ? WIN : UNDER_50;
+              return (
+                <div key={a.agent} style={{ padding: '10px 0', borderTop: i > 0 ? '1px solid var(--divider)' : 'none' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <span
+                      style={{
+                        width: 22,
+                        height: 22,
+                        flex: 'none',
+                        borderRadius: 6,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: 10.5,
+                        fontWeight: 700,
+                        color: isFirst ? GOLD : 'var(--text-faint)',
+                        background: isFirst ? `color-mix(in srgb, ${GOLD} 18%, transparent)` : 'var(--track)',
+                      }}
+                    >
+                      {i + 1}
+                    </span>
+                    {agentIcons[a.agent] && <img src={agentIcons[a.agent]} alt="" style={{ width: 22, height: 22, borderRadius: 5, objectFit: 'contain', background: 'var(--track)', flex: 'none' }} />}
+                    <div style={{ minWidth: 110, flex: 'none' }}>
+                      <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 700, fontSize: 13.5, color: isFirst ? GOLD : 'var(--text)' }}>{a.agent}</div>
+                      <div style={{ fontSize: 10.5, color: 'var(--text-faint)' }}>
+                        {plural(a.matches, 'partida')} · {formatPlaytime(a.playtimeMs)}
+                      </div>
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0, height: 6, borderRadius: 3, background: 'var(--track)' }}>
+                      <div style={{ height: '100%', width: `${a.winratePercent}%`, borderRadius: 3, background: color }} />
+                    </div>
+                    <span style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 700, fontSize: 14, color, width: 36, textAlign: 'right', flex: 'none' }}>{a.winratePercent}%</span>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 8, marginTop: 9 }}>
+                    {[
+                      { label: 'K/D', value: fmtNum(a.kd, 2) },
+                      { label: 'ADR', value: fmtNum(a.adr, 1) },
+                      { label: 'ACS', value: fmtNum(a.acs, 1) },
+                      { label: 'DDΔ', value: fmtDelta(a.ddPerRound, 0), color: a.ddPerRound >= 0 ? WIN : LOSS },
+                      { label: 'Melhor mapa', value: a.bestMap ? `${a.bestMap.map} ${a.bestMap.winratePercent}%` : '—' },
+                    ].map((s) => (
+                      <div key={s.label} style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
+                        <span style={{ fontSize: 9, letterSpacing: '.06em', color: 'var(--text-faint)', whiteSpace: 'nowrap' }}>{s.label.toUpperCase()}</span>
+                        <span
+                          style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 13, color: s.color ?? 'var(--text-2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                        >
+                          {s.value}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )
+      }
+    </ExpandableCard>
   );
 }
 
