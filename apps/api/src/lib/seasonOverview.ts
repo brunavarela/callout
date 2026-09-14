@@ -52,6 +52,7 @@ const rowArgs = {
     damageDealt: true,
     accountLevel: true,
     weaponKills: true,
+    weaponAccuracy: true,
     multiKills: true,
     clutches: true,
     firstBloods: true,
@@ -461,23 +462,38 @@ export async function buildSeasonOverview(
     overtime: { wins: otWins, total: otTotal },
   };
 
-  // Top Weapons — lê a coluna weaponKills já agregada na sincronização
-  // (ver sync.ts/matchReplay.ts), não relê rawJson aqui.
+  // Top Weapons — lê as colunas weaponKills/weaponAccuracy já agregadas na
+  // sincronização (ver sync.ts/matchReplay.ts), não relê rawJson aqui.
+  // weaponAccuracy é aproximado (round.stats, não tiro a tiro — ver
+  // PlayerMatchReplayStats.weaponAccuracy).
   const weaponTotals = new Map<string, number>();
+  const weaponShots = new Map<string, { head: number; body: number; leg: number }>();
   for (const r of filteredStatRows) {
     const wk = (r.weaponKills as Record<string, number> | null) ?? {};
     for (const [weapon, count] of Object.entries(wk)) {
       weaponTotals.set(weapon, (weaponTotals.get(weapon) ?? 0) + count);
     }
+    const wa = (r.weaponAccuracy as Record<string, { headshots: number; bodyshots: number; legshots: number }> | null) ?? {};
+    for (const [weapon, s] of Object.entries(wa)) {
+      const entry = weaponShots.get(weapon) ?? { head: 0, body: 0, leg: 0 };
+      entry.head += s.headshots;
+      entry.body += s.bodyshots;
+      entry.leg += s.legshots;
+      weaponShots.set(weapon, entry);
+    }
   }
   const topWeapons: WeaponStat[] = [...weaponTotals.entries()]
-    .map(([weapon, weaponKillsCount]) => ({
-      weapon,
-      kills: weaponKillsCount,
-      headPercent: accuracy.headPercent,
-      bodyPercent: accuracy.bodyPercent,
-      legPercent: accuracy.legPercent,
-    }))
+    .map(([weapon, weaponKillsCount]) => {
+      const shots = weaponShots.get(weapon);
+      const shotsTotalForWeapon = shots ? shots.head + shots.body + shots.leg : 0;
+      return {
+        weapon,
+        kills: weaponKillsCount,
+        headPercent: shotsTotalForWeapon > 0 ? round1((shots!.head / shotsTotalForWeapon) * 100) : 0,
+        bodyPercent: shotsTotalForWeapon > 0 ? round1((shots!.body / shotsTotalForWeapon) * 100) : 0,
+        legPercent: shotsTotalForWeapon > 0 ? round1((shots!.leg / shotsTotalForWeapon) * 100) : 0,
+      };
+    })
     .sort((a, b) => b.kills - a.kills)
     .slice(0, 5);
 

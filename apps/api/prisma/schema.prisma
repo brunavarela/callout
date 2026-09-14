@@ -201,6 +201,7 @@ model MatchPlayer {
   // desse campo existir (backfill via scripts/backfillTrackerStats.ts).
   accountLevel Int? // nível da conta no momento dessa partida (players[].account_level)
   weaponKills  Json? // { "Vandal": 12, "Phantom": 8, ... } — kills[] agrupado por arma
+  weaponAccuracy Json? // { "Vandal": { headshots, bodyshots, legshots }, ... } — round.stats agrupado por arma (aproximado, ver PlayerMatchReplayStats.weaponAccuracy)
   multiKills   Json? // { "2": n, "3": n, "4": n, "5": n } — kills[] agrupado por (round, killer)
   clutches     Json? // { "1v1": n, ..., "1v5": n } — rounds vencidos em desvantagem numérica
   firstBloods  Int? // rounds em que foi a primeira kill da partida (replayMatchStats já calculava isso, só não era salvo)

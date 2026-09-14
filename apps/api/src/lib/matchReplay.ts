@@ -16,6 +16,14 @@ export interface PlayerMatchReplayStats {
   // Kills sem arma "normal" (bomba, ambiente) têm weapon.name null e
   // ficam de fora — não tem "arma" de verdade pra contar.
   weaponKills: Record<string, number>;
+  // Nome da arma -> headshots/bodyshots/legshots feitos com ela, no ato.
+  // Aproximação (a HenrikDev não liga cada tiro a uma arma, só o round
+  // inteiro): usa round.stats[].economy.weapon (arma comprada naquele
+  // round) + round.stats[].stats.headshots/bodyshots/legshots (tiros que
+  // acertaram no round todo) — se a pessoa trocou de arma no meio do
+  // round, o tiro fica atribuído à arma que ela tinha comprado, não
+  // necessariamente à que realmente puxou o gatilho.
+  weaponAccuracy: Record<string, { headshots: number; bodyshots: number; legshots: number }>;
   // Kills do próprio jogador no mesmo round, agrupado por round -> chave =
   // tamanho do multi-kill ("2" a "5"). Generaliza o hasAce() antigo
   // (dashboard.ts), que é só multiKills["5"] > 0.
@@ -53,6 +61,7 @@ export function replayMatchStats(match: MatchV4Data): Map<string, PlayerMatchRep
       clutchesWon: 0,
       clutchesWonBySize: {},
       weaponKills: {},
+      weaponAccuracy: {},
       multiKills: {},
     });
   }
@@ -78,6 +87,22 @@ export function replayMatchStats(match: MatchV4Data): Map<string, PlayerMatchRep
       if (!entry) continue;
       const key = String(Math.min(count, 5));
       entry.multiKills[key] = (entry.multiKills[key] ?? 0) + 1;
+    }
+  }
+
+  // Precisão por arma — não depende da simulação round-a-round de clutch
+  // abaixo, só de somar round.stats (arma comprada + tiros que acertaram
+  // naquele round), então sai numa passada simples separada.
+  for (const round of match.rounds) {
+    for (const rs of round.stats) {
+      const entry = stats.get(rs.player.puuid);
+      const weaponName = rs.economy.weapon?.name;
+      if (!entry || !weaponName) continue;
+      const acc = entry.weaponAccuracy[weaponName] ?? { headshots: 0, bodyshots: 0, legshots: 0 };
+      acc.headshots += rs.stats.headshots;
+      acc.bodyshots += rs.stats.bodyshots;
+      acc.legshots += rs.stats.legshots;
+      entry.weaponAccuracy[weaponName] = acc;
     }
   }
 

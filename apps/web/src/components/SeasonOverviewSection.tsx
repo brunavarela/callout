@@ -2,7 +2,7 @@ import type { MatchCountFilter, MatchModeFilter, RecentFormInsights, RrHistoryPo
 import { LoadingFill } from './Spinner';
 import { SeasonMatchesList } from './SeasonMatchesList';
 import { RrHistoryCard } from './RrHistoryCard';
-import { cardStyle, fmtNum, fmtDelta, plural, RankingBlock, LOW_SAMPLE, MIN_SAMPLE } from './statsPrimitives';
+import { cardStyle, fmtNum, fmtDelta, plural, RankingBlock, LOW_SAMPLE, MIN_SAMPLE, GOLD } from './statsPrimitives';
 import { formatSeasonShort } from '../lib/seasonFormat';
 
 export { formatSeasonShort, formatPlaytime } from '../lib/seasonFormat';
@@ -18,6 +18,31 @@ const ROLE_COLORS: Record<string, string> = {
   Controlador: 'var(--neg, #EF4958)',
   Sentinela: 'var(--pos, #18AAB7)',
   Iniciador: 'var(--text-2)',
+};
+
+// Categoria de cada arma (fixo — nomenclatura do próprio jogo, não muda com
+// os dados). A HenrikDev não devolve essa categoria pronta em nenhum lugar
+// que a gente já lê.
+const WEAPON_CATEGORY: Record<string, string> = {
+  Classic: 'Pistolas',
+  Shorty: 'Pistolas',
+  Frenzy: 'Pistolas',
+  Ghost: 'Pistolas',
+  Sheriff: 'Pistolas',
+  Stinger: 'Submetralhadoras',
+  Spectre: 'Submetralhadoras',
+  Bucky: 'Shotguns',
+  Judge: 'Shotguns',
+  Bulldog: 'Fuzis de assalto',
+  Guardian: 'Fuzis de assalto',
+  Phantom: 'Fuzis de assalto',
+  Vandal: 'Fuzis de assalto',
+  Marshal: 'Snipers',
+  Outlaw: 'Snipers',
+  Operator: 'Snipers',
+  Ares: 'Metralhadoras',
+  Odin: 'Metralhadoras',
+  Melee: 'Corpo a corpo',
 };
 
 // "?" ao lado do título de cada stat — passa o mouse (ou foca via teclado)
@@ -71,24 +96,43 @@ function AttackDefenseCard({ sides }: { sides: SeasonOverview['attackDefense'] }
   );
 }
 
-// Silhueta humana — cabeça/corpo/pernas com a mesma cor de sempre (teal/
-// cinza/vermelho, ver AccuracyBreakdown), cada parte com sua % de tiros ao
-// lado. Os 3 recortes (cabeça, "parte superior", "parte inferior") vieram
-// prontos da Bruna — só empilha e recolore via `fill`.
-function BodySilhouette({ headColor, bodyColor, legColor }: { headColor: string; bodyColor: string; legColor: string }) {
+// Silhueta humana — cabeça/corpo/pernas, cada parte com sua cor (e,
+// opcionalmente, opacidade pra indicar intensidade). Os 3 recortes (cabeça,
+// "parte superior", "parte inferior") vieram prontos da Bruna — só empilha
+// e recolore via `fill`/`fillOpacity`. `width` reaproveita o mesmo SVG em
+// tamanhos diferentes (78px na Precisão, bem menor nas Armas).
+function BodySilhouette({
+  headColor,
+  bodyColor,
+  legColor,
+  headOpacity = 1,
+  bodyOpacity = 1,
+  legOpacity = 1,
+  width = 78,
+}: {
+  headColor: string;
+  bodyColor: string;
+  legColor: string;
+  headOpacity?: number;
+  bodyOpacity?: number;
+  legOpacity?: number;
+  width?: number;
+}) {
   return (
-    <svg viewBox="0 0 140 340" width={78} height={189} aria-hidden="true">
-      <circle cx="70" cy="27.5" r="27.5" fill={headColor} />
+    <svg viewBox="0 0 140 340" width={width} height={(width * 340) / 140} aria-hidden="true" style={{ flex: 'none' }}>
+      <circle cx="70" cy="27.5" r="27.5" fill={headColor} fillOpacity={headOpacity} />
       <g transform="translate(10, 59)">
         <path
           d="M58.0001 133H61.0341H91.5001V36.0003C91.5001 34.5005 95.5001 33.5001 96.5001 36.0003V126C96.5001 131.5 112 139.5 119 126V36.0003C119.5 24.5002 114.7 1.2 91.5001 0H59.5332H59.501H27.5341C4.33411 1.2 -0.46589 24.5002 0.0341103 36.0003V126C7.03411 139.5 22.5341 131.5 22.5341 126V36.0003C23.5341 33.5001 27.5341 34.5005 27.5341 36.0003V133H58.0001Z"
           fill={bodyColor}
+          fillOpacity={bodyOpacity}
         />
       </g>
       <g transform="translate(38, 197)">
         <path
           d="M0 126.265V0H64V126.265C55.8195 149.222 36.0902 135.747 36.0902 126.265L35.609 11.4786C35.609 10.4805 35.3684 8 32 8C29.2779 8 28.5514 10.1478 28.391 11.4786V126.265C23.5789 147.226 0 138.742 0 126.265Z"
           fill={legColor}
+          fillOpacity={legOpacity}
         />
       </g>
     </svg>
@@ -189,6 +233,93 @@ function RoleBlock({ roles }: { roles: SeasonOverview['roles'] }) {
           abaixo de 50%
         </span>
         <span>KDA: abates / mortes / assistências</span>
+      </div>
+    </div>
+  );
+}
+
+// Armas — ranking numerado (destaque dourado no 1º), nome + categoria,
+// silhueta pequena (mesma da Precisão) mostrando a distribuição de acertos
+// daquela arma via opacidade de cada parte, e abates com barra relativa à
+// arma mais usada.
+function WeaponBlock({ weapons }: { weapons: SeasonOverview['topWeapons'] }) {
+  const maxKills = Math.max(1, ...weapons.map((w) => w.kills));
+
+  return (
+    <div style={{ ...cardStyle, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 11 }}>
+      <div>
+        <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 15 }}>Armas mais usadas</div>
+        <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 3 }}>Abates e distribuição de acertos por arma no ato</div>
+      </div>
+      {weapons.length === 0 ? (
+        <div style={{ fontSize: 12.5, color: 'var(--text-faint)' }}>Sem dados ainda.</div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
+          {weapons.map((w, i) => {
+            const isFirst = i === 0;
+            const color = isFirst ? GOLD : 'var(--pos, #18AAB7)';
+            const killRatio = w.kills / maxKills;
+            return (
+              <div key={w.weapon} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '12px 0', borderTop: i > 0 ? '1px solid var(--divider)' : 'none' }}>
+                <span
+                  style={{
+                    width: 22,
+                    height: 22,
+                    flex: 'none',
+                    borderRadius: 6,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: 10.5,
+                    fontWeight: 700,
+                    color: isFirst ? GOLD : 'var(--text-faint)',
+                    background: isFirst ? `color-mix(in srgb, ${GOLD} 18%, transparent)` : 'var(--track)',
+                  }}
+                >
+                  {i + 1}
+                </span>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 700, fontSize: 14, color: isFirst ? GOLD : 'var(--text)' }}>{w.weapon}</div>
+                  <div style={{ fontSize: 11, color: 'var(--text-faint)' }}>{WEAPON_CATEGORY[w.weapon] ?? 'Arma'}</div>
+                </div>
+
+                <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 16, flex: 'none' }}>
+                  <BodySilhouette
+                    width={22}
+                    headColor={color}
+                    bodyColor={color}
+                    legColor={color}
+                    headOpacity={Math.max(0.22, w.headPercent / 100)}
+                    bodyOpacity={Math.max(0.22, w.bodyPercent / 100)}
+                    legOpacity={Math.max(0.22, w.legPercent / 100)}
+                  />
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 1, fontSize: 11.5, color: 'var(--text-faint)', flex: 'none' }}>
+                    <span>
+                      {fmtNum(w.headPercent, 0)}% <span style={{ color: 'var(--text-3)' }}>cabeça</span>
+                    </span>
+                    <span>
+                      {fmtNum(w.bodyPercent, 0)}% <span style={{ color: 'var(--text-3)' }}>corpo</span>
+                    </span>
+                    <span>
+                      {fmtNum(w.legPercent, 0)}% <span style={{ color: 'var(--text-3)' }}>pernas</span>
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-end', width: 78, flex: 'none' }}>
+                    <span style={{ fontSize: 9.5, letterSpacing: '.08em', color: 'var(--text-faint)' }}>ABATES</span>
+                    <span style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 700, fontSize: 20 }}>{w.kills}</span>
+                    <div style={{ width: '100%', height: 4, borderRadius: 2, background: 'var(--track)' }}>
+                      <div style={{ height: '100%', width: `${killRatio * 100}%`, borderRadius: 2, background: color }} />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+      <div style={{ borderTop: '1px solid var(--divider)', paddingTop: 9, display: 'flex', flexWrap: 'wrap', gap: 14, fontSize: 11, color: 'var(--text-faint)' }}>
+        <span>Barra: abates relativos à arma mais usada</span>
+        <span>Boneco: intensidade por região de acerto</span>
       </div>
     </div>
   );
@@ -366,11 +497,7 @@ export function SeasonOverviewSection({
             icon: data.mapIcons[m.map],
           }))}
         />
-        <RankingBlock
-          title="Armas mais usadas"
-          sub="Abates por arma no ato"
-          rows={data.topWeapons.map((w) => ({ key: w.weapon, name: w.weapon, value: plural(w.kills, 'abate') }))}
-        />
+        <WeaponBlock weapons={data.topWeapons} />
         <RoleBlock roles={data.roles} />
       </div>
     </div>

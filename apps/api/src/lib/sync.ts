@@ -209,6 +209,7 @@ async function persistMatch(match: MatchV4Data, selfPuuid: string, selfRr: numbe
             rankTierId: p.puuid === selfPuuid ? selfRankTierId : null,
             accountLevel: p.account_level,
             weaponKills: playerReplay?.weaponKills ?? {},
+            weaponAccuracy: playerReplay?.weaponAccuracy ?? {},
             multiKills: playerReplay?.multiKills ?? {},
             clutches: playerReplay?.clutchesWonBySize ?? {},
             firstBloods: playerReplay?.firstBloods ?? 0,
