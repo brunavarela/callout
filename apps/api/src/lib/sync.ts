@@ -66,8 +66,15 @@ export async function syncUserMatches(userId: string, puuid: string, region: str
       }
       if (batch.length === 0) break;
       matches.push(...batch);
-      const existingInBatch = await prisma.match.count({ where: { id: { in: batch.map((m) => m.metadata.match_id) } } });
-      if (existingInBatch === batch.length) break; // página inteira já sincronizada — sem mais gap
+      // A 1ª página (mais recente) está sempre 100% sincronizada em uso
+      // normal (é o que todo sync anterior já cobriu) -- um gap de verdade
+      // fica no MEIO do histórico, não no topo. Por isso só passa a
+      // considerar parar a partir da 2ª página em diante; parar já na 1ª
+      // nunca alcançaria um gap que começa depois dela.
+      if (i > 0) {
+        const existingInBatch = await prisma.match.count({ where: { id: { in: batch.map((m) => m.metadata.match_id) } } });
+        if (existingInBatch === batch.length) break; // página inteira já sincronizada — sem mais gap
+      }
     }
     progressByUser.set(userId, { state: "syncing", progress: { done: 0, total: matches.length } });
 
@@ -145,14 +152,21 @@ export async function syncUserMatches(userId: string, puuid: string, region: str
     // corrige; se já saiu da janela, o rr dela ficou perdido pra sempre
     // (limitação da API, não retroativo).
     if (mmrHistory.length > 0) {
-      await Promise.all(
-        mmrHistory.map((h) =>
-          prisma.matchPlayer.updateMany({
+      // Mesmo teto de concorrência do worker de persistMatch acima —
+      // Promise.all sem limite aqui (até 20 updates de uma vez) chegou a
+      // estourar o pool de conexões do Neon (P1001) numa conta com gap
+      // grande pra corrigir.
+      let rrCursor = 0;
+      async function rrWorker() {
+        while (rrCursor < mmrHistory.length) {
+          const h = mmrHistory[rrCursor++]!;
+          await prisma.matchPlayer.updateMany({
             where: { matchId: h.match_id, puuid, rr: null },
             data: { rr: h.last_change, rankTierId: h.tier.id },
-          }),
-        ),
-      );
+          });
+        }
+      }
+      await Promise.all(Array.from({ length: Math.min(PERSIST_CONCURRENCY, mmrHistory.length) }, rrWorker));
     }
 
     progressByUser.set(userId, {
