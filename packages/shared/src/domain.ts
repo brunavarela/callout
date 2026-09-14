@@ -245,6 +245,9 @@ export interface RoleStat {
   matches: number;
   winratePercent: number;
   kda: number;
+  kills: number;
+  deaths: number;
+  assists: number;
   wins: number;
   losses: number;
 }

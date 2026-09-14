@@ -2,13 +2,23 @@ import type { MatchCountFilter, MatchModeFilter, RecentFormInsights, RrHistoryPo
 import { LoadingFill } from './Spinner';
 import { SeasonMatchesList } from './SeasonMatchesList';
 import { RrHistoryCard } from './RrHistoryCard';
-import { cardStyle, fmtNum, fmtDelta, plural, rateBarColor, RateBlock, RankingBlock } from './statsPrimitives';
+import { cardStyle, fmtNum, fmtDelta, plural, RankingBlock, LOW_SAMPLE, MIN_SAMPLE } from './statsPrimitives';
 import { formatSeasonShort } from '../lib/seasonFormat';
 
 export { formatSeasonShort, formatPlaytime } from '../lib/seasonFormat';
 
 const WIN = 'var(--pos, #18AAB7)';
 const UNDER_50 = 'color-mix(in srgb, var(--neg, #EF4958) 42%, var(--track))';
+
+// Cor de referência por função — mesma linguagem visual usada no resto do
+// app (vitória/teal, derrota/vermelho), sem depender de uma cor de agente
+// específico (várias funções têm agentes de cores bem diferentes).
+const ROLE_COLORS: Record<string, string> = {
+  Duelista: '#4FD1E8',
+  Controlador: 'var(--neg, #EF4958)',
+  Sentinela: 'var(--pos, #18AAB7)',
+  Iniciador: 'var(--text-2)',
+};
 
 // "?" ao lado do título de cada stat — passa o mouse (ou foca via teclado)
 // pra ver a legenda numa bolha no estilo do resto do app, em vez do
@@ -114,6 +124,71 @@ function AccuracyBar({ accuracy }: { accuracy: SeasonOverview['accuracy'] }) {
             </div>
           ))}
         </div>
+      </div>
+    </div>
+  );
+}
+
+// Funções — cada uma com seu winrate (V–D), KDA (com os abates/mortes/
+// assistências absolutos ao lado) e uma barra de progresso colorida pela
+// própria função, em vez da lista compacta genérica que os outros cards
+// (Mapa/Armas) usam -- tem informação demais aqui pra caber numa linha só.
+function RoleBlock({ roles }: { roles: SeasonOverview['roles'] }) {
+  return (
+    <div style={{ ...cardStyle, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 11 }}>
+      <div>
+        <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 15 }}>Funções</div>
+        <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 3 }}>Winrate por função no ato</div>
+      </div>
+      {roles.length === 0 ? (
+        <div style={{ fontSize: 12.5, color: 'var(--text-faint)' }}>Sem dados ainda.</div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
+          {roles.map((r, i) => {
+            const color = ROLE_COLORS[r.role] ?? 'var(--text-2)';
+            const lowSample = r.matches < MIN_SAMPLE;
+            const wrColor = lowSample ? LOW_SAMPLE : r.winratePercent >= 50 ? WIN : UNDER_50;
+            return (
+              <div key={r.role} style={{ padding: '12px 0', borderTop: i > 0 ? '1px solid var(--divider)' : 'none' }}>
+                <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+                    <span style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 700, fontSize: 14, color }}>{r.role}</span>
+                    <span style={{ fontSize: 10, letterSpacing: '.06em', color: 'var(--text-faint)' }}>WR</span>
+                    <span style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 700, fontSize: 17, color: wrColor }}>{r.winratePercent}%</span>
+                    <span style={{ fontSize: 11.5, color: 'var(--text-faint)' }}>
+                      {r.wins}V–{r.losses}D
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+                    <span style={{ fontSize: 10, letterSpacing: '.06em', color: 'var(--text-faint)' }}>KDA</span>
+                    <span style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 700, fontSize: 15 }}>{fmtNum(r.kda, 2)}</span>
+                    <span style={{ fontSize: 11, color: 'var(--text-faint)' }}>
+                      {r.kills} / {r.deaths} / {r.assists}
+                    </span>
+                  </div>
+                </div>
+                <div style={{ height: 5, borderRadius: 3, background: 'var(--track)', marginTop: 8 }}>
+                  <div style={{ height: '100%', width: `${r.winratePercent}%`, borderRadius: 3, background: lowSample ? LOW_SAMPLE : color }} />
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 5, marginTop: 4 }}>
+                  {lowSample && <span style={{ width: 6, height: 6, borderRadius: '50%', background: LOW_SAMPLE, flex: 'none' }} />}
+                  <span style={{ fontSize: 10.5, color: 'var(--text-faint)' }}>{plural(r.matches, 'partida')}</span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+      <div style={{ borderTop: '1px solid var(--divider)', paddingTop: 9, display: 'flex', flexWrap: 'wrap', gap: 14, fontSize: 11, color: 'var(--text-faint)' }}>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+          <span style={{ width: 9, height: 5, borderRadius: 3, background: LOW_SAMPLE, flex: 'none' }} />
+          menos de {MIN_SAMPLE} partidas: amostra pequena
+        </span>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+          <span style={{ width: 9, height: 5, borderRadius: 3, background: UNDER_50, flex: 'none' }} />
+          abaixo de 50%
+        </span>
+        <span>KDA: abates / mortes / assistências</span>
       </div>
     </div>
   );
@@ -296,12 +371,7 @@ export function SeasonOverviewSection({
           sub="Abates por arma no ato"
           rows={data.topWeapons.map((w) => ({ key: w.weapon, name: w.weapon, value: plural(w.kills, 'abate') }))}
         />
-        <RateBlock
-          title="Funções"
-          sub="Winrate por função no ato"
-          rows={data.roles.map((r) => ({ key: r.role, name: r.role, wins: r.wins, total: r.matches }))}
-          colorFor={rateBarColor}
-        />
+        <RoleBlock roles={data.roles} />
       </div>
     </div>
   );

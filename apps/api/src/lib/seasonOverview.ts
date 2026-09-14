@@ -421,6 +421,9 @@ export async function buildSeasonOverview(
       matches: s.matches,
       winratePercent: Math.round((s.wins / s.matches) * 100),
       kda: s.deaths > 0 ? round2((s.kills + s.assists) / s.deaths) : s.kills + s.assists,
+      kills: s.kills,
+      deaths: s.deaths,
+      assists: s.assists,
       wins: s.wins,
       losses: s.matches - s.wins,
     }))
