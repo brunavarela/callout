@@ -328,6 +328,8 @@ export function SeasonMatchesList({
 }) {
   const [compact, setCompact] = useState(false);
 
+  const navigate = useNavigate();
+
   if (loading) return <LoadingFill />;
   if (error) return <div style={{ ...cardStyle, padding: 24, textAlign: 'center', color: 'var(--text-muted)', fontSize: 13.5 }}>{error}</div>;
   if (!matchesPage || matchesPage.matches.length === 0) {
@@ -338,31 +340,40 @@ export function SeasonMatchesList({
 
   return (
     <div style={{ ...cardStyle, padding: '16px 18px 8px', display: 'flex', flexDirection: 'column', ...(height ? { height } : {}) }}>
-      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
         <div>
           <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 16 }}>{title}</div>
           <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>{plural(matchesPage.total, 'partida')} no ato</div>
         </div>
-        <div style={{ display: 'flex', gap: 4, background: 'var(--input-bg)', border: '1px solid var(--surface-border)', borderRadius: 9, padding: 3 }}>
-          {(['Detalhado', 'Compacto'] as const).map((opt) => (
-            <button
-              key={opt}
-              onClick={() => setCompact(opt === 'Compacto')}
-              style={{
-                padding: '5px 11px',
-                borderRadius: 6,
-                border: 'none',
-                cursor: 'pointer',
-                fontSize: 11.5,
-                whiteSpace: 'nowrap',
-                background: (opt === 'Compacto') === compact ? 'var(--acc, #EF4958)' : 'transparent',
-                color: (opt === 'Compacto') === compact ? 'var(--acc-text, #141415)' : 'var(--text-muted)',
-              }}
-            >
-              {opt}
-            </button>
-          ))}
-        </div>
+        {expandable ? (
+          <div style={{ display: 'flex', gap: 4, background: 'var(--input-bg)', border: '1px solid var(--surface-border)', borderRadius: 9, padding: 3 }}>
+            {(['Detalhado', 'Compacto'] as const).map((opt) => (
+              <button
+                key={opt}
+                onClick={() => setCompact(opt === 'Compacto')}
+                style={{
+                  padding: '5px 11px',
+                  borderRadius: 6,
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontSize: 11.5,
+                  whiteSpace: 'nowrap',
+                  background: (opt === 'Compacto') === compact ? 'var(--acc, #EF4958)' : 'transparent',
+                  color: (opt === 'Compacto') === compact ? 'var(--acc-text, #141415)' : 'var(--text-muted)',
+                }}
+              >
+                {opt}
+              </button>
+            ))}
+          </div>
+        ) : (
+          <button
+            onClick={() => navigate('/partidas')}
+            style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontSize: 11.5, fontWeight: 600, color: 'var(--acc, #EF4958)', whiteSpace: 'nowrap' }}
+          >
+            Ver tudo
+          </button>
+        )}
       </div>
 
       <div className="scroll-x-mobile" style={height ? { flex: 1, minHeight: 0, overflowY: 'auto' } : undefined}>
