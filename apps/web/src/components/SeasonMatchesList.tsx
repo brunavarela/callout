@@ -1,8 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Crown } from 'lucide-react';
-import type { MatchBadge, SeasonMatchesPage, SeasonMatchSummary } from '@callout/shared';
+import { ChevronRight, Crown } from 'lucide-react';
+import type { MatchBadge, MatchDetail, SeasonMatchesPage, SeasonMatchSummary } from '@callout/shared';
 import { LoadingFill } from './Spinner';
+import { MatchDetailPanel } from './MatchDetailPanel';
+import { apiFetch } from '../lib/api';
 import { cardStyle, fmtNum, fmtDelta, plural } from './statsPrimitives';
 import { PageControls, MODO_LABELS } from './SeasonFilters';
 
@@ -129,94 +131,161 @@ function StatCol({ label, value, color, bold, width = 46 }: { label: string; val
 // Uma linha de partida do ato — ícone de agente preenchendo o "quadrado"
 // (mapa como fallback), badges de clutch/multi-kill, fundo tingido na cor
 // do resultado (mais vivo que só a borda esquerda) e o placar em destaque.
-function SeasonMatchRow({ m, agentIcon, mapIcon, compact }: { m: SeasonMatchSummary; agentIcon: string | null; mapIcon: string | null; compact: boolean }) {
+// Sem `expandable`, o clique navega pra "/partidas?expand=<id>" (usado na
+// Visão do ato, que não tem espaço pra mostrar o detalhe completo aqui
+// dentro); com `expandable`, o clique expande a linha no lugar (usado na
+// página de Partidas) -- `autoExpand` já abre e busca o detalhe sozinha,
+// pra chegar direto expandida quando vem daquele link.
+function SeasonMatchRow({
+  m,
+  agentIcon,
+  mapIcon,
+  compact,
+  expandable,
+  autoExpand,
+}: {
+  m: SeasonMatchSummary;
+  agentIcon: string | null;
+  mapIcon: string | null;
+  compact: boolean;
+  expandable: boolean;
+  autoExpand: boolean;
+}) {
   const navigate = useNavigate();
   const resultColor = m.result === 'V' ? WIN : m.result === 'D' ? LOSS : DRAW;
 
+  const [expanded, setExpanded] = useState(autoExpand);
+  const [detail, setDetail] = useState<MatchDetail | null>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [detailError, setDetailError] = useState<string | null>(null);
+
+  function loadDetail() {
+    if (detail || detailLoading) return;
+    setDetailLoading(true);
+    setDetailError(null);
+    apiFetch<MatchDetail>(`/matches/${m.id}`)
+      .then(setDetail)
+      .catch(() => setDetailError('Não foi possível carregar essa partida.'))
+      .finally(() => setDetailLoading(false));
+  }
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (autoExpand) loadDetail();
+  }, []);
+
+  function handleClick() {
+    if (!expandable) {
+      navigate(`/partidas?expand=${m.id}`);
+      return;
+    }
+    setExpanded((v) => !v);
+    loadDetail();
+  }
+
   return (
-    <div
-      className="list-row"
-      onClick={() => navigate(`/partida/${m.id}`)}
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: 10,
-        padding: '8px 8px 8px 10px',
-        margin: '2px 0',
-        borderRadius: 8,
-        cursor: 'pointer',
-        borderLeft: `3px solid ${resultColor}`,
-        background: `color-mix(in srgb, ${resultColor} 14%, var(--surface-2, rgba(255,255,255,.02)))`,
-      }}
-    >
-      {agentIcon || mapIcon ? (
-        <img src={agentIcon ?? mapIcon!} alt="" style={{ width: 32, height: 32, borderRadius: 7, objectFit: 'contain', background: 'var(--track)', flex: 'none' }} />
-      ) : (
-        <span style={{ width: 32, height: 32, borderRadius: 7, background: 'var(--track)', flex: 'none' }} />
-      )}
-
-      <div style={{ flex: '1 1 auto', minWidth: 0, overflow: 'hidden' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'nowrap', overflow: 'hidden' }}>
-          <span style={{ fontSize: 12.5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {m.map} <span style={{ color: 'var(--text-faint)' }}>· {MODO_LABELS[m.modo] ?? m.modo}</span>
-          </span>
-          {m.rankIconUrl && <img src={m.rankIconUrl} alt="" title="Elo na hora dessa partida" style={{ width: 16, height: 16, objectFit: 'contain', flex: 'none' }} />}
-          {m.mvp ? (
-            <span
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 3,
-                fontSize: 9.5,
-                fontWeight: 800,
-                letterSpacing: '.02em',
-                borderRadius: 5,
-                padding: '2px 7px 2px 5px',
-                whiteSpace: 'nowrap',
-                color: '#141415',
-                background: GOLD,
-                boxShadow: `0 0 0 1px color-mix(in srgb, ${GOLD} 55%, transparent), 0 1px 4px color-mix(in srgb, ${GOLD} 45%, transparent)`,
-              }}
-            >
-              <Crown size={11} strokeWidth={2.5} fill="#141415" />
-              MVP
-            </span>
-          ) : (
-            m.position !== null && (
-              <span
-                title="Posição no próprio time por ACS"
-                style={{ fontSize: 9.5, fontWeight: 700, borderRadius: 5, padding: '2px 6px', whiteSpace: 'nowrap', color: 'var(--text-3)', background: 'var(--track)' }}
-              >
-                {m.position}º
-              </span>
-            )
-          )}
-          {groupBadges(m.badges).map(({ badge, count }, i) => (
-            <span key={i} style={{ fontSize: 8.5, fontWeight: 700, borderRadius: 4, padding: '1px 5px', whiteSpace: 'nowrap', color: badgeColor(badge), background: `color-mix(in srgb, ${badgeColor(badge)} 18%, transparent)` }}>
-              {count > 1 ? `${count}x ` : ''}
-              {badgeLabel(badge)}
-            </span>
-          ))}
-        </div>
-        {!compact && <div style={{ fontSize: 10.5, color: 'var(--text-dim)', marginTop: 2 }}>{m.playedAtLabel}</div>}
-      </div>
-
-      <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10, flex: 'none' }}>
-        <StatCol label="PLACAR" value={m.score} bold />
-
-        {!compact && (
-          <>
-            <StatCol label="K/D" value={fmtNum(m.kdaRatio, 1)} />
-            <StatCol label="K/D/A" value={m.kda} width={62} />
-            <StatCol label="DDΔ" value={fmtDelta(m.ddPerRound, 0)} color={m.ddPerRound >= 0 ? WIN : LOSS} />
-            <StatCol label="HS%" value={`${fmtNum(m.hsPercent, 0)}%`} />
-            <StatCol label="ACS" value={String(m.acs)} bold />
-          </>
+    <div>
+      <div
+        className="list-row"
+        onClick={handleClick}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 10,
+          padding: '8px 8px 8px 10px',
+          margin: '2px 0',
+          borderRadius: 8,
+          cursor: 'pointer',
+          borderLeft: `3px solid ${resultColor}`,
+          background: `color-mix(in srgb, ${resultColor} 14%, var(--surface-2, rgba(255,255,255,.02)))`,
+        }}
+      >
+        {expandable && (
+          <ChevronRight size={14} strokeWidth={2} style={{ flex: 'none', color: 'var(--text-faint)', transform: expanded ? 'rotate(90deg)' : 'none', transition: 'transform .15s ease' }} />
         )}
-        <span style={{ fontSize: 13, fontWeight: 600, textAlign: 'right', width: 36, flex: 'none', color: m.rr === null ? 'var(--text-faint)' : m.rr >= 0 ? WIN : LOSS }}>
-          {m.rr === null ? '—' : fmtRr(m.rr)}
-        </span>
+        {agentIcon || mapIcon ? (
+          <img src={agentIcon ?? mapIcon!} alt="" style={{ width: 32, height: 32, borderRadius: 7, objectFit: 'contain', background: 'var(--track)', flex: 'none' }} />
+        ) : (
+          <span style={{ width: 32, height: 32, borderRadius: 7, background: 'var(--track)', flex: 'none' }} />
+        )}
+
+        <div style={{ flex: '1 1 auto', minWidth: 0, overflow: 'hidden' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'nowrap', overflow: 'hidden' }}>
+            <span style={{ fontSize: 12.5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {m.map} <span style={{ color: 'var(--text-faint)' }}>· {MODO_LABELS[m.modo] ?? m.modo}</span>
+            </span>
+            {m.rankIconUrl && <img src={m.rankIconUrl} alt="" title="Elo na hora dessa partida" style={{ width: 16, height: 16, objectFit: 'contain', flex: 'none' }} />}
+            {m.mvp ? (
+              <span
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 3,
+                  fontSize: 9.5,
+                  fontWeight: 800,
+                  letterSpacing: '.02em',
+                  borderRadius: 5,
+                  padding: '2px 7px 2px 5px',
+                  whiteSpace: 'nowrap',
+                  color: '#141415',
+                  background: GOLD,
+                  boxShadow: `0 0 0 1px color-mix(in srgb, ${GOLD} 55%, transparent), 0 1px 4px color-mix(in srgb, ${GOLD} 45%, transparent)`,
+                }}
+              >
+                <Crown size={11} strokeWidth={2.5} fill="#141415" />
+                MVP
+              </span>
+            ) : (
+              m.position !== null && (
+                <span
+                  title="Posição no próprio time por ACS"
+                  style={{ fontSize: 9.5, fontWeight: 700, borderRadius: 5, padding: '2px 6px', whiteSpace: 'nowrap', color: 'var(--text-3)', background: 'var(--track)' }}
+                >
+                  {m.position}º
+                </span>
+              )
+            )}
+            {groupBadges(m.badges).map(({ badge, count }, i) => (
+              <span key={i} style={{ fontSize: 8.5, fontWeight: 700, borderRadius: 4, padding: '1px 5px', whiteSpace: 'nowrap', color: badgeColor(badge), background: `color-mix(in srgb, ${badgeColor(badge)} 18%, transparent)` }}>
+                {count > 1 ? `${count}x ` : ''}
+                {badgeLabel(badge)}
+              </span>
+            ))}
+          </div>
+          {!compact && <div style={{ fontSize: 10.5, color: 'var(--text-dim)', marginTop: 2 }}>{m.playedAtLabel}</div>}
+        </div>
+
+        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10, flex: 'none' }}>
+          <StatCol label="PLACAR" value={m.score} bold />
+
+          {!compact && (
+            <>
+              <StatCol label="K/D" value={fmtNum(m.kdaRatio, 1)} />
+              <StatCol label="K/D/A" value={m.kda} width={62} />
+              <StatCol label="DDΔ" value={fmtDelta(m.ddPerRound, 0)} color={m.ddPerRound >= 0 ? WIN : LOSS} />
+              <StatCol label="HS%" value={`${fmtNum(m.hsPercent, 0)}%`} />
+              <StatCol label="ACS" value={String(m.acs)} bold />
+            </>
+          )}
+          <span style={{ fontSize: 13, fontWeight: 600, textAlign: 'right', width: 36, flex: 'none', color: m.rr === null ? 'var(--text-faint)' : m.rr >= 0 ? WIN : LOSS }}>
+            {m.rr === null ? '—' : fmtRr(m.rr)}
+          </span>
+        </div>
       </div>
+
+      {expandable && (
+        <div style={{ display: 'grid', gridTemplateRows: expanded ? '1fr' : '0fr', opacity: expanded ? 1 : 0, transition: 'grid-template-rows .28s ease, opacity .22s ease' }}>
+          <div style={{ overflow: 'hidden', minHeight: 0 }}>
+            {detailLoading ? (
+              <div style={{ padding: '16px 18px', fontSize: 12.5, color: 'var(--text-faint)', borderTop: '1px solid var(--divider)' }}>Carregando…</div>
+            ) : detailError ? (
+              <div style={{ padding: '16px 18px', fontSize: 12.5, color: 'var(--text-3)', borderTop: '1px solid var(--divider)' }}>{detailError}</div>
+            ) : detail ? (
+              <MatchDetailPanel detail={detail} />
+            ) : null}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -233,6 +302,8 @@ export function SeasonMatchesList({
   agentIcons,
   setPage,
   title = 'Partidas',
+  expandable = false,
+  autoExpandMatchId = null,
 }: {
   matchesPage: SeasonMatchesPage | null;
   loading: boolean;
@@ -241,6 +312,12 @@ export function SeasonMatchesList({
   agentIcons: Record<string, string>;
   setPage: (page: number) => void;
   title?: string;
+  // Sem isso, clicar numa partida navega pra "/partidas?expand=<id>" (usado
+  // na Visão do ato). Com isso, o clique expande a linha no lugar (usado na
+  // própria página de Partidas) -- `autoExpandMatchId` já abre uma linha
+  // específica de cara, pra chegar direto expandida vindo daquele link.
+  expandable?: boolean;
+  autoExpandMatchId?: string | null;
 }) {
   const [compact, setCompact] = useState(false);
 
@@ -288,7 +365,15 @@ export function SeasonMatchesList({
               <DayHeaderRow label={g.label} matches={g.matches} />
               <div style={{ display: 'flex', flexDirection: 'column', paddingBottom: 6 }}>
                 {g.matches.map((m) => (
-                  <SeasonMatchRow key={m.id} m={m} agentIcon={agentIcons[m.agent] ?? null} mapIcon={mapIcons[m.map] ?? null} compact={compact} />
+                  <SeasonMatchRow
+                    key={m.id}
+                    m={m}
+                    agentIcon={agentIcons[m.agent] ?? null}
+                    mapIcon={mapIcons[m.map] ?? null}
+                    compact={compact}
+                    expandable={expandable}
+                    autoExpand={expandable && m.id === autoExpandMatchId}
+                  />
                 ))}
               </div>
             </div>
