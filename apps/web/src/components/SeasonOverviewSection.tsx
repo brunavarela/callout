@@ -1,11 +1,9 @@
-import { useRef, useState } from 'react';
 import type { MatchCountFilter, MatchModeFilter, RecentFormInsights, RrHistoryPoint, SeasonMatchesPage, SeasonOverview } from '@callout/shared';
 import { LoadingFill } from './Spinner';
 import { SeasonMatchesList } from './SeasonMatchesList';
 import { RrHistoryCard } from './RrHistoryCard';
 import { cardStyle, fmtNum, fmtDelta, plural, rateBarColor, RateBlock, RankingBlock } from './statsPrimitives';
 import { formatSeasonShort } from '../lib/seasonFormat';
-import { useFlip } from '../lib/useFlip';
 
 export { formatSeasonShort, formatPlaytime } from '../lib/seasonFormat';
 
@@ -152,28 +150,6 @@ export function SeasonOverviewSection({
   modoFilter: MatchModeFilter;
   subject?: string;
 }) {
-  const [compact, setCompact] = useState(false);
-  const registerCard = useFlip(compact);
-
-  // Mapa/Armas/Funções, no modo compacto, ganham a mesma altura do card de
-  // Agentes (medida ao vivo num clone invisível dele, não no card real --
-  // ver o clone mais abaixo) -- com scroll por dentro se o conteúdo não
-  // couber. Ref callback (não useEffect com []) porque esse card só existe
-  // de fato depois que `data` chega -- um efeito de montagem rodaria antes
-  // disso, com a ref ainda nula, e nunca mais.
-  const agentesObserver = useRef<ResizeObserver | null>(null);
-  const [agentesHeight, setAgentesHeight] = useState<number | undefined>(undefined);
-  const setAgentesRef = (el: HTMLDivElement | null) => {
-    agentesObserver.current?.disconnect();
-    agentesObserver.current = null;
-    if (!el) return;
-    const observer = new ResizeObserver(([entry]) => {
-      if (entry) setAgentesHeight(entry.contentRect.height);
-    });
-    observer.observe(el);
-    agentesObserver.current = observer;
-  };
-
   if (loading) return <LoadingFill />;
   if (error) return <div style={{ ...cardStyle, padding: 24, textAlign: 'center', color: 'var(--text-muted)', fontSize: 13.5 }}>{error}</div>;
   if (!data) {
@@ -249,69 +225,15 @@ export function SeasonOverviewSection({
       />
 
       <div className="grid-responsive-season">
-        {/* Coluna da esquerda: a lista de partidas, sozinha (modo normal) ou
-            encolhida ao lado dos cards de Mapa/Armas/Funções (modo
-            compacto, em 2 colunas do mesmo tamanho da sidebar) -- só essa
-            coluna reflui; a sidebar (Agentes/Precisão/Ataque-defesa) ao
-            lado é sempre estática. */}
-        <div className="season-left-row">
-          <div ref={registerCard('partidas')} style={{ flex: compact ? '0 0 190px' : '1 1 auto' }}>
-            <SeasonMatchesList
-              matchesPage={matchesPage}
-              loading={matchesLoading}
-              error={matchesError}
-              mapIcons={data.mapIcons}
-              agentIcons={data.agentIcons}
-              setPage={setMatchesPageNumber}
-              compact={compact}
-              setCompact={setCompact}
-              style={{ flex: 1 }}
-            />
-          </div>
+        <SeasonMatchesList
+          matchesPage={matchesPage}
+          loading={matchesLoading}
+          error={matchesError}
+          mapIcons={data.mapIcons}
+          agentIcons={data.agentIcons}
+          setPage={setMatchesPageNumber}
+        />
 
-          {compact && (
-            <div className="season-rise-grid">
-              <div ref={registerCard('funcoes')} style={{ gridColumn: 2, gridRow: 1 }}>
-                <RateBlock
-                  title="Funções"
-                  sub="Winrate por função no ato"
-                  rows={data.roles.map((r) => ({ key: r.role, name: r.role, wins: r.wins, total: r.matches }))}
-                  colorFor={rateBarColor}
-                  maxHeight={agentesHeight}
-                />
-              </div>
-              <div ref={registerCard('armas')} style={{ gridColumn: 2, gridRow: 2 }}>
-                <RankingBlock
-                  title="Armas mais usadas"
-                  sub="Abates por arma no ato"
-                  rows={data.topWeapons.map((w) => ({ key: w.weapon, name: w.weapon, value: plural(w.kills, 'abate') }))}
-                  maxHeight={agentesHeight}
-                />
-              </div>
-              <div ref={registerCard('mapa')} style={{ gridColumn: 2, gridRow: 3 }}>
-                <RankingBlock
-                  title="Mapa"
-                  sub="Vitórias no ato"
-                  rows={data.topMaps.map((m) => ({
-                    key: m.map,
-                    name: m.map,
-                    value: `${m.wins}V · ${m.total - m.wins}D`,
-                    caption: `${m.winratePercent}% de winrate`,
-                    icon: data.mapIcons[m.map],
-                  }))}
-                  maxHeight={agentesHeight}
-                />
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Sidebar fixa -- nunca se move nem redimensiona com o toggle
-            Detalhado/Compacto, em nenhuma hipótese (nem o flex/height de
-            esticar muda). A altura usada por Mapa/Armas/Funções vem de um
-            clone invisível do card de Agentes (ver `agentesMeasureRef`
-            abaixo), não deste aqui -- assim a medida nunca depende do
-            quanto esse card real está esticado. */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16, height: '100%' }}>
           <RankingBlock
             title="Agentes"
@@ -331,59 +253,32 @@ export function SeasonOverviewSection({
         </div>
       </div>
 
-      {/* Clone invisível do card de Agentes, fora do fluxo (position:
-          absolute + visibility:hidden) e sem nenhum flex/stretch de pai --
-          existe só pra medir a altura NATURAL do conteúdo (a mesma largura
-          320px da sidebar), sem sofrer (nem causar) qualquer influência do
-          layout visível. É o que dá a altura de Mapa/Armas/Funções no modo
-          compacto. */}
-      {compact && (
-        <div style={{ position: 'absolute', top: 0, left: 0, width: 320, height: 0, overflow: 'hidden', visibility: 'hidden', pointerEvents: 'none', zIndex: -1 }} aria-hidden="true">
-          <div ref={setAgentesRef}>
-            <RankingBlock
-              title="Agentes"
-              sub="Winrate no ato"
-              rows={data.topAgents.slice(0, 6).map((a) => ({
-                key: a.agent,
-                name: a.agent,
-                value: `${a.winratePercent}%`,
-                caption: `${plural(a.matches, 'partida')} · KD ${fmtNum(a.kda, 2)}`,
-                icon: data.agentIcons[a.agent],
-                dot: a.color,
-              }))}
-            />
-          </div>
-        </div>
-      )}
-
-      {/* Fora do modo compacto, Mapa/Armas/Funções ficam abaixo, em vez de
-          "em cima" ao lado da lista de partidas encolhida. */}
-      {!compact && (
-        <div className="grid-responsive-3">
-          <RankingBlock
-            title="Mapa"
-            sub="Vitórias no ato"
-            rows={data.topMaps.map((m) => ({
-              key: m.map,
-              name: m.map,
-              value: `${m.wins}V · ${m.total - m.wins}D`,
-              caption: `${m.winratePercent}% de winrate`,
-              icon: data.mapIcons[m.map],
-            }))}
-          />
-          <RankingBlock
-            title="Armas mais usadas"
-            sub="Abates por arma no ato"
-            rows={data.topWeapons.map((w) => ({ key: w.weapon, name: w.weapon, value: plural(w.kills, 'abate') }))}
-          />
-          <RateBlock
-            title="Funções"
-            sub="Winrate por função no ato"
-            rows={data.roles.map((r) => ({ key: r.role, name: r.role, wins: r.wins, total: r.matches }))}
-            colorFor={rateBarColor}
-          />
-        </div>
-      )}
+      {/* Cards adicionais — sobram depois da lista de partidas, "encaixados"
+          lado a lado em vez de ficarem perdidos no fim da página. */}
+      <div className="grid-responsive-3">
+        <RankingBlock
+          title="Mapa"
+          sub="Vitórias no ato"
+          rows={data.topMaps.map((m) => ({
+            key: m.map,
+            name: m.map,
+            value: `${m.wins}V · ${m.total - m.wins}D`,
+            caption: `${m.winratePercent}% de winrate`,
+            icon: data.mapIcons[m.map],
+          }))}
+        />
+        <RankingBlock
+          title="Armas mais usadas"
+          sub="Abates por arma no ato"
+          rows={data.topWeapons.map((w) => ({ key: w.weapon, name: w.weapon, value: plural(w.kills, 'abate') }))}
+        />
+        <RateBlock
+          title="Funções"
+          sub="Winrate por função no ato"
+          rows={data.roles.map((r) => ({ key: r.role, name: r.role, wins: r.wins, total: r.matches }))}
+          colorFor={rateBarColor}
+        />
+      </div>
     </div>
   );
 }

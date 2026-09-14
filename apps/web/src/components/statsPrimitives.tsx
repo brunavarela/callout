@@ -53,7 +53,6 @@ export function RateBlock({
   rows,
   colorFor,
   maxHeight,
-  style,
 }: {
   title: string;
   sub: string;
@@ -63,10 +62,9 @@ export function RateBlock({
   // linhas rola por dentro (título/legenda continuam sempre visíveis). Sem
   // isso, o card cresce com o conteúdo (comportamento de sempre).
   maxHeight?: number;
-  style?: React.CSSProperties;
 }) {
   return (
-    <div style={{ ...cardStyle, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 11, ...(maxHeight ? { height: maxHeight, overflow: 'hidden' } : {}), ...style }}>
+    <div style={{ ...cardStyle, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 11, ...(maxHeight ? { height: maxHeight } : {}) }}>
       <div>
         <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 15 }}>{title}</div>
         <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 3 }}>{sub}</div>
@@ -121,24 +119,9 @@ export interface RankingRow {
 // à direita, destaque dourado no 1º lugar (mesma cor do badge de MVP em
 // MatchRow.tsx/EquipePartidas.tsx). Cobre ACS/MVP/assistências/first
 // blood/clutches/agentes do painel da equipe — uma implementação só.
-// Opcional: `maxHeight` -- quando passado, o card vira altura fixa e só a
-// lista de linhas rola por dentro (título/legenda continuam sempre
-// visíveis), mesmo padrão do `maxHeight` de RateBlock.
-export function RankingBlock({
-  title,
-  sub,
-  rows,
-  style,
-  maxHeight,
-}: {
-  title: string;
-  sub: string;
-  rows: RankingRow[];
-  style?: React.CSSProperties;
-  maxHeight?: number;
-}) {
+export function RankingBlock({ title, sub, rows, style }: { title: string; sub: string; rows: RankingRow[]; style?: React.CSSProperties }) {
   return (
-    <div style={{ ...cardStyle, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 11, ...(maxHeight ? { height: maxHeight, overflow: 'hidden' } : {}), ...style }}>
+    <div style={{ ...cardStyle, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 11, ...style }}>
       <div>
         <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 15 }}>{title}</div>
         <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 3 }}>{sub}</div>
@@ -146,7 +129,7 @@ export function RankingBlock({
       {rows.length === 0 ? (
         <div style={{ fontSize: 12.5, color: 'var(--text-faint)' }}>Sem dados ainda.</div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 2, ...(maxHeight ? { flex: 1, minHeight: 0, overflowY: 'auto' } : {}) }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
           {rows.map((r, i) => {
             const isFirst = i === 0;
             return (

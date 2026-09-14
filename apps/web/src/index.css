@@ -539,9 +539,7 @@ button {
   transform: translateY(0);
 }
 
-/* Visão do ato: lista de partidas + sidebar (Agentes/Precisão/Ataque-
-   defesa) -- a sidebar (coluna da direita) é sempre estática, nunca entra
-   no grid/FLIP de reflow do modo compacto, só a coluna da esquerda muda. */
+/* Visão do ato: lista de partidas + sidebar (Agentes/Mapas/Funções) */
 .grid-responsive-season {
   display: grid;
   grid-template-columns: 1fr 320px;
@@ -553,33 +551,15 @@ button {
   }
 }
 
-/* Coluna da esquerda da Visão do ato: a lista de partidas sozinha (modo
-   normal) ou, no modo compacto, a lista encolhida ao lado dos cards de
-   Mapa/Armas/Funções (que "sobem" pra esse nível, em 2 colunas do mesmo
-   tamanho dos cards da sidebar -- 320px, mesma largura de Agentes/
-   Precisão/Ataque-defesa). */
-.season-left-row {
-  display: flex;
-  align-items: flex-start;
-  gap: 16px;
-}
-.season-left-row > * {
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-}
-.season-rise-grid {
+/* Pares de cards 50/50 do Painel do time (mapa+combinação, ACS+MVP etc.) */
+.grid-responsive-2 {
   display: grid;
-  grid-template-columns: repeat(2, 320px);
+  grid-template-columns: 1fr 1fr;
   gap: 16px;
 }
-.season-rise-grid > * {
-  display: flex;
-  flex-direction: column;
-}
-@media (max-width: 1180px) {
-  .season-rise-grid {
-    grid-template-columns: 320px;
+@media (max-width: 900px) {
+  .grid-responsive-2 {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -596,18 +576,6 @@ button {
 }
 @media (max-width: 640px) {
   .grid-responsive-3 {
-    grid-template-columns: 1fr;
-  }
-}
-
-/* Pares de cards 50/50 do Painel do time (mapa+combinação, ACS+MVP etc.) */
-.grid-responsive-2 {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
-}
-@media (max-width: 900px) {
-  .grid-responsive-2 {
     grid-template-columns: 1fr;
   }
 }

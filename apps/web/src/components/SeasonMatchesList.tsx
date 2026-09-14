@@ -1,5 +1,6 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Crown, LayoutGrid, LayoutList } from 'lucide-react';
+import { Crown } from 'lucide-react';
 import type { MatchBadge, SeasonMatchesPage, SeasonMatchSummary } from '@callout/shared';
 import { LoadingFill } from './Spinner';
 import { cardStyle, fmtNum, fmtDelta, plural } from './statsPrimitives';
@@ -70,7 +71,7 @@ function parseKda(kda: string): [number, number, number] {
 // Linha de resumo do dia — contagem V/D e a média das mesmas métricas que
 // cada linha de partida mostra, pra dar o "placar do dia" antes de listar
 // as partidas dele.
-function DayHeaderRow({ label, matches, compact }: { label: string; matches: SeasonMatchSummary[]; compact: boolean }) {
+function DayHeaderRow({ label, matches }: { label: string; matches: SeasonMatchSummary[] }) {
   const wins = matches.filter((m) => m.result === 'V').length;
   const losses = matches.filter((m) => m.result === 'D').length;
   let k = 0,
@@ -86,18 +87,6 @@ function DayHeaderRow({ label, matches, compact }: { label: string; matches: Sea
   const avgHs = matches.reduce((s, m) => s + m.hsPercent, 0) / matches.length;
   const avgDd = matches.reduce((s, m) => s + m.ddPerRound, 0) / matches.length;
   const kd = d > 0 ? fmtNum(k / d, 1) : String(k);
-
-  if (compact) {
-    return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 2, padding: '14px 4px 6px', textAlign: 'center' }}>
-        <span style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 13 }}>{label}</span>
-        <span style={{ fontSize: 10.5, color: 'var(--text-faint)' }}>{plural(matches.length, 'partida')}</span>
-        <span style={{ fontSize: 10.5, color: 'var(--text-faint)' }}>
-          {wins}V·{losses}D
-        </span>
-      </div>
-    );
-  }
 
   return (
     <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, padding: '14px 6px 6px', flexWrap: 'wrap' }}>
@@ -140,36 +129,9 @@ function StatCol({ label, value, color, bold, width = 46 }: { label: string; val
 // Uma linha de partida do ato — ícone de agente preenchendo o "quadrado"
 // (mapa como fallback), badges de clutch/multi-kill, fundo tingido na cor
 // do resultado (mais vivo que só a borda esquerda) e o placar em destaque.
-// No modo compacto vira só um quadradinho colorido com o placar.
 function SeasonMatchRow({ m, agentIcon, mapIcon, compact }: { m: SeasonMatchSummary; agentIcon: string | null; mapIcon: string | null; compact: boolean }) {
   const navigate = useNavigate();
   const resultColor = m.result === 'V' ? WIN : m.result === 'D' ? LOSS : DRAW;
-
-  if (compact) {
-    return (
-      <div
-        onClick={() => navigate(`/partida/${m.id}`)}
-        title={`${m.map} · ${MODO_LABELS[m.modo] ?? m.modo} · ${m.playedAtLabel}`}
-        style={{
-          width: 50,
-          height: 50,
-          flex: 'none',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          borderRadius: 9,
-          cursor: 'pointer',
-          borderLeft: `3px solid ${resultColor}`,
-          background: `color-mix(in srgb, ${resultColor} 16%, var(--surface-2, rgba(255,255,255,.02)))`,
-          fontSize: 11.5,
-          fontWeight: 700,
-          color: 'var(--text-2)',
-        }}
-      >
-        {m.score}
-      </div>
-    );
-  }
 
   return (
     <div
@@ -236,16 +198,21 @@ function SeasonMatchRow({ m, agentIcon, mapIcon, compact }: { m: SeasonMatchSumm
             </span>
           ))}
         </div>
-        <div style={{ fontSize: 10.5, color: 'var(--text-dim)', marginTop: 2 }}>{m.playedAtLabel}</div>
+        {!compact && <div style={{ fontSize: 10.5, color: 'var(--text-dim)', marginTop: 2 }}>{m.playedAtLabel}</div>}
       </div>
 
       <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10, flex: 'none' }}>
         <StatCol label="PLACAR" value={m.score} bold />
-        <StatCol label="K/D" value={fmtNum(m.kdaRatio, 1)} />
-        <StatCol label="K/D/A" value={m.kda} width={62} />
-        <StatCol label="DDΔ" value={fmtDelta(m.ddPerRound, 0)} color={m.ddPerRound >= 0 ? WIN : LOSS} />
-        <StatCol label="HS%" value={`${fmtNum(m.hsPercent, 0)}%`} />
-        <StatCol label="ACS" value={String(m.acs)} bold />
+
+        {!compact && (
+          <>
+            <StatCol label="K/D" value={fmtNum(m.kdaRatio, 1)} />
+            <StatCol label="K/D/A" value={m.kda} width={62} />
+            <StatCol label="DDΔ" value={fmtDelta(m.ddPerRound, 0)} color={m.ddPerRound >= 0 ? WIN : LOSS} />
+            <StatCol label="HS%" value={`${fmtNum(m.hsPercent, 0)}%`} />
+            <StatCol label="ACS" value={String(m.acs)} bold />
+          </>
+        )}
         <span style={{ fontSize: 13, fontWeight: 600, textAlign: 'right', width: 36, flex: 'none', color: m.rr === null ? 'var(--text-faint)' : m.rr >= 0 ? WIN : LOSS }}>
           {m.rr === null ? '—' : fmtRr(m.rr)}
         </span>
@@ -266,9 +233,6 @@ export function SeasonMatchesList({
   agentIcons,
   setPage,
   title = 'Partidas',
-  compact,
-  setCompact,
-  style,
 }: {
   matchesPage: SeasonMatchesPage | null;
   loading: boolean;
@@ -277,10 +241,9 @@ export function SeasonMatchesList({
   agentIcons: Record<string, string>;
   setPage: (page: number) => void;
   title?: string;
-  compact: boolean;
-  setCompact: (compact: boolean) => void;
-  style?: React.CSSProperties;
 }) {
+  const [compact, setCompact] = useState(false);
+
   if (loading) return <LoadingFill />;
   if (error) return <div style={{ ...cardStyle, padding: 24, textAlign: 'center', color: 'var(--text-muted)', fontSize: 13.5 }}>{error}</div>;
   if (!matchesPage || matchesPage.matches.length === 0) {
@@ -290,39 +253,40 @@ export function SeasonMatchesList({
   const dayGroups = groupByDay(matchesPage.matches);
 
   return (
-    <div style={{ ...cardStyle, padding: '16px 18px 8px', display: 'flex', flexDirection: 'column', ...style }}>
+    <div style={{ ...cardStyle, padding: '16px 18px 8px', display: 'flex', flexDirection: 'column' }}>
       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
         <div>
           <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 16 }}>{title}</div>
           <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>{plural(matchesPage.total, 'partida')} no ato</div>
         </div>
-        <button
-          onClick={() => setCompact(!compact)}
-          title={compact ? 'Ver detalhado' : 'Ver compacto'}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            width: 32,
-            height: 32,
-            borderRadius: 8,
-            border: '1px solid var(--surface-border)',
-            cursor: 'pointer',
-            flex: 'none',
-            background: compact ? 'var(--acc, #EF4958)' : 'var(--input-bg)',
-            color: compact ? 'var(--acc-text, #141415)' : 'var(--text-muted)',
-          }}
-        >
-          {compact ? <LayoutList size={16} /> : <LayoutGrid size={16} />}
-        </button>
+        <div style={{ display: 'flex', gap: 4, background: 'var(--input-bg)', border: '1px solid var(--surface-border)', borderRadius: 9, padding: 3 }}>
+          {(['Detalhado', 'Compacto'] as const).map((opt) => (
+            <button
+              key={opt}
+              onClick={() => setCompact(opt === 'Compacto')}
+              style={{
+                padding: '5px 11px',
+                borderRadius: 6,
+                border: 'none',
+                cursor: 'pointer',
+                fontSize: 11.5,
+                whiteSpace: 'nowrap',
+                background: (opt === 'Compacto') === compact ? 'var(--acc, #EF4958)' : 'transparent',
+                color: (opt === 'Compacto') === compact ? 'var(--acc-text, #141415)' : 'var(--text-muted)',
+              }}
+            >
+              {opt}
+            </button>
+          ))}
+        </div>
       </div>
 
-      <div className={compact ? undefined : 'scroll-x-mobile'}>
+      <div className="scroll-x-mobile">
         <div style={{ minWidth: compact ? undefined : 560 }}>
           {dayGroups.map((g) => (
             <div key={g.key}>
-              <DayHeaderRow label={g.label} matches={g.matches} compact={compact} />
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: compact ? 'center' : 'stretch', gap: compact ? 6 : 0, paddingBottom: 6 }}>
+              <DayHeaderRow label={g.label} matches={g.matches} />
+              <div style={{ display: 'flex', flexDirection: 'column', paddingBottom: 6 }}>
                 {g.matches.map((m) => (
                   <SeasonMatchRow key={m.id} m={m} agentIcon={agentIcons[m.agent] ?? null} mapIcon={mapIcons[m.map] ?? null} compact={compact} />
                 ))}
