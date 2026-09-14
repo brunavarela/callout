@@ -101,7 +101,7 @@ function AccuracyBar({ accuracy }: { accuracy: SeasonOverview['accuracy'] }) {
       </div>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 36 }}>
         <BodySilhouette headColor={segments[0]!.color} bodyColor={segments[1]!.color} legColor={segments[2]!.color} />
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, flex: 1, minWidth: 0 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, flex: '0 0 auto', minWidth: 0 }}>
           {segments.map((s) => (
             <div key={s.label} style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
               <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--text-3)' }}>
