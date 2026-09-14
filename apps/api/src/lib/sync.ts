@@ -65,19 +65,21 @@ export async function syncUserMatches(userId: string, puuid: string, region: str
     // pra sempre. Por isso capturamos aqui, no momento do sync (quando a
     // partida ainda tá bem dentro da janela), em vez de buscar sob demanda
     // depois. `tier.id` é o elo que a pessoa estava NESSA partida — usado
-    // pro ícone de elo na lista de partidas (ver RankTierAsset).
+    // pro ícone de elo na lista de partidas (ver RankTierAsset). Busca
+    // sempre (não só quando há partida nova) porque também serve pra
+    // corrigir abaixo partidas já existentes que ficaram com rr/rankTierId
+    // null (ver comentário mais abaixo).
     const rrByMatchId = new Map<string, number>();
     const rankTierByMatchId = new Map<string, number>();
-    if (newMatches.length > 0) {
-      try {
-        const history = await getMmrHistory(region, puuid);
-        for (const h of history) {
-          rrByMatchId.set(h.match_id, h.last_change);
-          rankTierByMatchId.set(h.match_id, h.tier.id);
-        }
-      } catch {
-        // sem histórico de RR agora — as partidas novas ficam com rr/rankTierId null
+    let mmrHistory: Awaited<ReturnType<typeof getMmrHistory>> = [];
+    try {
+      mmrHistory = await getMmrHistory(region, puuid);
+      for (const h of mmrHistory) {
+        rrByMatchId.set(h.match_id, h.last_change);
+        rankTierByMatchId.set(h.match_id, h.tier.id);
       }
+    } catch {
+      // sem histórico de RR agora — as partidas novas ficam com rr/rankTierId null
     }
 
     // Paralelo, mas com teto — Promise.all sem limite chegou a abrir uma
@@ -103,6 +105,25 @@ export async function syncUserMatches(userId: string, puuid: string, region: str
       }
     }
     await Promise.all(Array.from({ length: Math.min(PERSIST_CONCURRENCY, newMatches.length) }, worker));
+
+    // Corrige partidas que já existiam no banco mas ficaram com rr/
+    // rankTierId null -- acontece quando, no sync em que a partida foi
+    // criada, ela ainda não tinha aparecido no mmr-history (delay de
+    // propagação da própria Riot/HenrikDev) ou a chamada falhou por algum
+    // motivo transitório. Como esse endpoint só cobre as ~20 partidas
+    // ranqueadas mais recentes, se a partida ainda está na janela agora,
+    // corrige; se já saiu da janela, o rr dela ficou perdido pra sempre
+    // (limitação da API, não retroativo).
+    if (mmrHistory.length > 0) {
+      await Promise.all(
+        mmrHistory.map((h) =>
+          prisma.matchPlayer.updateMany({
+            where: { matchId: h.match_id, puuid, rr: null },
+            data: { rr: h.last_change, rankTierId: h.tier.id },
+          }),
+        ),
+      );
+    }
 
     progressByUser.set(userId, {
       state: "idle",
