@@ -73,7 +73,7 @@ function InfoDot({ text }: { text: string }) {
 // de 30 dias, só que alimentado por SeasonOverview.attackDefense.
 function AttackDefenseCard({ sides, height }: { sides: SeasonOverview['attackDefense']; height?: number }) {
   return (
-    <div style={{ ...cardStyle, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 12, flex: 1, ...(height ? { height, overflow: 'hidden' } : {}) }}>
+    <div style={{ ...cardStyle, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 12, flex: height ? '0 0 auto' : 1, ...(height ? { height, overflow: 'hidden' } : {}) }}>
       <div>
         <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 15 }}>Ataque ou defesa</div>
         <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 3 }}>% de rounds ganhos em cada lado, no ato</div>
@@ -159,7 +159,7 @@ function AccuracyBar({ accuracy, height }: { accuracy: SeasonOverview['accuracy'
     { label: 'Perna', percent: accuracy.legPercent, hits: accuracy.legHits, color: 'var(--neg, #EF4958)' },
   ];
   return (
-    <div style={{ ...cardStyle, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 12, flex: 1, ...(height ? { height, overflow: 'hidden' } : {}) }}>
+    <div style={{ ...cardStyle, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 12, flex: height ? '0 0 auto' : 1, ...(height ? { height, overflow: 'hidden' } : {}) }}>
       <div>
         <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 15 }}>Precisão</div>
         <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 3 }}>Onde seus tiros acertaram no ato — cabeça, corpo ou perna.</div>
@@ -344,7 +344,7 @@ function MapBlock({ maps, maxHeight }: { maps: SeasonOverview['topMaps']; maxHei
   const totalMatches = maps.reduce((s, m) => s + m.total, 0);
 
   return (
-    <div style={{ ...cardStyle, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 11, flex: 1, ...(maxHeight ? { height: maxHeight, overflow: 'hidden' } : {}) }}>
+    <div style={{ ...cardStyle, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 11, flex: maxHeight ? '0 0 auto' : 1, ...(maxHeight ? { height: maxHeight, overflow: 'hidden' } : {}) }}>
       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
         <div>
           <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 15 }}>Mapa</div>
