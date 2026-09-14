@@ -164,17 +164,17 @@ function AccuracyBar({ accuracy, height }: { accuracy: SeasonOverview['accuracy'
         <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 15 }}>Precisão</div>
         <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 3 }}>Onde seus tiros acertaram no ato — cabeça, corpo ou perna.</div>
       </div>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 36 }}>
+      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 40 }}>
         <BodySilhouette headColor={segments[0]!.color} bodyColor={segments[1]!.color} legColor={segments[2]!.color} />
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, flex: '0 0 auto', minWidth: 0 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 20, flex: '0 0 auto', minWidth: 0 }}>
           {segments.map((s) => (
-            <div key={s.label} style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--text-3)' }}>
-                <span style={{ width: 8, height: 8, borderRadius: 2, background: s.color, flex: 'none' }} />
+            <div key={s.label} style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 14, color: 'var(--text-3)' }}>
+                <span style={{ width: 9, height: 9, borderRadius: 3, background: s.color, flex: 'none' }} />
                 {s.label}
               </span>
-              <span style={{ fontSize: 15, fontWeight: 600 }}>
-                {fmtNum(s.percent, 1)}% <span style={{ fontSize: 10.5, color: 'var(--text-faint)', fontWeight: 400 }}>({plural(s.hits, 'tiro')})</span>
+              <span style={{ fontFamily: 'Poppins,sans-serif', fontSize: 22, fontWeight: 700 }}>
+                {fmtNum(s.percent, 1)}% <span style={{ fontSize: 12.5, color: 'var(--text-faint)', fontWeight: 400 }}>({plural(s.hits, 'tiro')})</span>
               </span>
             </div>
           ))}
