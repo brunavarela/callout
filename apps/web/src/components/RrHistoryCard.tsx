@@ -230,9 +230,30 @@ export function RrHistoryCard({
   }
   return (
     <div style={{ ...cardStyle, padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: 4, ...(height ? { height, overflow: 'hidden' } : {}) }}>
-      <div>
-        <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 16 }}>RR ganho e perdido</div>
-        <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 3 }}>Soma acumulada de RR — cada ponto é uma partida.</div>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+        <div>
+          <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 16 }}>RR ganho e perdido</div>
+          <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 3 }}>Soma acumulada de RR — cada ponto é uma partida.</div>
+        </div>
+        {rrHistory.length > 0 && (
+          <span
+            title="Saldo de RR sob o filtro de partidas atual"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              fontSize: 12.5,
+              fontWeight: 600,
+              borderRadius: 8,
+              padding: '5px 11px',
+              whiteSpace: 'nowrap',
+              color: rrBalance >= 0 ? WIN : LOSS,
+              background: `color-mix(in srgb, ${rrBalance >= 0 ? WIN : LOSS} 14%, transparent)`,
+            }}
+          >
+            Saldo RR {fmtDelta(rrBalance, 0)}
+          </span>
+        )}
       </div>
       {rrHistoryLoading ? (
         <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 150 }}>
