@@ -46,8 +46,13 @@ export async function getAccountByRiotId(name: string, tag: string): Promise<Acc
   return accountV2ResponseSchema.parse(json).data;
 }
 
-export async function getMatchlist(affinity: string, puuid: string): Promise<MatchV4Data[]> {
-  const json = await henrikFetch(`/valorant/v4/by-puuid/matches/${affinity}/pc/${puuid}?size=30`);
+// `start`/`size` paginam o histórico (start = índice inicial, size =
+// quantidade) -- sem `start`, a API sempre devolve só as `size` partidas
+// mais recentes. syncUserMatches pagina com isso pra não perder partidas
+// quando a pessoa joga mais que `size` sem abrir o app entre uma
+// sincronização e outra (ver comentário lá).
+export async function getMatchlist(affinity: string, puuid: string, start = 0, size = 30): Promise<MatchV4Data[]> {
+  const json = await henrikFetch(`/valorant/v4/by-puuid/matches/${affinity}/pc/${puuid}?start=${start}&size=${size}`);
   return matchlistV4ResponseSchema.parse(json).data;
 }
 

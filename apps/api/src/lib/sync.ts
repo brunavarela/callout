@@ -38,7 +38,37 @@ export async function syncUserMatches(userId: string, puuid: string, region: str
   progressByUser.set(userId, { state: "syncing", progress: { done: 0, total: 0 } });
 
   try {
-    const matches = await getMatchlist(region, puuid);
+    // Pagina pra trás (start=0, start=<recebidas até agora>, ...) até achar
+    // uma página onde TODAS as partidas já existem no banco (sinal de que
+    // alcançamos o que já tinha sido sincronizado antes) ou até um teto de
+    // segurança. Sem isso, a HenrikDev só devolve as mais recentes de
+    // qualquer jeito (sem `start` ela nunca "anda" pro passado) — então se
+    // a pessoa jogar muitas partidas (de qualquer modo) sem abrir o app
+    // entre uma sincronização e outra, as mais antigas desse intervalo
+    // ficavam pra sempre fora do alcance, sem essa paginação.
+    //
+    // O `start` avança por `matches.length` (quantas vieram DE VERDADE),
+    // não por um tamanho de página fixo — a API às vezes devolve bem menos
+    // que o `size` pedido (visto na prática: pedindo 30, vêm só ~10), e
+    // avançar por um valor fixo nesse caso pularia registros no meio.
+    const PAGE_REQUEST_SIZE = 30;
+    const MAX_PAGES = 3; // teto de segurança -- a HenrikDev tem rate limit apertado por chave (CONTEXT.md §5.2), poucas páginas por sync evita estourar
+    const matches: MatchV4Data[] = [];
+    for (let i = 0; i < MAX_PAGES; i++) {
+      let batch: MatchV4Data[];
+      try {
+        batch = await getMatchlist(region, puuid, matches.length, PAGE_REQUEST_SIZE);
+      } catch (err) {
+        // Rate limit no meio da paginação (só a 1ª página é essencial pro
+        // sync normal) -- usa o que já foi coletado em vez de falhar tudo.
+        if (err instanceof HenrikDevError && err.status === 429) break;
+        throw err;
+      }
+      if (batch.length === 0) break;
+      matches.push(...batch);
+      const existingInBatch = await prisma.match.count({ where: { id: { in: batch.map((m) => m.metadata.match_id) } } });
+      if (existingInBatch === batch.length) break; // página inteira já sincronizada — sem mais gap
+    }
     progressByUser.set(userId, { state: "syncing", progress: { done: 0, total: matches.length } });
 
     // Um findMany só pra ver quais dos 30 já existem, em vez de um
