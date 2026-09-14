@@ -523,7 +523,7 @@ function AgentBlock({ agents, agentIcons, maxHeight }: { agents: SeasonOverview[
               const lowSample = a.matches < MIN_SAMPLE;
               const color = isFirst ? GOLD : lowSample ? LOW_SAMPLE : a.winratePercent >= 50 ? WIN : UNDER_50;
               return (
-                <div key={a.agent} style={{ padding: '10px 0', borderTop: i > 0 ? '1px solid var(--divider)' : 'none' }}>
+                <div key={a.agent} style={{ padding: '10px 18px', margin: '0 -18px', borderRadius: 8, background: i % 2 === 1 ? 'var(--track)' : 'transparent' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                     <span
                       style={{
