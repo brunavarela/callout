@@ -144,12 +144,44 @@ function buildTeamPositionByMatchPuuid(rows: Array<{ matchId: string; teamId: st
 // mapa restringe a quais agentes você jogou NESSE mapa. Mesmo padrão dual
 // já usado no /dashboard antigo (ver mapIdFilter em dashboard.ts).
 async function buildTopAgents(rows: Row[]): Promise<TopAgentStat[]> {
+  // DDΔ por agente — mesmo cálculo do ddPerRound geral (dano por round vs
+  // média dos outros 9 jogadores da mesma partida), só que agregado por
+  // agente em vez do painel inteiro. Precisa buscar todo mundo dessas
+  // partidas (não só o dono do painel) pra saber a média dos outros.
+  const matchIds = rows.map((r) => r.matchId);
+  const allPlayers =
+    matchIds.length > 0
+      ? await prisma.matchPlayer.findMany({ where: { matchId: { in: matchIds } }, select: { matchId: true, puuid: true, damageDealt: true, roundsPlayed: true } })
+      : [];
+  const selfPuuidByMatch = new Map(rows.map((r) => [r.matchId, r.puuid]));
+  const othersByMatch = new Map<string, { dmg: number; rounds: number }>();
+  for (const p of allPlayers) {
+    if (p.puuid === selfPuuidByMatch.get(p.matchId)) continue;
+    const entry = othersByMatch.get(p.matchId) ?? { dmg: 0, rounds: 0 };
+    entry.dmg += p.damageDealt;
+    entry.rounds += p.roundsPlayed;
+    othersByMatch.set(p.matchId, entry);
+  }
+
   const byAgent = new Map<
     string,
-    { matches: number; wins: number; kills: number; deaths: number; assists: number; dmg: number; rounds: number; acsSum: number; maps: Map<string, { wins: number; total: number }> }
+    {
+      matches: number;
+      wins: number;
+      kills: number;
+      deaths: number;
+      assists: number;
+      dmg: number;
+      rounds: number;
+      acsSum: number;
+      ddSum: number;
+      durationMs: number;
+      maps: Map<string, { wins: number; total: number }>;
+    }
   >();
   for (const r of rows) {
-    const entry = byAgent.get(r.agentName) ?? { matches: 0, wins: 0, kills: 0, deaths: 0, assists: 0, dmg: 0, rounds: 0, acsSum: 0, maps: new Map() };
+    const entry =
+      byAgent.get(r.agentName) ?? { matches: 0, wins: 0, kills: 0, deaths: 0, assists: 0, dmg: 0, rounds: 0, acsSum: 0, ddSum: 0, durationMs: 0, maps: new Map() };
     entry.matches++;
     if (r.won) entry.wins++;
     entry.kills += r.kills;
@@ -158,6 +190,11 @@ async function buildTopAgents(rows: Row[]): Promise<TopAgentStat[]> {
     entry.dmg += r.damageDealt;
     entry.rounds += r.roundsPlayed;
     entry.acsSum += r.acs;
+    entry.durationMs += r.match.durationMs;
+    const selfAdr = r.roundsPlayed > 0 ? r.damageDealt / r.roundsPlayed : 0;
+    const others = othersByMatch.get(r.matchId);
+    const othersAdr = others && others.rounds > 0 ? others.dmg / others.rounds : selfAdr;
+    entry.ddSum += selfAdr - othersAdr;
     const mapName = r.match.map?.nome ?? "—";
     const mapEntry = entry.maps.get(mapName) ?? { wins: 0, total: 0 };
     mapEntry.total++;
@@ -180,8 +217,11 @@ async function buildTopAgents(rows: Row[]): Promise<TopAgentStat[]> {
         matches: s.matches,
         winratePercent: Math.round((s.wins / s.matches) * 100),
         kda: s.deaths > 0 ? round2((s.kills + s.assists) / s.deaths) : s.kills + s.assists,
+        kd: s.deaths > 0 ? round2(s.kills / s.deaths) : s.kills,
         adr: s.rounds > 0 ? Math.round(s.dmg / s.rounds) : 0,
         acs: Math.round(s.acsSum / s.matches),
+        ddPerRound: round1(s.ddSum / s.matches),
+        playtimeMs: s.durationMs,
         bestMap,
       };
     })

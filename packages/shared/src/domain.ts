@@ -235,8 +235,11 @@ export interface TopAgentStat {
   matches: number;
   winratePercent: number;
   kda: number;
+  kd: number; // abates / mortes (sem assistências) -- kda já é (abates+assistências)/mortes
   adr: number;
   acs: number;
+  ddPerRound: number; // mesmo cálculo do ddPerRound geral (SeasonOverview), só que restrito às partidas com esse agente
+  playtimeMs: number; // soma da duração das partidas jogadas com esse agente
   bestMap: { map: string; winratePercent: number } | null;
 }
 

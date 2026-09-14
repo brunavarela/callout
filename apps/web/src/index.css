@@ -563,10 +563,13 @@ button {
   }
 }
 
-/* Trio de cards da Visão do ato (Agentes/Mapas/Funções) */
+/* Trio de cards da Visão do ato (Agentes/Armas/Funções) -- align-items:
+   start pra Agentes (que tem altura fixa + scroll) não esticar os outros
+   dois, que devem crescer só com o próprio conteúdo. */
 .grid-responsive-3 {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
+  align-items: start;
   gap: 16px;
 }
 @media (max-width: 1180px) {

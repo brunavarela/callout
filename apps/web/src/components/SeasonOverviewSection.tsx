@@ -1,13 +1,15 @@
+import { useRef, useState } from 'react';
 import type { MatchCountFilter, MatchModeFilter, RecentFormInsights, RrHistoryPoint, SeasonMatchesPage, SeasonOverview } from '@callout/shared';
 import { LoadingFill } from './Spinner';
 import { SeasonMatchesList } from './SeasonMatchesList';
 import { RrHistoryCard } from './RrHistoryCard';
-import { cardStyle, fmtNum, fmtDelta, plural, RankingBlock, LOW_SAMPLE, MIN_SAMPLE, GOLD } from './statsPrimitives';
-import { formatSeasonShort } from '../lib/seasonFormat';
+import { cardStyle, fmtNum, fmtDelta, plural, LOW_SAMPLE, MIN_SAMPLE, GOLD } from './statsPrimitives';
+import { formatSeasonShort, formatPlaytime } from '../lib/seasonFormat';
 
 export { formatSeasonShort, formatPlaytime } from '../lib/seasonFormat';
 
 const WIN = 'var(--pos, #18AAB7)';
+const LOSS = 'var(--neg, #EF4958)';
 const UNDER_50 = 'color-mix(in srgb, var(--neg, #EF4958) 42%, var(--track))';
 
 // Cor de referência por função — mesma linguagem visual usada no resto do
@@ -325,6 +327,175 @@ function WeaponBlock({ weapons }: { weapons: SeasonOverview['topWeapons'] }) {
   );
 }
 
+// Mapa — ranking numerado (destaque dourado no 1º), nome, barra de
+// progresso pela % de vitória e V–D à direita. Cabeçalho ganha o resumo
+// geral (V–D total · nº de partidas) ao lado do título, como Agentes.
+function MapBlock({ maps, maxHeight }: { maps: SeasonOverview['topMaps']; maxHeight?: number }) {
+  const totalWins = maps.reduce((s, m) => s + m.wins, 0);
+  const totalMatches = maps.reduce((s, m) => s + m.total, 0);
+
+  return (
+    <div style={{ ...cardStyle, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 11, flex: 1, ...(maxHeight ? { height: maxHeight, overflow: 'hidden' } : {}) }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+        <div>
+          <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 15 }}>Mapa</div>
+          <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 3 }}>Vitórias no ato</div>
+        </div>
+        <span style={{ fontSize: 11, color: 'var(--text-faint)', whiteSpace: 'nowrap' }}>
+          {totalWins}V–{totalMatches - totalWins}D · {plural(totalMatches, 'partida')}
+        </span>
+      </div>
+      {maps.length === 0 ? (
+        <div style={{ fontSize: 12.5, color: 'var(--text-faint)' }}>Sem dados ainda.</div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, ...(maxHeight ? { flex: 1, minHeight: 0, overflowY: 'auto' } : {}) }}>
+          {maps.map((m, i) => {
+            const isFirst = i === 0;
+            const lowSample = m.total < MIN_SAMPLE;
+            const color = isFirst ? GOLD : lowSample ? LOW_SAMPLE : m.winratePercent >= 50 ? WIN : UNDER_50;
+            return (
+              <div key={m.map} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span
+                  style={{
+                    width: 22,
+                    height: 22,
+                    flex: 'none',
+                    borderRadius: 6,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: 10.5,
+                    fontWeight: 700,
+                    color: isFirst ? GOLD : 'var(--text-faint)',
+                    background: isFirst ? `color-mix(in srgb, ${GOLD} 18%, transparent)` : 'var(--track)',
+                  }}
+                >
+                  {i + 1}
+                </span>
+                <span style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 700, fontSize: 13.5, color: isFirst ? GOLD : 'var(--text)', flex: 'none', width: 62, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {m.map}
+                </span>
+                <div style={{ flex: 1, minWidth: 0, height: 6, borderRadius: 3, background: 'var(--track)' }}>
+                  <div style={{ height: '100%', width: `${m.winratePercent}%`, borderRadius: 3, background: color }} />
+                </div>
+                <span style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 700, fontSize: 14, color, width: 36, textAlign: 'right', flex: 'none' }}>{m.winratePercent}%</span>
+                <span style={{ fontSize: 11, color: 'var(--text-faint)', flex: 'none', width: 52, textAlign: 'right' }}>
+                  {m.wins}V · {m.total - m.wins}D
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+      <div style={{ borderTop: '1px solid var(--divider)', paddingTop: 9, display: 'flex', flexWrap: 'wrap', gap: 14, fontSize: 11, color: 'var(--text-faint)' }}>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+          <span style={{ width: 9, height: 5, borderRadius: 3, background: LOW_SAMPLE, flex: 'none' }} />
+          menos de {MIN_SAMPLE} partidas: amostra pequena
+        </span>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+          <span style={{ width: 9, height: 5, borderRadius: 3, background: UNDER_50, flex: 'none' }} />
+          abaixo de 50%
+        </span>
+      </div>
+    </div>
+  );
+}
+
+// Agentes — mesmo padrão do Mapa (ranking, barra de WR), com um mini-grid
+// K/D · ADR · ACS · DDΔ · melhor mapa abaixo de cada linha. Aceita
+// `maxHeight` porque, na posição "de baixo" (ao lado de Armas/Funções),
+// não deve crescer mais que os outros dois — rola por dentro.
+function AgentBlock({ agents, agentIcons, maxHeight }: { agents: SeasonOverview['topAgents']; agentIcons: Record<string, string>; maxHeight?: number }) {
+  const totalMatches = agents.reduce((s, a) => s + a.matches, 0);
+
+  return (
+    <div style={{ ...cardStyle, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 11, ...(maxHeight ? { height: maxHeight, overflow: 'hidden' } : {}) }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+        <div>
+          <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 15 }}>Agentes</div>
+          <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 3 }}>Winrate e desempenho por agente no ato</div>
+        </div>
+        <span style={{ fontSize: 11, color: 'var(--text-faint)', whiteSpace: 'nowrap' }}>
+          {plural(agents.length, 'agente')} · {plural(totalMatches, 'partida')}
+        </span>
+      </div>
+      {agents.length === 0 ? (
+        <div style={{ fontSize: 12.5, color: 'var(--text-faint)' }}>Sem dados ainda.</div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, ...(maxHeight ? { flex: 1, minHeight: 0, overflowY: 'auto' } : {}) }}>
+          {agents.map((a, i) => {
+            const isFirst = i === 0;
+            const lowSample = a.matches < MIN_SAMPLE;
+            const color = isFirst ? GOLD : lowSample ? LOW_SAMPLE : a.winratePercent >= 50 ? WIN : UNDER_50;
+            return (
+              <div key={a.agent} style={{ padding: '10px 0', borderTop: i > 0 ? '1px solid var(--divider)' : 'none' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span
+                    style={{
+                      width: 22,
+                      height: 22,
+                      flex: 'none',
+                      borderRadius: 6,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: 10.5,
+                      fontWeight: 700,
+                      color: isFirst ? GOLD : 'var(--text-faint)',
+                      background: isFirst ? `color-mix(in srgb, ${GOLD} 18%, transparent)` : 'var(--track)',
+                    }}
+                  >
+                    {i + 1}
+                  </span>
+                  {agentIcons[a.agent] && <img src={agentIcons[a.agent]} alt="" style={{ width: 22, height: 22, borderRadius: 5, objectFit: 'contain', background: 'var(--track)', flex: 'none' }} />}
+                  <div style={{ minWidth: 110, flex: 'none' }}>
+                    <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 700, fontSize: 13.5, color: isFirst ? GOLD : 'var(--text)' }}>{a.agent}</div>
+                    <div style={{ fontSize: 10.5, color: 'var(--text-faint)' }}>
+                      {plural(a.matches, 'partida')} · {formatPlaytime(a.playtimeMs)}
+                    </div>
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0, height: 6, borderRadius: 3, background: 'var(--track)' }}>
+                    <div style={{ height: '100%', width: `${a.winratePercent}%`, borderRadius: 3, background: color }} />
+                  </div>
+                  <span style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 700, fontSize: 14, color, width: 36, textAlign: 'right', flex: 'none' }}>{a.winratePercent}%</span>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 8, marginTop: 9 }}>
+                  {[
+                    { label: 'K/D', value: fmtNum(a.kd, 2) },
+                    { label: 'ADR', value: fmtNum(a.adr, 1) },
+                    { label: 'ACS', value: fmtNum(a.acs, 1) },
+                    { label: 'DDΔ', value: fmtDelta(a.ddPerRound, 0), color: a.ddPerRound >= 0 ? WIN : LOSS },
+                    { label: 'Melhor mapa', value: a.bestMap ? `${a.bestMap.map} ${a.bestMap.winratePercent}%` : '—' },
+                  ].map((s) => (
+                    <div key={s.label} style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
+                      <span style={{ fontSize: 9, letterSpacing: '.06em', color: 'var(--text-faint)', whiteSpace: 'nowrap' }}>{s.label.toUpperCase()}</span>
+                      <span
+                        style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 13, color: s.color ?? 'var(--text-2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                      >
+                        {s.value}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+      <div style={{ borderTop: '1px solid var(--divider)', paddingTop: 9, display: 'flex', flexWrap: 'wrap', gap: 14, fontSize: 11, color: 'var(--text-faint)' }}>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+          <span style={{ width: 9, height: 5, borderRadius: 3, background: LOW_SAMPLE, flex: 'none' }} />
+          menos de {MIN_SAMPLE} partidas: amostra pequena
+        </span>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+          <span style={{ width: 9, height: 5, borderRadius: 3, background: UNDER_50, flex: 'none' }} />
+          abaixo de 50%
+        </span>
+      </div>
+    </div>
+  );
+}
+
 export function SeasonOverviewSection({
   data,
   loading,
@@ -356,6 +527,24 @@ export function SeasonOverviewSection({
   modoFilter: MatchModeFilter;
   subject?: string;
 }) {
+  // Agentes, na linha de baixo (ao lado de Armas/Funções), ganha a mesma
+  // altura de Armas -- pra não crescer mais que os outros dois, com scroll
+  // por dentro pra caber os agentes que faltarem. Ref callback (não
+  // useEffect com []) porque esse card só existe de fato depois que `data`
+  // chega -- um efeito de montagem rodaria antes disso, com a ref nula.
+  const weaponBlockObserver = useRef<ResizeObserver | null>(null);
+  const [weaponBlockHeight, setWeaponBlockHeight] = useState<number | undefined>(undefined);
+  const setWeaponBlockRef = (el: HTMLDivElement | null) => {
+    weaponBlockObserver.current?.disconnect();
+    weaponBlockObserver.current = null;
+    if (!el) return;
+    const observer = new ResizeObserver(([entry]) => {
+      if (entry) setWeaponBlockHeight(entry.contentRect.height);
+    });
+    observer.observe(el);
+    weaponBlockObserver.current = observer;
+  };
+
   if (loading) return <LoadingFill />;
   if (error) return <div style={{ ...cardStyle, padding: 24, textAlign: 'center', color: 'var(--text-muted)', fontSize: 13.5 }}>{error}</div>;
   if (!data) {
@@ -465,39 +654,21 @@ export function SeasonOverviewSection({
         />
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16, height: '100%' }}>
-          <RankingBlock
-            title="Agentes"
-            sub="Winrate no ato"
-            rows={data.topAgents.slice(0, 6).map((a) => ({
-              key: a.agent,
-              name: a.agent,
-              value: `${a.winratePercent}%`,
-              caption: `${plural(a.matches, 'partida')} · KD ${fmtNum(a.kda, 2)}`,
-              icon: data.agentIcons[a.agent],
-              dot: a.color,
-            }))}
-            style={{ flex: 1 }}
-          />
+          <MapBlock maps={data.topMaps} />
           <AccuracyBar accuracy={data.accuracy} />
           <AttackDefenseCard sides={data.attackDefense} />
         </div>
       </div>
 
       {/* Cards adicionais — sobram depois da lista de partidas, "encaixados"
-          lado a lado em vez de ficarem perdidos no fim da página. */}
+          lado a lado em vez de ficarem perdidos no fim da página. Agentes
+          ganha a mesma altura de Armas (medida ao vivo) + scroll, pra não
+          esticar Armas/Funções (align-items:start no grid cuida do resto). */}
       <div className="grid-responsive-3">
-        <RankingBlock
-          title="Mapa"
-          sub="Vitórias no ato"
-          rows={data.topMaps.map((m) => ({
-            key: m.map,
-            name: m.map,
-            value: `${m.wins}V · ${m.total - m.wins}D`,
-            caption: `${m.winratePercent}% de winrate`,
-            icon: data.mapIcons[m.map],
-          }))}
-        />
-        <WeaponBlock weapons={data.topWeapons} />
+        <AgentBlock agents={data.topAgents} agentIcons={data.agentIcons} maxHeight={weaponBlockHeight} />
+        <div ref={setWeaponBlockRef}>
+          <WeaponBlock weapons={data.topWeapons} />
+        </div>
         <RoleBlock roles={data.roles} />
       </div>
     </div>
