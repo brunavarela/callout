@@ -164,13 +164,26 @@ export function SeasonOverviewSection({
     );
   }
 
-  const heroStats: Array<{ label: string; value: string; explain: string }> = [
-    { label: 'ADR', value: String(data.adr), explain: 'Dano médio causado por round no ato.' },
-    { label: 'K/D', value: data.deaths > 0 ? fmtNum(data.kills / data.deaths, 2) : String(data.kills), explain: 'Abates divididos pelas mortes, no ato.' },
-    { label: 'Headshot %', value: `${fmtNum(data.hsPercent, 1)}%`, explain: 'Dos seus tiros que acertaram, quantos foram na cabeça.' },
-    { label: 'Win %', value: `${data.winratePercent}%`, explain: `${plural(data.wins, 'vitória')} em ${plural(data.matchesCount, 'partida')} no ato.` },
-    { label: 'KDA', value: fmtNum(data.kda, 2), explain: 'Abates mais assistências divididos pelas mortes, por partida em média.' },
-    { label: 'V/D', value: `${data.wins}V–${data.losses}D`, explain: 'Vitórias e derrotas somadas no ato.' },
+  // `ratio` é só uma referência visual (não um recorde real) pra dar noção
+  // de "cheio"/"vazio" na barrinha de cada stat -- ADR/K/D/KDA usam um teto
+  // razoável pro jogo, as que já são % usam a própria %.
+  const heroStats: Array<{ label: string; value: string; explain: string; ratio: number }> = [
+    { label: 'ADR', value: String(data.adr), explain: 'Dano médio causado por round no ato.', ratio: Math.min(1, data.adr / 300) },
+    {
+      label: 'K/D',
+      value: data.deaths > 0 ? fmtNum(data.kills / data.deaths, 2) : String(data.kills),
+      explain: 'Abates divididos pelas mortes, no ato.',
+      ratio: Math.min(1, (data.deaths > 0 ? data.kills / data.deaths : data.kills) / 2.5),
+    },
+    { label: 'Headshot %', value: `${fmtNum(data.hsPercent, 1)}%`, explain: 'Dos seus tiros que acertaram, quantos foram na cabeça.', ratio: Math.min(1, data.hsPercent / 100) },
+    {
+      label: 'Win %',
+      value: `${data.winratePercent}%`,
+      explain: `${plural(data.wins, 'vitória')} em ${plural(data.matchesCount, 'partida')} no ato.`,
+      ratio: Math.min(1, data.winratePercent / 100),
+    },
+    { label: 'KDA', value: fmtNum(data.kda, 2), explain: 'Abates mais assistências divididos pelas mortes, por partida em média.', ratio: Math.min(1, data.kda / 3) },
+    { label: 'V/D', value: `${data.wins}V–${data.losses}D`, explain: 'Vitórias e derrotas somadas no ato.', ratio: Math.min(1, data.winratePercent / 100) },
   ];
 
   const miniStats: Array<{ label: string; value: string; explain: string }> = [
@@ -187,15 +200,26 @@ export function SeasonOverviewSection({
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <div style={{ ...cardStyle, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 14 }}>
         <div className="kpi-hero-row">
-          {heroStats.map((s) => (
-            <div key={s.label} style={{ display: 'flex', gap: 10, alignItems: 'stretch', minWidth: 0 }}>
-              <span style={{ width: 3, borderRadius: 2, background: 'var(--acc, #EF4958)', flex: 'none' }} />
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 3, minWidth: 0 }}>
-                <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, color: 'var(--text-dim)' }}>
-                  {s.label}
-                  <InfoDot text={s.explain} />
-                </span>
-                <span style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 700, fontSize: 22, letterSpacing: '-.02em' }}>{s.value}</span>
+          {heroStats.map((s, i) => (
+            <div
+              key={s.label}
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 8,
+                minWidth: 0,
+                flex: '1 1 140px',
+                paddingRight: i < heroStats.length - 1 ? 20 : 0,
+                borderRight: i < heroStats.length - 1 ? '1px solid var(--divider)' : 'none',
+              }}
+            >
+              <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: 600, letterSpacing: '.04em', textTransform: 'uppercase', color: 'var(--pos, #18AAB7)' }}>
+                {s.label}
+                <InfoDot text={s.explain} />
+              </span>
+              <span style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 700, fontSize: 28, letterSpacing: '-.02em' }}>{s.value}</span>
+              <div style={{ height: 4, borderRadius: 2, background: 'var(--track)', position: 'relative' }}>
+                <div style={{ position: 'absolute', inset: '0 auto 0 0', width: `${s.ratio * 100}%`, borderRadius: 2, background: 'var(--pos, #18AAB7)' }} />
               </div>
             </div>
           ))}
