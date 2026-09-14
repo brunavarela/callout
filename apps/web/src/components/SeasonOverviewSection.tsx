@@ -1,14 +1,12 @@
 import { useState } from 'react';
 import type { ReactNode } from 'react';
-import type { MatchCountFilter, MatchModeFilter, RecentFormInsights, RrHistoryPoint, SeasonMatchesPage, SeasonOverview } from '@callout/shared';
+import type { MatchModeFilter, RecentFormInsights, RrHistoryPoint, SeasonMatchesPage, SeasonOverview } from '@callout/shared';
 import { LoadingFill } from './Spinner';
 import { SeasonMatchesList } from './SeasonMatchesList';
 import { RrHistoryCard } from './RrHistoryCard';
 import { Modal, ModalHeader } from './Modal';
 import { cardStyle, fmtNum, fmtDelta, plural, LOW_SAMPLE, MIN_SAMPLE, GOLD } from './statsPrimitives';
-import { formatSeasonShort, formatPlaytime } from '../lib/seasonFormat';
-
-export { formatSeasonShort, formatPlaytime } from '../lib/seasonFormat';
+import { formatPlaytime } from '../lib/seasonFormat';
 
 const WIN = 'var(--pos, #18AAB7)';
 const LOSS = 'var(--neg, #EF4958)';
@@ -71,7 +69,7 @@ function InfoDot({ text }: { text: string }) {
   );
 }
 
-// Ataque/defesa — % de rounds ganhos em cada lado, no ato (e sob o filtro
+// Ataque/defesa — % de rounds ganhos em cada lado, no período (e sob o filtro
 // de mapa/agente atual). Mesmo visual do card que já existia no dashboard
 // de 30 dias, só que alimentado por SeasonOverview.attackDefense.
 function AttackDefenseCard({ sides, height }: { sides: SeasonOverview['attackDefense']; height?: number }) {
@@ -79,7 +77,7 @@ function AttackDefenseCard({ sides, height }: { sides: SeasonOverview['attackDef
     <div style={{ ...cardStyle, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 12, flex: height ? '0 0 auto' : 1, ...(height ? { height, overflow: 'hidden' } : {}) }}>
       <div>
         <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 15 }}>Ataque ou defesa</div>
-        <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 3 }}>% de rounds ganhos em cada lado, no ato</div>
+        <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 3 }}>% de rounds ganhos em cada lado, no período</div>
       </div>
       {(
         [
@@ -165,7 +163,7 @@ function AccuracyBar({ accuracy, height }: { accuracy: SeasonOverview['accuracy'
     <div style={{ ...cardStyle, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 12, flex: height ? '0 0 auto' : 1, ...(height ? { height, overflow: 'hidden' } : {}) }}>
       <div>
         <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 15 }}>Precisão</div>
-        <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 3 }}>Onde seus tiros acertaram no ato — cabeça, corpo ou perna.</div>
+        <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 3 }}>Onde seus tiros acertaram no período — cabeça, corpo ou perna.</div>
       </div>
       <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 40 }}>
         <BodySilhouette headColor={segments[0]!.color} bodyColor={segments[1]!.color} legColor={segments[2]!.color} />
@@ -251,7 +249,7 @@ function RoleBlock({ roles, maxHeight }: { roles: SeasonOverview['roles']; maxHe
   return (
     <ExpandableCard
       title="Funções"
-      sub="Winrate por função no ato"
+      sub="Winrate por função no período"
       maxHeight={maxHeight}
       footer={
         <div style={{ borderTop: '1px solid var(--divider)', paddingTop: 9, display: 'flex', flexWrap: 'wrap', gap: 14, fontSize: 11, color: 'var(--text-faint)' }}>
@@ -322,7 +320,7 @@ function WeaponBlock({ weapons, maxHeight }: { weapons: SeasonOverview['topWeapo
   return (
     <ExpandableCard
       title="Armas mais usadas"
-      sub="Abates e distribuição de acertos por arma no ato"
+      sub="Abates e distribuição de acertos por arma no período"
       maxHeight={maxHeight}
       footer={
         <div style={{ borderTop: '1px solid var(--divider)', paddingTop: 9, display: 'flex', flexWrap: 'wrap', gap: 14, fontSize: 11, color: 'var(--text-faint)' }}>
@@ -413,7 +411,7 @@ function MapBlock({ maps, maxHeight }: { maps: SeasonOverview['topMaps']; maxHei
   return (
     <ExpandableCard
       title="Mapa"
-      sub="Vitórias no ato"
+      sub="Vitórias no período"
       maxHeight={maxHeight}
       headerExtra={
         <span style={{ fontSize: 11, color: 'var(--text-faint)', whiteSpace: 'nowrap' }}>
@@ -493,7 +491,7 @@ function AgentBlock({ agents, agentIcons, maxHeight }: { agents: SeasonOverview[
   return (
     <ExpandableCard
       title="Agentes"
-      sub="Winrate e desempenho por agente no ato"
+      sub="Winrate e desempenho por agente no período"
       maxHeight={maxHeight}
       headerExtra={
         <span style={{ fontSize: 11, color: 'var(--text-faint)', whiteSpace: 'nowrap' }}>
@@ -593,8 +591,6 @@ export function SeasonOverviewSection({
   rrHistory,
   rrHistoryLoading,
   rrFormInsights,
-  matchCountFilter,
-  setMatchCountFilter,
   modoFilter,
   subject = 'você',
 }: {
@@ -608,53 +604,47 @@ export function SeasonOverviewSection({
   rrHistory: RrHistoryPoint[];
   rrHistoryLoading: boolean;
   rrFormInsights: RecentFormInsights | null;
-  matchCountFilter: MatchCountFilter;
-  setMatchCountFilter: (n: MatchCountFilter) => void;
   modoFilter: MatchModeFilter;
   subject?: string;
 }) {
   if (loading) return <LoadingFill />;
   if (error) return <div style={{ ...cardStyle, padding: 24, textAlign: 'center', color: 'var(--text-muted)', fontSize: 13.5 }}>{error}</div>;
   if (!data) {
-    return <div style={{ ...cardStyle, padding: 24, textAlign: 'center', color: 'var(--text-muted)', fontSize: 13.5 }}>Sem dados de ato ainda.</div>;
+    return <div style={{ ...cardStyle, padding: 24, textAlign: 'center', color: 'var(--text-muted)', fontSize: 13.5 }}>Sem dados ainda.</div>;
   }
 
   if (data.matchesCount === 0) {
-    return (
-      <div style={{ ...cardStyle, padding: 24, textAlign: 'center', color: 'var(--text-muted)', fontSize: 13.5 }}>
-        {data.seasonShort ? `Nenhuma partida encontrada em ${formatSeasonShort(data.seasonShort)} com esse filtro.` : 'Sem dados desse ato ainda.'}
-      </div>
-    );
+    return <div style={{ ...cardStyle, padding: 24, textAlign: 'center', color: 'var(--text-muted)', fontSize: 13.5 }}>Nenhuma partida encontrada com esse filtro.</div>;
   }
 
   // `ratio` é só uma referência visual (não um recorde real) pra dar noção
   // de "cheio"/"vazio" na barrinha de cada stat -- ADR/K/D/KDA usam um teto
   // razoável pro jogo, as que já são % usam a própria %.
   const heroStats: Array<{ label: string; value: string; explain: string; ratio: number }> = [
-    { label: 'ADR', value: String(data.adr), explain: 'Dano médio causado por round no ato.', ratio: Math.min(1, data.adr / 300) },
+    { label: 'ADR', value: String(data.adr), explain: 'Dano médio causado por round no período.', ratio: Math.min(1, data.adr / 300) },
     {
       label: 'K/D',
       value: data.deaths > 0 ? fmtNum(data.kills / data.deaths, 2) : String(data.kills),
-      explain: 'Abates divididos pelas mortes, no ato.',
+      explain: 'Abates divididos pelas mortes, no período.',
       ratio: Math.min(1, (data.deaths > 0 ? data.kills / data.deaths : data.kills) / 2.5),
     },
     { label: 'Headshot %', value: `${fmtNum(data.hsPercent, 1)}%`, explain: 'Dos seus tiros que acertaram, quantos foram na cabeça.', ratio: Math.min(1, data.hsPercent / 100) },
     {
       label: 'Win %',
       value: `${data.winratePercent}%`,
-      explain: `${plural(data.wins, 'vitória')} em ${plural(data.matchesCount, 'partida')} no ato.`,
+      explain: `${plural(data.wins, 'vitória')} em ${plural(data.matchesCount, 'partida')} no período.`,
       ratio: Math.min(1, data.winratePercent / 100),
     },
     { label: 'KDA', value: fmtNum(data.kda, 2), explain: 'Abates mais assistências divididos pelas mortes, por partida em média.', ratio: Math.min(1, data.kda / 3) },
-    { label: 'V/D', value: `${data.wins}V–${data.losses}D`, explain: 'Vitórias e derrotas somadas no ato.', ratio: Math.min(1, data.winratePercent / 100) },
+    { label: 'V/D', value: `${data.wins}V–${data.losses}D`, explain: 'Vitórias e derrotas somadas no período.', ratio: Math.min(1, data.winratePercent / 100) },
   ];
 
   const miniStats: Array<{ label: string; value: string; explain: string }> = [
     { label: 'ACS', value: String(data.acs), explain: 'Pontuação de combate por round, considerando todo o ato.' },
     { label: 'DDΔ/round', value: fmtDelta(data.ddPerRound, 1), explain: 'Quanto de dano a mais (ou a menos) você fez por round, comparado à média dos outros 9 jogadores das mesmas partidas.' },
-    { label: 'Abates', value: String(data.kills), explain: 'Total de abates no ato.' },
-    { label: 'Mortes', value: String(data.deaths), explain: 'Total de mortes no ato.' },
-    { label: 'Assistências', value: String(data.assists), explain: 'Total de assistências no ato.' },
+    { label: 'Abates', value: String(data.kills), explain: 'Total de abates no período.' },
+    { label: 'Mortes', value: String(data.deaths), explain: 'Total de mortes no período.' },
+    { label: 'Assistências', value: String(data.assists), explain: 'Total de assistências no período.' },
     { label: 'First bloods', value: String(data.firstBloods), explain: 'Primeiro abate da rodada, contando só as vezes que foi você.' },
     { label: 'Aces', value: String(data.aces), explain: 'Rodadas em que você fez os 5 abates da equipe adversária sozinho.' },
   ];
@@ -721,8 +711,6 @@ export function SeasonOverviewSection({
             rrHistory={rrHistory}
             rrHistoryLoading={rrHistoryLoading}
             formInsights={rrFormInsights}
-            matchCountFilter={matchCountFilter}
-            setMatchCountFilter={setMatchCountFilter}
             subject={subject}
             noRankedHistory={modoFilter === 'Unrated'}
             currentRank={data.currentRank}

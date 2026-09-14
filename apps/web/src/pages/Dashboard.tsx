@@ -3,8 +3,8 @@ import type { SessionUser } from '@callout/shared';
 import type { OutletContext } from '../components/AppShell';
 import { LoadingFill } from '../components/Spinner';
 import { SeasonOverviewSection } from '../components/SeasonOverviewSection';
-import { MemberFilterSelect, SeasonFilterSelect, SeasonMapFilterSelect, SeasonAgentFilterSelect, SeasonModoFilterSelect } from '../components/SeasonFilters';
-import { formatSeasonShort, formatPlaytime } from '../lib/seasonFormat';
+import { MemberFilterSelect, MatchCountFilterSelect, SeasonMapFilterSelect, SeasonAgentFilterSelect, SeasonModoFilterSelect } from '../components/SeasonFilters';
+import { formatPlaytime } from '../lib/seasonFormat';
 import { cardStyle, plural } from '../components/statsPrimitives';
 import { useSession } from '../lib/session';
 
@@ -18,7 +18,6 @@ export function Dashboard() {
     seasonOverview,
     seasonOverviewLoading,
     seasonOverviewError,
-    setSelectedSeasonId,
     seasonMapFilter,
     setSeasonMapFilter,
     seasonAgentFilter,
@@ -54,8 +53,7 @@ export function Dashboard() {
           </h1>
           {seasonOverview && (
             <div style={{ fontSize: 14, color: 'var(--text-muted)', marginTop: 6 }}>
-              {plural(seasonOverview.matchesCount, 'partida')} ·{' '}
-              {seasonOverview.seasonShort ? formatSeasonShort(seasonOverview.seasonShort) : 'ato atual'} · {formatPlaytime(seasonOverview.playtimeMs)} jogadas · {seasonOverview.wins}V–{seasonOverview.losses}D
+              {plural(seasonOverview.matchesCount, 'partida')} · {formatPlaytime(seasonOverview.playtimeMs)} jogadas · {seasonOverview.wins}V–{seasonOverview.losses}D
             </div>
           )}
         </div>
@@ -66,9 +64,9 @@ export function Dashboard() {
               <SeasonAgentFilterSelect topAgents={seasonOverview.topAgents} agentFilter={seasonAgentFilter} setAgentFilter={setSeasonAgentFilter} />
               <SeasonMapFilterSelect topMaps={seasonOverview.topMaps} mapFilter={seasonMapFilter} setMapFilter={setSeasonMapFilter} />
               <SeasonModoFilterSelect availableModos={seasonOverview.availableModos} modoFilter={seasonModoFilter} setModoFilter={setSeasonModoFilter} />
-              <SeasonFilterSelect availableSeasons={seasonOverview.availableSeasons} seasonId={seasonOverview.seasonId} setSelectedSeasonId={setSelectedSeasonId} />
             </>
           )}
+          <MatchCountFilterSelect matchCountFilter={matchCountFilter} setMatchCountFilter={setMatchCountFilter} />
           <div className="dashboard-action-buttons">
             <button className="btn-secondary" style={{ minHeight: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 17px' }} onClick={() => navigate('/board')}>
               Abrir estratégia
@@ -95,8 +93,6 @@ export function Dashboard() {
           rrHistory={rrHistory}
           rrHistoryLoading={rrHistoryLoading}
           rrFormInsights={formInsights}
-          matchCountFilter={matchCountFilter}
-          setMatchCountFilter={setMatchCountFilter}
           modoFilter={modoFilter}
           subject={subject}
         />

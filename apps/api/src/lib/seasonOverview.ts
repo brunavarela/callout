@@ -1,19 +1,25 @@
-import type { AccuracyBreakdown, MapWinrate, MatchBadge, RoleStat, SeasonMatchesPage, SeasonMatchSummary, SeasonOption, SeasonOverview, SidesBreakdown, TopAgentStat, WeaponStat } from "@callout/shared";
+import type { AccuracyBreakdown, MapWinrate, MatchBadge, MatchCountFilter, RoleStat, SeasonMatchesPage, SeasonMatchSummary, SeasonOption, SeasonOverview, SidesBreakdown, TopAgentStat, WeaponStat } from "@callout/shared";
 import { prisma } from "./prisma.js";
 import { getMmr, getMmrHistory } from "./henrikdev.js";
-import { getCurrentSeasonId } from "./dashboard.js";
 import { mapNameFrom, scoreFor, formatPlayedAt } from "./dashboard.js";
 import { matchResult, countsTowardStats } from "./match-result.js";
 import { loadAgentColorsByName } from "./assets.js";
 
-// Teto de partidas (de qualquer modo) lidas por ato — mesmo valor e mesmo
-// motivo de MAX_EQUIPE_MATCHES/MAX_SIDES_MATCHES: sem isso, um ato muito
-// ativo (spam de Deathmatch etc.) buscaria a temporada inteira de uma vez.
+// Teto de partidas (de qualquer modo) lidas de uma vez — mesmo valor e
+// mesmo motivo de MAX_EQUIPE_MATCHES/MAX_SIDES_MATCHES: sem isso, "Todas as
+// partidas" numa conta muito ativa buscaria o histórico inteiro de uma vez.
 // Aqui o risco de memória é bem menor que nos outros dois (essa query não
 // toca rawJson, só colunas escalares/JSON pequenas já agregadas na sync),
 // mas o teto entra do mesmo jeito por consistência e porque `allPlayers`
-// (pro DDΔ/round) escala 10x esse número.
+// (pro DDΔ/round) escala 10x esse número. Também é o teto usado pra "Todas
+// as partidas" do filtro de contagem (ver `takeFor`).
 const MAX_SEASON_MATCHES = 150;
+
+// "all" pede o teto de segurança MAX_SEASON_MATCHES; 7/20 pedem exatamente
+// esse tanto (não faz sentido buscar mais do que a pessoa pediu).
+function takeFor(matchCountFilter: MatchCountFilter): number {
+  return matchCountFilter === "all" ? MAX_SEASON_MATCHES : matchCountFilter;
+}
 
 // Rotação competitiva ativa nesse ato — a Riot muda esse pool
 // periodicamente, sem relação fixa com o calendário de atos, e não existe
@@ -253,19 +259,15 @@ function buildTopMaps(rows: Row[], activeMapAssets: Array<{ id: string; nome: st
 export async function buildSeasonOverview(
   puuid: string,
   region: string,
-  requestedSeasonId?: string,
+  matchCountFilter: MatchCountFilter,
   mapIdFilter?: string,
   agentNameFilter?: string,
   modoFilter?: string,
 ): Promise<SeasonOverview | null> {
-  const availableSeasons = await listAvailableSeasons();
-  const seasonId = requestedSeasonId ?? (await getCurrentSeasonId());
-  if (!seasonId) return null;
-
   const rows = await prisma.matchPlayer.findMany({
-    where: { puuid, match: { seasonId } },
+    where: { puuid },
     orderBy: { match: { startedAt: "desc" } },
-    take: MAX_SEASON_MATCHES,
+    take: takeFor(matchCountFilter),
     ...rowArgs,
   });
 
@@ -276,7 +278,6 @@ export async function buildSeasonOverview(
   // pra estatística (ex.: Deathmatch), já que a pessoa pediu explicitamente.
   const statRows = modoFilter ? rows.filter((r) => r.match.modo === modoFilter) : rows.filter((r) => countsTowardStats(r.match.modo));
   const availableModos = [...new Set(rows.map((r) => r.match.modo))];
-  const seasonShort = availableSeasons.find((s) => s.seasonId === seasonId)?.seasonShort ?? null;
 
   let currentRank: SeasonOverview["currentRank"] = null;
   let peakRank: SeasonOverview["peakRank"] = null;
@@ -290,9 +291,6 @@ export async function buildSeasonOverview(
 
   if (statRows.length === 0) {
     return {
-      seasonId,
-      seasonShort,
-      availableSeasons,
       availableModos,
       accountLevel: rows[0]?.accountLevel ?? null,
       currentRank,
@@ -356,9 +354,6 @@ export async function buildSeasonOverview(
 
   if (filteredStatRows.length === 0) {
     return {
-      seasonId,
-      seasonShort,
-      availableSeasons,
       availableModos,
       accountLevel: rows[0]?.accountLevel ?? null,
       currentRank,
@@ -541,9 +536,6 @@ export async function buildSeasonOverview(
   const aces = filteredStatRows.reduce((s, r) => s + ((r.multiKills as Record<string, number> | null)?.["5"] ?? 0), 0);
 
   return {
-    seasonId,
-    seasonShort,
-    availableSeasons,
     availableModos,
     accountLevel: rows[0]?.accountLevel ?? null,
     currentRank,
@@ -633,26 +625,24 @@ function toSeasonMatchSummaries(
 
 const MATCHES_PAGE_SIZE = 12;
 
-// Lista paginada de partidas do ato (12 por página) — separada de
+// Lista paginada de partidas (12 por página) — separada de
 // buildSeasonOverview de propósito: virar página não deveria recalcular os
 // KPIs/top agentes/mapas/etc. de novo, só a própria lista. Reaplica os
-// mesmos filtros de ato/mapa/agente/modo do painel (ver buildSeasonOverview),
+// mesmos filtros de mapa/agente/modo do painel (ver buildSeasonOverview),
 // mas o DDΔ/round e o rawJson só são buscados pras partidas dessa página —
-// nunca das ~150 inteiras.
+// nunca das ~150 inteiras. De propósito NÃO respeita o filtro de contagem
+// (Todas/20/7) do resto do painel — a lista de partidas continua mostrando
+// o histórico completo (até MAX_SEASON_MATCHES), paginado.
 export async function buildSeasonMatchesPage(
   puuid: string,
   region: string,
-  requestedSeasonId?: string,
   mapIdFilter?: string,
   agentNameFilter?: string,
   modoFilter?: string,
   page = 1,
 ): Promise<SeasonMatchesPage | null> {
-  const seasonId = requestedSeasonId ?? (await getCurrentSeasonId());
-  if (!seasonId) return null;
-
   const rows = await prisma.matchPlayer.findMany({
-    where: { puuid, match: { seasonId } },
+    where: { puuid },
     orderBy: { match: { startedAt: "desc" } },
     take: MAX_SEASON_MATCHES,
     ...rowArgs,

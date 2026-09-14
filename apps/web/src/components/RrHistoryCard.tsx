@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import type { MatchCountFilter, RecentFormInsights, RrHistoryPoint, SeasonOverview } from '@callout/shared';
+import type { RecentFormInsights, RrHistoryPoint, SeasonOverview } from '@callout/shared';
 import { SnakeSpinner } from './Spinner';
 import { cardStyle, WIN, LOSS, DRAW, fmtDelta } from './statsPrimitives';
 
@@ -50,11 +50,6 @@ function EloReinforcement({ currentRank }: { currentRank: NonNullable<SeasonOver
     </div>
   );
 }
-
-const MATCH_COUNTS: Array<{ key: MatchCountFilter; label: string }> = [
-  { key: 7, label: 'Últimas 7' },
-  { key: 20, label: 'Últimas 20' },
-];
 
 // Ticks "redondos" cobrindo [min,max] garantindo que 0 caia exatamente numa
 // linha de grade — sem isso a régua vertical fica arbitrária e ilegível.
@@ -155,34 +150,6 @@ function RrLineChart({ points }: { points: RrHistoryPoint[] }) {
   );
 }
 
-// Mesmo padrão visual do resto dos filtros compactos do app — controla a
-// janela de partidas (7/20) do gráfico de RR e dos 4 tópicos de análise, que
-// usam o mesmo filtro pra bater.
-function MatchCountButtons({ matchCountFilter, setMatchCountFilter }: { matchCountFilter: MatchCountFilter; setMatchCountFilter: (n: MatchCountFilter) => void }) {
-  return (
-    <div style={{ display: 'flex', gap: 4, background: 'var(--input-bg)', border: '1px solid var(--surface-border)', borderRadius: 9, padding: 3, flex: 'none' }}>
-      {MATCH_COUNTS.map((c) => (
-        <button
-          key={c.key}
-          onClick={() => setMatchCountFilter(c.key)}
-          style={{
-            padding: '5px 11px',
-            borderRadius: 6,
-            border: 'none',
-            cursor: 'pointer',
-            fontSize: 11.5,
-            whiteSpace: 'nowrap',
-            background: matchCountFilter === c.key ? 'var(--acc, #EF4958)' : 'transparent',
-            color: matchCountFilter === c.key ? 'var(--acc-text, #141415)' : 'var(--text-muted)',
-          }}
-        >
-          {c.label}
-        </button>
-      ))}
-    </div>
-  );
-}
-
 // Card de RR ganho/perdido + análises de forma recente (mapa/agente mais
 // jogado, KDA negativo, MVP, saldo de RR, arma mais usada) — mesma largura
 // da lista de partidas, logo abaixo dela. Sempre expandido (sem toggle);
@@ -192,8 +159,6 @@ export function RrHistoryCard({
   rrHistory,
   rrHistoryLoading,
   formInsights,
-  matchCountFilter,
-  setMatchCountFilter,
   subject,
   noRankedHistory,
   currentRank,
@@ -202,8 +167,6 @@ export function RrHistoryCard({
   rrHistory: RrHistoryPoint[];
   rrHistoryLoading: boolean;
   formInsights: RecentFormInsights | null;
-  matchCountFilter: MatchCountFilter;
-  setMatchCountFilter: (n: MatchCountFilter) => void;
   subject: string;
   noRankedHistory: boolean;
   currentRank: SeasonOverview['currentRank'];
@@ -267,12 +230,9 @@ export function RrHistoryCard({
   }
   return (
     <div style={{ ...cardStyle, padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: 4, ...(height ? { height, overflow: 'hidden' } : {}) }}>
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
-        <div>
-          <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 16 }}>RR ganho e perdido</div>
-          <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 3 }}>Soma acumulada de RR — cada ponto é uma partida.</div>
-        </div>
-        <MatchCountButtons matchCountFilter={matchCountFilter} setMatchCountFilter={setMatchCountFilter} />
+      <div>
+        <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 16 }}>RR ganho e perdido</div>
+        <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 3 }}>Soma acumulada de RR — cada ponto é uma partida.</div>
       </div>
       {rrHistoryLoading ? (
         <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 150 }}>

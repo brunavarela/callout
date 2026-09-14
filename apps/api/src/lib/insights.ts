@@ -80,14 +80,19 @@ function buildFormInsights(rows: Row[], maxAcsByMatchTeam: Map<string, number>):
   };
 }
 
+// Mesmo teto de segurança de MAX_SEASON_MATCHES (seasonOverview.ts) —
+// "Todas as partidas" pede esse valor em vez de sem limite nenhum.
+const MAX_ALL_MATCHES = 150;
+
 // RR e os 4 tópicos de análise vivem no mesmo card na tela e usam a mesma
-// janela de partidas (7/20/30) — saem numa fetch só. `rr` vem da coluna já
+// janela de partidas (Todas/20/7 — mesmo MatchCountFilter que escopa o
+// resto da Visão do ato) — saem numa fetch só. `rr` vem da coluna já
 // persistida em cada MatchPlayer (capturada uma vez, no momento da
 // sincronização — ver sync.ts) em vez de chamar getMmrHistory aqui: esse
 // endpoint da HenrikDev só cobre as ~20 partidas ranqueadas MAIS RECENTES
 // da conta (a qualquer momento), então usar ele de novo aqui fazia o
-// gráfico "perder" pontos sempre que a janela pedida (ex.: 30) ultrapassava
-// esse teto vivo — a coluna já salva não tem esse limite. Partidas sem `rr`
+// gráfico "perder" pontos sempre que a janela pedida ultrapassava esse
+// teto vivo — a coluna já salva não tem esse limite. Partidas sem `rr`
 // (deathmatch, unrated etc. não geram RR) ficam de fora só dos pontos do
 // gráfico, não da análise (que conta a partida de qualquer forma).
 export async function buildRrAndInsights(
@@ -102,7 +107,7 @@ export async function buildRrAndInsights(
     where: { puuid, ...(Object.keys(matchWhere).length > 0 ? { match: matchWhere } : {}) },
     include: { match: true },
     orderBy: { match: { startedAt: "desc" } },
-    take: matchCount,
+    take: matchCount === "all" ? MAX_ALL_MATCHES : matchCount,
   });
 
   // MVP = maior ACS do seu próprio time na partida (não dos 10 jogadores —

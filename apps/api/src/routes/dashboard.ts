@@ -34,7 +34,7 @@ function parseModoFilter(raw: unknown): "Competitive" | "Unrated" | undefined {
 }
 
 function parseMatchCount(raw: unknown): MatchCountFilter {
-  return raw === "7" ? 7 : 20;
+  return raw === "7" ? 7 : raw === "all" ? "all" : 20;
 }
 
 // String vazia/ausente vira `undefined` — sem filtro de mapa. Não valida
@@ -73,33 +73,34 @@ export async function dashboardRoutes(app: FastifyInstance) {
     return buildSidesBreakdown(target.riotPuuid!, parseModoFilter(modo), parseMapIdFilter(mapId));
   });
 
-  // Visão geral de um ato — cards "estilo tracker.gg" (ver plano de
-  // 10/09/2026). Sem `seasonId`, mostra o ato atual; com `seasonId`, a
-  // pessoa escolheu outro ato no seletor do painel. `mapId`/`agent` filtram
-  // a visão sem sair do ato — mesmo padrão dual de mapIdFilter do
-  // /dashboard antigo (ver comentário em buildSeasonOverview). `modo`
-  // restringe a um modo de jogo específico (inclusive fora da allowlist de
-  // estatística, como Deathmatch) — sem ele, mistura só os modos com
-  // estatística de verdade (ver countsTowardStats).
+  // Visão do ato — cards "estilo tracker.gg" (ver plano de 10/09/2026).
+  // Escopada por `matches` (Todas/20/7 partidas mais recentes, de qualquer
+  // ato — ver MatchCountFilter). `mapId`/`agent` filtram a visão sem sair
+  // desse recorte — mesmo padrão dual de mapIdFilter do /dashboard antigo
+  // (ver comentário em buildSeasonOverview). `modo` restringe a um modo de
+  // jogo específico (inclusive fora da allowlist de estatística, como
+  // Deathmatch) — sem ele, mistura só os modos com estatística de verdade
+  // (ver countsTowardStats).
   app.get("/dashboard/season", { preHandler: requireAuth }, async (request, reply) => {
     const target = await resolveTarget(request, reply);
     if (!target) return;
-    const { seasonId, mapId, agent, modo } = request.query as { seasonId?: string; mapId?: string; agent?: string; modo?: string };
-    return buildSeasonOverview(target.riotPuuid!, target.riotRegion!, seasonId || undefined, mapId || undefined, agent || undefined, modo || undefined);
+    const { matches, mapId, agent, modo } = request.query as { matches?: string; mapId?: string; agent?: string; modo?: string };
+    return buildSeasonOverview(target.riotPuuid!, target.riotRegion!, parseMatchCount(matches), mapId || undefined, agent || undefined, modo || undefined);
   });
 
-  // Lista paginada (12 por página) das partidas do ato — separada de
+  // Lista paginada (12 por página) das partidas — separada de
   // /dashboard/season pra virar página sem recalcular KPIs/top agentes/
-  // mapas/etc de novo. Mesmos filtros de ato/mapa/agente/modo do painel.
+  // mapas/etc de novo. Mesmos filtros de mapa/agente/modo do painel, mas
+  // de propósito IGNORA o filtro de contagem (Todas/20/7) — mostra sempre
+  // o histórico completo paginado.
   app.get("/dashboard/season/matches", { preHandler: requireAuth }, async (request, reply) => {
     const target = await resolveTarget(request, reply);
     if (!target) return;
-    const { seasonId, mapId, agent, modo, page } = request.query as { seasonId?: string; mapId?: string; agent?: string; modo?: string; page?: string };
+    const { mapId, agent, modo, page } = request.query as { mapId?: string; agent?: string; modo?: string; page?: string };
     const pageNumber = Number(page);
     return buildSeasonMatchesPage(
       target.riotPuuid!,
       target.riotRegion!,
-      seasonId || undefined,
       mapId || undefined,
       agent || undefined,
       modo || undefined,

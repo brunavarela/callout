@@ -152,10 +152,13 @@ export interface SyncStatus {
 // com partida ranqueada/não ranqueada que fazem sentido filtrar por aqui.
 export type MatchModeFilter = "all" | "Competitive" | "Unrated";
 
-// Janela de partidas usada pelo gráfico de RR e pelos tópicos de análise
-// (mapa/agente mais jogado, KDA negativo, MVP) — os dois precisam usar a
-// mesma janela pra os números baterem entre si.
-export type MatchCountFilter = 7 | 20;
+// Janela de partidas que escopa a Visão do ato inteira (KPIs, Agentes,
+// Mapa, Precisão, Ataque-defesa, Armas, Funções e o gráfico de RR/tópicos
+// de análise) — um filtro só pra tudo bater entre si. "all" pede o
+// histórico inteiro (com teto de segurança no back, ver takeFor em
+// seasonOverview.ts). A lista de Partidas, de propósito, NÃO respeita esse
+// filtro — continua mostrando o histórico completo paginado.
+export type MatchCountFilter = "all" | 7 | 20;
 
 export interface KpiValue {
   value: number;
@@ -225,9 +228,11 @@ export interface DashboardSummary {
   dataAgeLabel?: string;
 }
 
-// --- Visão geral do ato (GET /dashboard/season) — cards "estilo tracker.gg" ---
-// Tudo escopado no ato atual (Match.seasonId), não numa janela de dias como
-// o resto do /dashboard. Ver LAUNCH-adjacent plan de 10/09/2026.
+// --- Visão do ato (GET /dashboard/season) — cards "estilo tracker.gg" ---
+// Escopado por `MatchCountFilter` (Todas/20/7 partidas mais recentes, de
+// qualquer ato), não por Match.seasonId nem por uma janela de dias. Ver
+// LAUNCH-adjacent plan de 10/09/2026 (versão original, escopada por ato) e
+// a mudança pra filtro de contagem em 14/09/2026.
 
 export interface TopAgentStat {
   agent: string;
@@ -332,10 +337,7 @@ export interface SeasonOption {
 }
 
 export interface SeasonOverview {
-  seasonId: string | null;
-  seasonShort: string | null;
-  availableSeasons: SeasonOption[];
-  // Modos de jogo com pelo menos 1 partida sincronizada nesse ato (valor
+  // Modos de jogo com pelo menos 1 partida sincronizada nesse recorte (valor
   // bruto de Match.modo, ex.: "Competitive"/"Unrated"/"Deathmatch") — pro
   // seletor de modo do painel. Sem filtro escolhido, o painel mistura só
   // Competitivo/Sem classificação/Premier (ver countsTowardStats); com um

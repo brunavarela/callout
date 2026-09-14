@@ -1,4 +1,4 @@
-import type { EquipeOverview } from '@callout/shared';
+import type { EquipeOverview, MatchCountFilter } from '@callout/shared';
 import { Select } from './Select';
 import { formatSeasonShort } from '../lib/seasonFormat';
 
@@ -31,8 +31,9 @@ export function MemberFilterSelect({
   );
 }
 
-// Seletor de ato — mostra o ato atual por padrão; trocar aqui reescopa o
-// painel/lista inteiro pro ato escolhido.
+// Seletor de ato — usado só pelo histórico da equipe (EquipePartidas.tsx),
+// que continua escopado por ato; a Visão do ato individual trocou esse
+// seletor pelo MatchCountFilterSelect abaixo (ver conversa de 14/09/2026).
 export function SeasonFilterSelect({
   availableSeasons,
   seasonId,
@@ -49,6 +50,34 @@ export function SeasonFilterSelect({
       onChange={setSelectedSeasonId}
       options={availableSeasons.map((s) => ({ value: s.seasonId, label: formatSeasonShort(s.seasonShort) }))}
       title="Escolher o ato"
+      style={FILTER_STYLE}
+    />
+  );
+}
+
+// Rótulos do filtro de contagem de partidas — o filtro que escopa a Visão
+// do ato inteira (KPIs, Agentes, Mapa, Precisão, Ataque-defesa, Armas,
+// Funções e o gráfico de RR/tópicos de análise). A lista de Partidas, de
+// propósito, não respeita esse filtro (ver SeasonMatchesList).
+const MATCH_COUNT_LABELS: Record<MatchCountFilter, string> = {
+  all: 'Todas as partidas',
+  20: 'Últimas 20 partidas',
+  7: 'Últimas 7 partidas',
+};
+
+export function MatchCountFilterSelect({
+  matchCountFilter,
+  setMatchCountFilter,
+}: {
+  matchCountFilter: MatchCountFilter;
+  setMatchCountFilter: (n: MatchCountFilter) => void;
+}) {
+  return (
+    <Select
+      value={String(matchCountFilter)}
+      onChange={(v) => setMatchCountFilter(v === 'all' ? 'all' : v === '7' ? 7 : 20)}
+      options={(['all', 20, 7] as const).map((n) => ({ value: String(n), label: MATCH_COUNT_LABELS[n] }))}
+      title="Quantas partidas considerar"
       style={FILTER_STYLE}
     />
   );
