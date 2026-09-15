@@ -83,6 +83,13 @@ function AttackDefenseCard({ sides, height }: { sides: SeasonOverview['attackDef
         [
           { label: 'Ataque', ...sides.attack },
           { label: 'Defesa', ...sides.defense },
+          // Overtime não vem com winratePercent pronto (ver SidesBreakdown
+          // em domain.ts, só wins/total) -- calcula aqui igual às outras
+          // duas. Só entra na lista se teve overtime no período (senão
+          // vira uma barra de 0/0 sem sentido).
+          ...(sides.overtime.total > 0
+            ? [{ label: 'Overtime', winratePercent: Math.round((sides.overtime.wins / sides.overtime.total) * 100), wins: sides.overtime.wins, total: sides.overtime.total }]
+            : []),
         ] as Array<{ label: string; winratePercent: number; wins: number; total: number }>
       ).map((s) => (
         <div key={s.label} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -99,11 +106,6 @@ function AttackDefenseCard({ sides, height }: { sides: SeasonOverview['attackDef
           </span>
         </div>
       ))}
-      {sides.overtime.total > 0 && (
-        <div style={{ fontSize: 11, color: 'var(--text-faint)' }}>
-          + overtime: {sides.overtime.wins} de {sides.overtime.total} rounds
-        </div>
-      )}
     </div>
   );
 }
