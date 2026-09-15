@@ -922,14 +922,22 @@ button {
   }
 }
 
-/* Cabeçalho do main: busca + ações. Em telas estreitas, empilha. */
+/* Cabeçalho do main: elo/level à esquerda, busca, conta à direita. Grid de
+   3 colunas (1fr / até 520px / 1fr) em vez de flex -- com flex, a busca
+   ficava colada logo depois do elo/level (que tem largura variável),
+   puxada pra esquerda; com as duas colunas externas em 1fr (largura igual
+   entre si, venha o que vier de conteúdo), a coluna do meio fica realmente
+   centralizada no cabeçalho. Em telas estreitas, empilha (mesmo
+   comportamento de antes). */
 .app-header {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 520px) minmax(0, 1fr);
   align-items: center;
   gap: 16px;
 }
 @media (max-width: 640px) {
   .app-header {
+    display: flex;
     flex-wrap: wrap;
     gap: 10px;
   }
