@@ -80,11 +80,36 @@ export const THEME_PALETTE = ["#EF4958", "#18AAB7", "#192573", "#421662", "#2FB1
 export const THEME_MODES = ["dark", "light"] as const;
 export type ThemeMode = (typeof THEME_MODES)[number];
 
+// Fundo de mapa (Configurações > Tema) — arte de splash de cada mapa
+// ativo, servida como asset estático em /img/maps/<key>.png (ver
+// apps/web/public/img/maps). Lista fechada igual THEME_PALETTE: fonte
+// única pro seletor no front e pra validação do PATCH /me/theme.
+export const MAP_BACKGROUNDS = [
+  "abyss",
+  "ascent",
+  "bind",
+  "breeze",
+  "corrode",
+  "fracture",
+  "haven",
+  "icebox",
+  "lotus",
+  "pearl",
+  "split",
+  "summit",
+  "sunset",
+] as const;
+export type MapBackground = (typeof MAP_BACKGROUNDS)[number];
+
 export interface ThemePreferences {
   accentColor: string; // cor principal — também colore valores positivos (vitória, deltas positivos)
   negativeColor: string; // só derrotas/valores negativos
   glow: number; // 0-100
   mode: ThemeMode;
+  // null = sem fundo de mapa (preto/branco padrão conforme `mode`). Opacidade
+  // do overlay escuro por cima da arte é fixa (não é preferência da pessoa,
+  // ver MapWallpaper em lib/theme.tsx) — só a escolha do mapa é salva aqui.
+  mapBackground: MapBackground | null;
 }
 
 // --- Sessão ---

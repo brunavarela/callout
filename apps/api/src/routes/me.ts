@@ -1,6 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
-import { THEME_MODES, THEME_PALETTE } from "@callout/shared";
+import { THEME_MODES, THEME_PALETTE, MAP_BACKGROUNDS } from "@callout/shared";
 import { requireAuth } from "../lib/session.js";
 import { toSessionUser } from "../lib/dto.js";
 import { getUserEquipe } from "../lib/equipe.js";
@@ -18,6 +18,7 @@ const themeBodySchema = z.object({
   negativeColor: z.enum(THEME_PALETTE),
   glow: z.number().int().min(0).max(100),
   mode: z.enum(THEME_MODES),
+  mapBackground: z.enum(MAP_BACKGROUNDS).nullable(),
 });
 
 // Nome de exibição, foto de perfil e preferência de "mostrar RiotID como
@@ -64,6 +65,7 @@ export async function meRoutes(app: FastifyInstance) {
         themeNegative: parsed.data.negativeColor,
         themeGlow: parsed.data.glow,
         themeMode: parsed.data.mode,
+        themeMapBackground: parsed.data.mapBackground,
       },
     });
 

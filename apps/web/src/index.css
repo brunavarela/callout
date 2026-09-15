@@ -704,6 +704,10 @@ button {
   height: 100vh;
   overflow: hidden;
   position: relative;
+  /* Acima do fundo de mapa (position:fixed, z-index:0 — ver ThemeProvider
+     em lib/theme.tsx), que fica atrás de toda tela quando a pessoa escolhe
+     um. */
+  z-index: 1;
   transition: grid-template-columns 0.24s ease;
 }
 @media (max-width: 900px) {

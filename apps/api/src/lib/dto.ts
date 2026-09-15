@@ -1,5 +1,5 @@
 import type { User } from "@prisma/client";
-import type { Intuito, SessionUser, ThemeMode } from "@callout/shared";
+import type { Intuito, MapBackground, SessionUser, ThemeMode } from "@callout/shared";
 import { resolveOnboardingStep } from "./onboarding.js";
 
 // Nome/avatar de exibição em qualquer lugar do app que mostre um usuário —
@@ -41,6 +41,7 @@ export function toSessionUser(user: User, equipe: { id: string; nome: string } |
       negativeColor: user.themeNegative,
       glow: user.themeGlow,
       mode: user.themeMode as ThemeMode,
+      mapBackground: user.themeMapBackground as MapBackground | null,
     },
     isAdmin: user.isAdmin,
     proximoPasso: resolveOnboardingStep(user, equipe !== null),

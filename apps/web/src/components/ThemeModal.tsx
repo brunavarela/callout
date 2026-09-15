@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import type { ThemePreferences } from '@callout/shared';
+import { Ban } from 'lucide-react';
+import { MAP_BACKGROUNDS, type MapBackground, type ThemePreferences } from '@callout/shared';
 import { THEME_PALETTE, useTheme } from '../lib/theme';
 import { Modal, ModalHeader } from './Modal';
 
@@ -19,6 +20,51 @@ function Swatch({ color, active, onClick }: { color: string; active: boolean; on
         cursor: 'pointer',
       }}
     />
+  );
+}
+
+// Nome pra exibir no título de cada miniatura de mapa -- MAP_BACKGROUNDS
+// (@callout/shared) é a key do arquivo (ver apps/web/public/img/maps), em
+// minúsculo; aqui só pra ficar legível no hover.
+const MAP_LABELS: Record<MapBackground, string> = {
+  abyss: 'Abyss',
+  ascent: 'Ascent',
+  bind: 'Bind',
+  breeze: 'Breeze',
+  corrode: 'Corrode',
+  fracture: 'Fracture',
+  haven: 'Haven',
+  icebox: 'Icebox',
+  lotus: 'Lotus',
+  pearl: 'Pearl',
+  split: 'Split',
+  summit: 'Summit',
+  sunset: 'Sunset',
+};
+
+function MapThumb({ map, active, onClick }: { map: MapBackground | null; active: boolean; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      title={map ? MAP_LABELS[map] : 'Nenhum'}
+      style={{
+        width: 52,
+        height: 52,
+        flex: 'none',
+        borderRadius: 10,
+        overflow: 'hidden',
+        cursor: 'pointer',
+        padding: 0,
+        border: active ? '2px solid var(--acc, #EF4958)' : '2px solid transparent',
+        outline: active ? 'none' : '1px solid var(--surface-border)',
+        background: map ? `url(/img/maps/${map}.png) center/cover` : 'var(--input-bg)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
+    >
+      {!map && <Ban size={18} strokeWidth={1.75} color="var(--text-faint)" />}
+    </button>
   );
 }
 
@@ -93,6 +139,19 @@ export function ThemeModal({ onClose }: { onClose: () => void }) {
             onChange={(e) => apply({ ...local, glow: Number(e.target.value) })}
             style={{ width: '100%' }}
           />
+        </div>
+
+        <div>
+          <div style={{ fontSize: 10, letterSpacing: '.1em', color: 'var(--text-dim)', marginBottom: 8 }}>FUNDO</div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            <MapThumb map={null} active={local.mapBackground === null} onClick={() => apply({ ...local, mapBackground: null }, true)} />
+            {MAP_BACKGROUNDS.map((m) => (
+              <MapThumb key={m} map={m} active={local.mapBackground === m} onClick={() => apply({ ...local, mapBackground: m }, true)} />
+            ))}
+          </div>
+          <div style={{ fontSize: 11, color: 'var(--text-faint)', marginTop: 8, lineHeight: 1.4 }}>
+            Arte do mapa escolhido, escurecida, como fundo em todas as telas.
+          </div>
         </div>
       </div>
     </Modal>

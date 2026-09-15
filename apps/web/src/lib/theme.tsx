@@ -10,7 +10,14 @@ const DEFAULT_THEME: ThemePreferences = {
   negativeColor: '#EF4958',
   glow: 70,
   mode: 'dark',
+  mapBackground: null,
 };
+
+// Opacidade do véu escuro por cima da arte do mapa -- fixa de propósito
+// (não é preferência da pessoa, ver ThemePreferences.mapBackground): forte
+// o bastante pra texto solto (fora de card) continuar legível em cima de
+// qualquer arte, mas ainda dá pra reconhecer o mapa escolhido.
+const MAP_BACKGROUND_OVERLAY = 'rgba(15, 15, 16, 0.84)';
 
 function hexRgb(hex: string): [number, number, number] {
   const h = hex.replace('#', '');
@@ -86,7 +93,30 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   return (
     <ThemeContext.Provider value={{ theme, setTheme }}>
-      <div style={cssVars}>{children}</div>
+      <div style={cssVars}>
+        {/* Fundo de mapa -- fixed + z-index baixo (ver .app-shell-grid no
+            index.css, que sobe pra z-index:1) pra ficar atrás de todo o
+            conteúdo em qualquer tela, sem empurrar layout (position:fixed
+            não ocupa espaço no fluxo). Gradiente com a mesma cor duas vezes
+            é só um jeito de sobrepor uma cor sólida translúcida em cima de
+            uma background-image só (não dá pra empilhar background-color +
+            background-image direto). */}
+        {theme.mapBackground && (
+          <div
+            aria-hidden="true"
+            style={{
+              position: 'fixed',
+              inset: 0,
+              zIndex: 0,
+              pointerEvents: 'none',
+              backgroundImage: `linear-gradient(${MAP_BACKGROUND_OVERLAY}, ${MAP_BACKGROUND_OVERLAY}), url(/img/maps/${theme.mapBackground}.png)`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+            }}
+          />
+        )}
+        {children}
+      </div>
     </ThemeContext.Provider>
   );
 }

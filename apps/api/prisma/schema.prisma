@@ -73,6 +73,11 @@ model User {
   themeNegative String @default("#EF4958")
   themeGlow     Int    @default(70) // 0-100
   themeMode     String @default("dark") // "dark" | "light" — ver ThemeMode em @callout/shared
+  // Fundo de mapa (Configurações > Tema) — key de MAP_BACKGROUNDS
+  // (@callout/shared) ou null pra "nenhum" (preto/branco padrão conforme
+  // themeMode). Opacidade do overlay escuro por cima da arte é fixa no
+  // front, não é preferência salva aqui.
+  themeMapBackground String?
 
   // Admin da PLATAFORMA (não da equipe — ver MembroEquipe.isAdmin pra
   // isso). Só quem tem isso true vê o switch de Administrador e pode
