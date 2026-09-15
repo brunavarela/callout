@@ -378,7 +378,7 @@ function GrupoCard({
           crescer -- mesma lição do resto do painel, ver cardStyle. */}
       <div
         className={colapsado ? 'grupo-matches colapsado' : 'grupo-matches'}
-        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 9, flex: 1, minWidth: 0, overflowX: 'auto', paddingBottom: 4 }}
+        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 18, flex: 1, minWidth: 0, overflowX: 'auto', paddingBottom: 4 }}
       >
         {ordenados.map((c) => (
           <MatchCard key={c.id} confronto={c} competicao={competicao} editavel={editavel} onSalvar={onSalvar} />
