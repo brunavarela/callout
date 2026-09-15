@@ -5,7 +5,7 @@ import { LoadingFill } from './Spinner';
 import { SeasonMatchesList } from './SeasonMatchesList';
 import { RrHistoryCard } from './RrHistoryCard';
 import { Modal, ModalHeader } from './Modal';
-import { cardStyle, fmtNum, fmtDelta, plural, LOW_SAMPLE, MIN_SAMPLE, GOLD } from './statsPrimitives';
+import { cardStyle, fmtNum, fmtDelta, plural, LOW_SAMPLE, MIN_SAMPLE, GOLD, InfoDot } from './statsPrimitives';
 import { formatPlaytime } from '../lib/seasonFormat';
 
 const WIN = 'var(--pos, #18AAB7)';
@@ -56,18 +56,6 @@ const WEAPON_CATEGORY: Record<string, string> = {
   Odin: 'Metralhadoras',
   Melee: 'Corpo a corpo',
 };
-
-// "?" ao lado do título de cada stat — passa o mouse (ou foca via teclado)
-// pra ver a legenda numa bolha no estilo do resto do app, em vez do
-// tooltip nativo do navegador.
-function InfoDot({ text }: { text: string }) {
-  return (
-    <span className="info-tip" tabIndex={0}>
-      <span className="info-dot">?</span>
-      <span className="info-tip-bubble">{text}</span>
-    </span>
-  );
-}
 
 // Ataque/defesa — % de rounds ganhos em cada lado, no período (e sob o filtro
 // de mapa/agente atual). Mesmo visual do card que já existia no dashboard

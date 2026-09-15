@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import type { RecentFormInsights, RrHistoryPoint, SeasonOverview } from '@callout/shared';
 import { SnakeSpinner } from './Spinner';
-import { cardStyle, WIN, LOSS, DRAW, fmtDelta } from './statsPrimitives';
+import { cardStyle, WIN, LOSS, DRAW, fmtDelta, InfoDot } from './statsPrimitives';
 
 // Escada de ranques (sem contar Unranked/Radiant, que não seguem o padrão
 // "nome N") — usada só pra descobrir o próximo ranque a partir do atual.
@@ -232,7 +232,10 @@ export function RrHistoryCard({
     <div className="season-fixed-card" style={{ ...cardStyle, padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: 4, ...(height ? { height } : {}) }}>
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
         <div>
-          <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 16 }}>RR ganho e perdido</div>
+          <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 16, display: 'flex', alignItems: 'center', gap: 6 }}>
+            RR ganho e perdido
+            <InfoDot text="RR (Rank Rating) é a pontuação de ranqueada dentro do seu elo atual — vai de 0 a 100 em cada tier. Ganhar RR suficiente sobe de tier; perder no 0 pode rebaixar." />
+          </div>
           <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 3 }}>Soma acumulada de RR — cada ponto é uma partida.</div>
         </div>
         {rrHistory.length > 0 && (

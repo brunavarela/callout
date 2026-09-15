@@ -43,6 +43,17 @@ export function rateBarColor(wins: number, total: number): string {
   return wins / total >= 0.5 ? WIN : UNDER_50;
 }
 
+// "?" ao lado de um título de stat — passa o mouse (ou foca via teclado)
+// pra ver a legenda numa bolha, mesma linguagem visual do resto do app.
+export function InfoDot({ text }: { text: string }) {
+  return (
+    <span className="info-tip" tabIndex={0}>
+      <span className="info-dot">?</span>
+      <span className="info-tip-bubble">{text}</span>
+    </span>
+  );
+}
+
 // Quadradinho de ícone (mapa/agente, via valorant-api.com) ou, na ausência
 // de ícone, um "dot" de cor — usado tanto em RateBlock quanto em
 // RankingBlock. Ícone tem prioridade sobre `dot` quando os dois vêm juntos.
