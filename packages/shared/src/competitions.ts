@@ -15,6 +15,9 @@ export const timeSchema = z.object({
   nome: z.string(),
   sigla: z.string().max(4),
   cor: z.string(),
+  // Logo do time (path/URL estático, mesmo padrão de Competicao.capaUrl) --
+  // opcional, sem ela o TimeChip cai no quadradinho colorido com a sigla.
+  logoUrl: z.string().optional(),
 });
 export type Time = z.infer<typeof timeSchema>;
 

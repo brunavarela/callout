@@ -41,7 +41,7 @@ export async function listCompeticoes(): Promise<Competicao[]> {
     capaUrl: r.capaUrl ?? undefined,
     linkTwitch: r.linkTwitch ?? undefined,
     linkYoutube: r.linkYoutube ?? undefined,
-    times: r.times.map((t) => ({ id: t.timeId, nome: t.nome, sigla: t.sigla, cor: t.cor })),
+    times: r.times.map((t) => ({ id: t.timeId, nome: t.nome, sigla: t.sigla, cor: t.cor, logoUrl: t.logoUrl ?? undefined })),
     confrontos: r.confrontos.map(toConfrontoDto),
   }));
 }

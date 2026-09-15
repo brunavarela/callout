@@ -109,7 +109,11 @@ function CompetitionCard({ competicao, onClick }: { competicao: Competicao; onCl
           <span style={{ fontSize: 12, color: 'rgba(255,255,255,.75)' }}>{periodoCompeticao(competicao)}</span>
           {vencedor && (
             <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 600, color: '#E8B339' }}>
-              <span style={{ width: 8, height: 8, borderRadius: 2, background: vencedor.cor, flex: 'none' }} />
+              {vencedor.logoUrl ? (
+                <img src={vencedor.logoUrl} alt="" style={{ width: 16, height: 16, objectFit: 'contain', flex: 'none' }} />
+              ) : (
+                <span style={{ width: 8, height: 8, borderRadius: 2, background: vencedor.cor, flex: 'none' }} />
+              )}
               {vencedor.nome} campeã
             </span>
           )}

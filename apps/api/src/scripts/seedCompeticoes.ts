@@ -45,8 +45,8 @@ async function seedCompeticao(comp: Competicao) {
   for (const time of comp.times) {
     await prisma.competicaoTime.upsert({
       where: { competicaoId_timeId: { competicaoId: comp.id, timeId: time.id } },
-      update: { nome: time.nome, sigla: time.sigla, cor: time.cor },
-      create: { competicaoId: comp.id, timeId: time.id, nome: time.nome, sigla: time.sigla, cor: time.cor },
+      update: { nome: time.nome, sigla: time.sigla, cor: time.cor, logoUrl: time.logoUrl },
+      create: { competicaoId: comp.id, timeId: time.id, nome: time.nome, sigla: time.sigla, cor: time.cor, logoUrl: time.logoUrl },
     });
   }
 

@@ -404,6 +404,10 @@ model CompeticaoTime {
   nome         String
   sigla        String
   cor          String
+  // Logo do time — path/URL estático (mesmo padrão de Competicao.capaUrl).
+  // Nullable até seedar; TimeChip cai no quadradinho colorido com a sigla
+  // sem isso.
+  logoUrl      String?
 
   @@unique([competicaoId, timeId])
   @@map("competicao_times")

@@ -28,23 +28,27 @@ type PatchConfronto = { status: Confronto['status']; placarA: number | null; pla
 function TimeChip({ time, rotulo }: { time: Time | null; rotulo: string }) {
   return (
     <span style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
-      <span
-        style={{
-          width: 20,
-          height: 20,
-          borderRadius: 6,
-          flex: 'none',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontSize: 8.5,
-          fontWeight: 700,
-          background: time ? time.cor : 'var(--track)',
-          color: time ? '#141415' : 'var(--text-faint)',
-        }}
-      >
-        {time ? time.sigla.slice(0, 3) : ''}
-      </span>
+      {time?.logoUrl ? (
+        <img src={time.logoUrl} alt="" style={{ width: 20, height: 20, borderRadius: 6, objectFit: 'contain', background: 'var(--track)', flex: 'none' }} />
+      ) : (
+        <span
+          style={{
+            width: 20,
+            height: 20,
+            borderRadius: 6,
+            flex: 'none',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: 8.5,
+            fontWeight: 700,
+            background: time ? time.cor : 'var(--track)',
+            color: time ? '#141415' : 'var(--text-faint)',
+          }}
+        >
+          {time ? time.sigla.slice(0, 3) : ''}
+        </span>
+      )}
       <span style={{ fontSize: 12.5, fontWeight: time ? 600 : 400, color: time ? 'var(--text-2)' : 'var(--text-faint)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
         {rotulo}
       </span>
