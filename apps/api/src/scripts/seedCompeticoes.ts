@@ -2,12 +2,13 @@ import { competicaoSchema, type Competicao } from "@callout/shared";
 import { prisma } from "../lib/prisma.js";
 import { vctAmericasPlayoffs2026 } from "../data/competicoes-seed/vct-americas-playoffs-2026.js";
 import { gameChangersBrasilEtapaFinal2026 } from "../data/competicoes-seed/game-changers-brasil-etapa-final-2026.js";
+import { vctChampionsShanghai2026 } from "../data/competicoes-seed/vct-champions-shanghai-2026.js";
 
 // Idempotente — pode rodar de novo em qualquer ambiente (dev/prod) sem
 // duplicar nada; upsert por id lógico. Só popula na primeira vez ou se um
 // confronto/time novo for adicionado aqui; NÃO sobrescreve placar/status já
 // editados pelo admin (ver updateCompeticao abaixo).
-const SEED: Competicao[] = [vctAmericasPlayoffs2026, gameChangersBrasilEtapaFinal2026];
+const SEED: Competicao[] = [vctAmericasPlayoffs2026, gameChangersBrasilEtapaFinal2026, vctChampionsShanghai2026];
 
 async function seedCompeticao(comp: Competicao) {
   const parsed = competicaoSchema.safeParse(comp);
@@ -63,6 +64,7 @@ async function seedCompeticao(comp: Competicao) {
         competicaoId: comp.id,
         confrontoId: confronto.id,
         chave: confronto.chave,
+        grupo: confronto.grupo,
         data: confronto.data,
         status: confronto.status,
         ladoA: confronto.ladoA,

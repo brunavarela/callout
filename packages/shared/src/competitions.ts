@@ -29,16 +29,30 @@ const ladoConfrontoSchema = z.union([
 ]);
 export type LadoConfronto = z.infer<typeof ladoConfrontoSchema>;
 
-export const confrontoSchema = z.object({
-  id: z.string(),
-  chave: z.enum(["superior", "inferior", "final"]),
-  data: z.string().datetime({ offset: true }).or(z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/)),
-  status: z.enum(["encerrada", "ao_vivo", "agendada"]),
-  ladoA: ladoConfrontoSchema,
-  ladoB: ladoConfrontoSchema,
-  placarA: z.number().int().nullable(),
-  placarB: z.number().int().nullable(),
-});
+// "grupos" = fase de grupos (todo mundo contra todo mundo dentro do mesmo
+// `grupo`, ex.: "A"/"B"/"C"/"D") -- diferente de superior/inferior/final,
+// que são o mata-mata depois dos grupos. Um confronto de grupo só referencia
+// times de verdade em ladoA/ladoB (tipo "time"), nunca vencedor/perdedor de
+// outro confronto -- os grupos não dependem uns dos outros.
+export const confrontoSchema = z
+  .object({
+    id: z.string(),
+    chave: z.enum(["grupos", "superior", "inferior", "final"]),
+    // Nome do grupo (ex.: "A") -- só faz sentido (e é obrigatório) quando
+    // chave === "grupos"; undefined nos confrontos de mata-mata.
+    grupo: z.string().optional(),
+    data: z.string().datetime({ offset: true }).or(z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/)),
+    status: z.enum(["encerrada", "ao_vivo", "agendada"]),
+    ladoA: ladoConfrontoSchema,
+    ladoB: ladoConfrontoSchema,
+    placarA: z.number().int().nullable(),
+    placarB: z.number().int().nullable(),
+  })
+  .superRefine((confronto, ctx) => {
+    if (confronto.chave === "grupos" && !confronto.grupo) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: `${confronto.id}: chave "grupos" precisa de um "grupo" (ex.: "A")` });
+    }
+  });
 export type Confronto = z.infer<typeof confrontoSchema>;
 
 // Body aceito pelo PATCH de admin — só o que dá pra editar num confronto.

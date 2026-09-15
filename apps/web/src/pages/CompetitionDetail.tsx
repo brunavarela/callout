@@ -289,6 +289,112 @@ function Banda({
   );
 }
 
+// Times de um grupo = quem aparece como lado "time" direto nos confrontos
+// dele (só os 2 confrontos de abertura têm isso — os outros 3 referenciam
+// vencedor/perdedor de outro confronto do próprio grupo).
+function timesDoGrupo(confrontosDoGrupo: Confronto[], times: Time[]): Time[] {
+  const ids = new Set<string>();
+  for (const c of confrontosDoGrupo) {
+    for (const lado of [c.ladoA, c.ladoB]) {
+      if (lado.tipo === 'time') ids.add(lado.timeId);
+    }
+  }
+  return times.filter((t) => ids.has(t.id));
+}
+
+// V/D por time dentro do grupo, a partir dos confrontos já decididos —
+// resolve cada lado (mesmo quando é vencedor/perdedor de outro confronto
+// do grupo) pra contar no time de verdade, não no rótulo pendente.
+function classificacaoGrupo(timesGrupo: Time[], confrontosGrupo: Confronto[], todosConfrontos: readonly Confronto[], todosTimes: readonly Time[]) {
+  const stats = new Map(timesGrupo.map((t) => [t.id, { time: t, vitorias: 0, derrotas: 0 }]));
+  for (const c of confrontosGrupo) {
+    if (c.placarA === null || c.placarB === null || c.placarA === c.placarB) continue;
+    const ladoVencedor = c.placarA > c.placarB ? c.ladoA : c.ladoB;
+    const ladoPerdedor = c.placarA > c.placarB ? c.ladoB : c.ladoA;
+    const vencedor = resolverLado(ladoVencedor, todosConfrontos, todosTimes).time;
+    const perdedor = resolverLado(ladoPerdedor, todosConfrontos, todosTimes).time;
+    if (vencedor && stats.has(vencedor.id)) stats.get(vencedor.id)!.vitorias++;
+    if (perdedor && stats.has(perdedor.id)) stats.get(perdedor.id)!.derrotas++;
+  }
+  return [...stats.values()].sort((a, b) => b.vitorias - a.vitorias || a.derrotas - b.derrotas);
+}
+
+function GrupoCard({
+  nome,
+  confrontos,
+  competicao,
+  editavel,
+  onSalvar,
+}: {
+  nome: string;
+  confrontos: Confronto[];
+  competicao: Competicao;
+  editavel: boolean;
+  onSalvar?: (confrontoId: string, patch: PatchConfronto) => Promise<void>;
+}) {
+  const ordenados = [...confrontos].sort((a, b) => a.id.localeCompare(b.id));
+  const timesGrupo = timesDoGrupo(confrontos, competicao.times);
+  const classificacao = classificacaoGrupo(timesGrupo, confrontos, competicao.confrontos, competicao.times);
+
+  return (
+    <div style={{ ...cardStyle, padding: 18, display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 700, fontSize: 14, letterSpacing: '.04em', color: 'var(--acc, #EF4958)' }}>GRUPO {nome}</div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        {classificacao.map((c, i) => (
+          <div key={c.time.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '5px 0', borderTop: i > 0 ? '1px solid var(--divider)' : 'none' }}>
+            <span style={{ width: 14, fontSize: 11, color: i < 2 ? WIN : 'var(--text-faint)', fontWeight: 700, flex: 'none' }}>{i + 1}º</span>
+            <TimeChip time={c.time} rotulo={c.time.nome} />
+            <span style={{ marginLeft: 'auto', fontSize: 11.5, color: 'var(--text-faint)', flex: 'none' }}>
+              {c.vitorias}V–{c.derrotas}D
+            </span>
+          </div>
+        ))}
+      </div>
+
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+        {ordenados.map((c) => (
+          <MatchCard key={c.id} confronto={c} competicao={competicao} editavel={editavel} onSalvar={onSalvar} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function FaseDeGrupos({
+  competicao,
+  editavel,
+  onSalvar,
+}: {
+  competicao: Competicao;
+  editavel: boolean;
+  onSalvar?: (confrontoId: string, patch: PatchConfronto) => Promise<void>;
+}) {
+  const porGrupo = useMemo(() => {
+    const map = new Map<string, Confronto[]>();
+    for (const c of competicao.confrontos) {
+      if (c.chave !== 'grupos' || !c.grupo) continue;
+      const lista = map.get(c.grupo) ?? [];
+      lista.push(c);
+      map.set(c.grupo, lista);
+    }
+    return [...map.entries()].sort(([a], [b]) => a.localeCompare(b));
+  }, [competicao]);
+
+  if (porGrupo.length === 0) return null;
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 15 }}>Fase de grupos</div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))', gap: 16 }}>
+        {porGrupo.map(([nome, confrontos]) => (
+          <GrupoCard key={nome} nome={nome} confrontos={confrontos} competicao={competicao} editavel={editavel} onSalvar={onSalvar} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function Chaveamento({
   competicao,
   editavel,
@@ -423,7 +529,10 @@ export function CompetitionDetail() {
       ) : (
         <>
           <ResumoCompeticao competicao={competicao} />
-          <Chaveamento competicao={competicao} editavel={adminMode} onSalvar={salvarConfronto} />
+          <FaseDeGrupos competicao={competicao} editavel={adminMode} onSalvar={salvarConfronto} />
+          {competicao.confrontos.some((c) => c.chave !== 'grupos') && (
+            <Chaveamento competicao={competicao} editavel={adminMode} onSalvar={salvarConfronto} />
+          )}
         </>
       )}
     </div>

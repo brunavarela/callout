@@ -1,10 +1,21 @@
 import type { Competicao, Confronto, LadoConfronto } from "@callout/shared";
 import { prisma } from "./prisma.js";
 
-function toConfrontoDto(row: { confrontoId: string; chave: string; data: string; status: string; ladoA: unknown; ladoB: unknown; placarA: number | null; placarB: number | null }): Confronto {
+function toConfrontoDto(row: {
+  confrontoId: string;
+  chave: string;
+  grupo: string | null;
+  data: string;
+  status: string;
+  ladoA: unknown;
+  ladoB: unknown;
+  placarA: number | null;
+  placarB: number | null;
+}): Confronto {
   return {
     id: row.confrontoId,
     chave: row.chave as Confronto["chave"],
+    grupo: row.grupo ?? undefined,
     data: row.data,
     status: row.status as Confronto["status"],
     ladoA: row.ladoA as LadoConfronto,

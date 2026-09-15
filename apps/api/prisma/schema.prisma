@@ -418,7 +418,11 @@ model Confronto {
   competicaoId String
   competicao   Competicao @relation(fields: [competicaoId], references: [id], onDelete: Cascade)
   confrontoId  String // "P1", "A5" — chave lógica referenciada por vencedor/perdedor
-  chave        String // superior | inferior | final
+  chave        String // grupos | superior | inferior | final
+  // Nome do grupo ("A", "B"...) — só preenchido quando chave = "grupos"
+  // (fase de grupos, todo mundo contra todo mundo dentro do mesmo grupo).
+  // Null nos confrontos de mata-mata (superior/inferior/final).
+  grupo        String?
   // String "ingênua" tipo "2026-08-27T18:00", sem timezone — o app inteiro
   // assume horário de Brasília e interpreta isso como hora local do
   // navegador. DateTime/timestamptz normalizaria pra UTC e deslocaria o
