@@ -664,35 +664,34 @@ button {
   }
 }
 
-/* Fase de grupos da tela de Competições — 4 colunas (uma por grupo) sempre
-   visíveis de uma vez, teto de 331px por coluna (20% mais estreita que o
-   antigo auto-fill de 360px, +15% depois disso). minmax(0, 331px) trava o
-   crescimento nesse teto sem forçar overflow -- encolhe normalmente se
-   não couber, até a próxima quebra. justify-content:space-between espalha
-   as 4 colunas pela largura toda em vez de empacotar tudo à esquerda
-   quando a tela sobra espaço. Desce em dupla (2+2) antes de virar coluna
-   única, em vez de ficar afinando cada coluna pra sempre. */
-.grupos-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 331px));
-  justify-content: space-between;
-  gap: 16px;
+/* Fase de grupos da tela de Competições — cada grupo é uma linha só
+   (título + classificação fixos à esquerda, confrontos numa fileira
+   horizontal rolável à direita), grupos empilhados um embaixo do outro
+   (ver FaseDeGrupos/GrupoCard). Em telas estreitas, empilha classificação
+   em cima dos confrontos em vez de espremer os dois lado a lado. */
+.grupo-row {
+  flex-direction: row;
 }
-@media (max-width: 1100px) {
-  .grupos-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+@media (max-width: 720px) {
+  .grupo-row {
+    flex-direction: column;
   }
 }
-@media (max-width: 600px) {
-  .grupos-grid {
-    grid-template-columns: 1fr;
+
+.grupo-classificacao {
+  width: 220px;
+}
+@media (max-width: 720px) {
+  .grupo-classificacao {
+    width: 100%;
   }
 }
 
 /* Botão de recolher/expandir grupo (chevron no card GRUPO X) -- só existe
-   no mobile/tablet pequeno, onde ver os 5 confrontos de cada um dos 4
-   grupos de uma vez fica bastante conteúdo pra rolar; no desktop os
-   grupos ficam sempre abertos (botão nem aparece). */
+   no mobile/tablet pequeno, onde a fileira de confrontos rolando de lado
+   some duas vezes por grupo pequena vale mais a pena só ver a
+   classificação; no desktop os grupos ficam sempre abertos (botão nem
+   aparece). */
 .grupo-toggle-btn {
   display: none;
 }

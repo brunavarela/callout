@@ -346,32 +346,37 @@ function GrupoCard({
   const [colapsado, setColapsado] = useState(false);
 
   return (
-    <div style={{ ...cardStyle, padding: 18, display: 'flex', flexDirection: 'column', gap: 14 }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-        <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 700, fontSize: 14, letterSpacing: '.04em', color: 'var(--acc, #EF4958)' }}>GRUPO {nome}</div>
-        <button
-          className="grupo-toggle-btn"
-          onClick={() => setColapsado((v) => !v)}
-          title={colapsado ? 'Expandir grupo' : 'Recolher grupo'}
-          style={{ background: 'none', border: 'none', padding: 2, cursor: 'pointer', color: 'var(--text-faint)' }}
-        >
-          {colapsado ? <ChevronDown size={16} strokeWidth={2} /> : <ChevronUp size={16} strokeWidth={2} />}
-        </button>
+    <div className="grupo-row" style={{ ...cardStyle, padding: 18, display: 'flex', alignItems: 'flex-start', gap: 20 }}>
+      <div className="grupo-classificacao" style={{ display: 'flex', flexDirection: 'column', gap: 10, flex: 'none' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+          <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 700, fontSize: 14, letterSpacing: '.04em', color: 'var(--acc, #EF4958)' }}>GRUPO {nome}</div>
+          <button
+            className="grupo-toggle-btn"
+            onClick={() => setColapsado((v) => !v)}
+            title={colapsado ? 'Expandir grupo' : 'Recolher grupo'}
+            style={{ background: 'none', border: 'none', padding: 2, cursor: 'pointer', color: 'var(--text-faint)' }}
+          >
+            {colapsado ? <ChevronDown size={16} strokeWidth={2} /> : <ChevronUp size={16} strokeWidth={2} />}
+          </button>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          {classificacao.map((c, i) => (
+            <div key={c.time.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '5px 0', borderTop: i > 0 ? '1px solid var(--divider)' : 'none' }}>
+              <span style={{ width: 14, fontSize: 11, color: i < 2 ? WIN : 'var(--text-faint)', fontWeight: 700, flex: 'none' }}>{i + 1}º</span>
+              <TimeChip time={c.time} rotulo={c.time.nome} />
+              <span style={{ marginLeft: 'auto', fontSize: 11.5, color: 'var(--text-faint)', flex: 'none' }}>
+                {c.vitorias}V–{c.derrotas}D
+              </span>
+            </div>
+          ))}
+        </div>
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-        {classificacao.map((c, i) => (
-          <div key={c.time.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '5px 0', borderTop: i > 0 ? '1px solid var(--divider)' : 'none' }}>
-            <span style={{ width: 14, fontSize: 11, color: i < 2 ? WIN : 'var(--text-faint)', fontWeight: 700, flex: 'none' }}>{i + 1}º</span>
-            <TimeChip time={c.time} rotulo={c.time.nome} />
-            <span style={{ marginLeft: 'auto', fontSize: 11.5, color: 'var(--text-faint)', flex: 'none' }}>
-              {c.vitorias}V–{c.derrotas}D
-            </span>
-          </div>
-        ))}
-      </div>
-
-      <div className={colapsado ? 'grupo-matches colapsado' : 'grupo-matches'} style={{ display: 'flex', flexWrap: 'wrap', gap: 10, justifyContent: 'center' }}>
+      {/* minWidth:0 é o que deixa essa fileira encolher e rolar de lado
+          (overflow-x:auto) em vez de forçar o card (e a página) inteira a
+          crescer -- mesma lição do resto do painel, ver cardStyle. */}
+      <div className={colapsado ? 'grupo-matches colapsado' : 'grupo-matches'} style={{ display: 'flex', gap: 10, flex: 1, minWidth: 0, overflowX: 'auto', paddingBottom: 4 }}>
         {ordenados.map((c) => (
           <MatchCard key={c.id} confronto={c} competicao={competicao} editavel={editavel} onSalvar={onSalvar} />
         ))}
@@ -405,7 +410,7 @@ function FaseDeGrupos({
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
       <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 15 }}>Fase de grupos</div>
-      <div className="grupos-grid">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         {porGrupo.map(([nome, confrontos]) => (
           <GrupoCard key={nome} nome={nome} confrontos={confrontos} competicao={competicao} editavel={editavel} onSalvar={onSalvar} />
         ))}
