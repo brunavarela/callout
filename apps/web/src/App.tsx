@@ -16,6 +16,7 @@ import { EquipeConfiguracoes } from './pages/EquipeConfiguracoes';
 import { Board } from './pages/Board';
 import { Spots } from './pages/Spots';
 import { Competitions } from './pages/Competitions';
+import { CompetitionDetail } from './pages/CompetitionDetail';
 import { Termos } from './pages/Termos';
 import { Privacidade } from './pages/Privacidade';
 
@@ -43,6 +44,7 @@ function App() {
         <Route path="/board/:id" element={<Board />} />
         <Route path="/spots" element={<Spots />} />
         <Route path="/competicoes" element={<Competitions />} />
+        <Route path="/competicoes/:id" element={<CompetitionDetail />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />

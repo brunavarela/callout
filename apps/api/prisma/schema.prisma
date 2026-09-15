@@ -382,6 +382,11 @@ model Competicao {
   categorias  String[] // mista | inclusiva | feminina | aberta
   fase        String
   status      String // agendada | em_andamento | encerrada
+  // Imagem de fundo do card de seleção (tela de Competições) — path/URL
+  // estático, mesmo padrão de linkTwitch/linkYoutube abaixo (não é upload,
+  // é editado direto no seed). Nullable até alguém preencher; card cai num
+  // gradiente padrão sem isso.
+  capaUrl     String?
   linkTwitch  String?
   linkYoutube String?
 

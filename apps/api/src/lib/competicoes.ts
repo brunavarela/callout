@@ -27,6 +27,7 @@ export async function listCompeticoes(): Promise<Competicao[]> {
     categorias: r.categorias as Competicao["categorias"],
     fase: r.fase,
     status: r.status as Competicao["status"],
+    capaUrl: r.capaUrl ?? undefined,
     linkTwitch: r.linkTwitch ?? undefined,
     linkYoutube: r.linkYoutube ?? undefined,
     times: r.times.map((t) => ({ id: t.timeId, nome: t.nome, sigla: t.sigla, cor: t.cor })),

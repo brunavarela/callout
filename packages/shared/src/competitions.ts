@@ -56,6 +56,9 @@ export const competicaoSchema = z
     formato: z.string(),
     categorias: z.array(categoriaCompeticaoSchema).min(1),
     fase: z.string(),
+    // Imagem de fundo do card de seleção (tela de Competições) -- opcional,
+    // sem ela o card cai num gradiente padrão (ver Competitions.tsx).
+    capaUrl: z.string().optional(),
     linkTwitch: z.string().url().optional(),
     linkYoutube: z.string().url().optional(),
     status: z.enum(["agendada", "em_andamento", "encerrada"]),
