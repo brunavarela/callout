@@ -550,7 +550,7 @@ button {
   align-items: start;
   gap: 16px;
 }
-@media (max-width: 1000px) {
+@media (max-width: 1280px) {
   .grid-responsive-season {
     grid-template-columns: 1fr;
   }
@@ -558,13 +558,19 @@ button {
 
 /* As 2 sub-colunas de cards dentro da coluna direita da Visão do ato --
    gap propositalmente bem pequeno (4px), diferente do gap de 16px do
-   resto do layout. */
+   resto do layout. Mesmo breakpoint de .grid-responsive-season (1280px) de
+   propósito -- as duas colam juntas: com só uma delas empilhando, a outra
+   ainda ficava espremida em 2-3 sub-colunas estreitas dentro de uma tela
+   de tablet (ex.: iPad ~1024px), cortando texto que "cabia" pela largura
+   da tela mas não pela largura real de cada card. Empilhando as duas ao
+   mesmo tempo, cada card volta a ter a largura cheia do conteúdo -- mais
+   scroll vertical, mas nada cortado. */
 .season-cards-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 4px;
 }
-@media (max-width: 720px) {
+@media (max-width: 1280px) {
   .season-cards-grid {
     grid-template-columns: 1fr;
   }
@@ -615,11 +621,12 @@ button {
 }
 
 /* Cards de altura fixa da Visão do ato (Mapa/Agentes/Ataque-defesa/
-   Precisão/Armas/Funções, ver SEASON_CARD_HEIGHT) — no mobile, onde cada
+   Precisão/Armas/Funções, ver SEASON_CARD_HEIGHT) — abaixo de 1280px
+   (mesmo ponto de .grid-responsive-season/.season-cards-grid), onde cada
    card já ocupa a largura cheia empilhado verticalmente (não precisa mais
    bater altura com o card ao lado), deixa crescer com o conteúdo em vez de
    forçar um scroll interno dentro de uma página que já rola. */
-@media (max-width: 720px) {
+@media (max-width: 1280px) {
   .season-fixed-card {
     height: auto !important;
     max-height: none !important;
