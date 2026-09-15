@@ -9,8 +9,8 @@ export const gameChangersBrasilEtapaFinal2026: Competicao = {
   nome: "VALORANT Game Changers Brasil · Etapa Final",
   formato: "Dupla eliminação · 8 times",
   categorias: ["inclusiva"],
-  fase: "Chave inferior",
-  status: "em_andamento",
+  fase: "Finalizada",
+  status: "encerrada",
   linkTwitch: "https://www.twitch.tv/valorant_br",
   linkYoutube: "https://www.youtube.com/@valesportsbr",
   times: [
@@ -39,17 +39,17 @@ export const gameChangersBrasilEtapaFinal2026: Competicao = {
     { id: "B2", chave: "inferior", data: "2026-08-17T20:00", status: "encerrada", ladoA: { tipo: "perdedor", confrontoId: "A4" }, ladoB: { tipo: "perdedor", confrontoId: "A3" }, placarA: 2, placarB: 0 },
 
     // Chave inferior — rodada 2
-    { id: "B3", chave: "inferior", data: "2026-08-24T17:00", status: "agendada", ladoA: { tipo: "perdedor", confrontoId: "A6" }, ladoB: { tipo: "vencedor", confrontoId: "B1" }, placarA: null, placarB: null },
-    { id: "B4", chave: "inferior", data: "2026-08-24T20:00", status: "agendada", ladoA: { tipo: "perdedor", confrontoId: "A5" }, ladoB: { tipo: "vencedor", confrontoId: "B2" }, placarA: null, placarB: null },
+    { id: "B3", chave: "inferior", data: "2026-08-24T17:00", status: "encerrada", ladoA: { tipo: "perdedor", confrontoId: "A6" }, ladoB: { tipo: "vencedor", confrontoId: "B1" }, placarA: 2, placarB: 0 },
+    { id: "B4", chave: "inferior", data: "2026-08-24T20:00", status: "encerrada", ladoA: { tipo: "perdedor", confrontoId: "A5" }, ladoB: { tipo: "vencedor", confrontoId: "B2" }, placarA: 2, placarB: 1 },
 
     // Semifinal da chave superior
-    { id: "A7", chave: "superior", data: "2026-09-09T20:00", status: "agendada", ladoA: { tipo: "vencedor", confrontoId: "A5" }, ladoB: { tipo: "vencedor", confrontoId: "A6" }, placarA: null, placarB: null },
+    { id: "A7", chave: "superior", data: "2026-09-09T20:00", status: "encerrada", ladoA: { tipo: "vencedor", confrontoId: "A5" }, ladoB: { tipo: "vencedor", confrontoId: "A6" }, placarA: 1, placarB: 2 },
 
     // Chave inferior — rodadas finais
-    { id: "B5", chave: "inferior", data: "2026-09-09T17:00", status: "agendada", ladoA: { tipo: "vencedor", confrontoId: "B3" }, ladoB: { tipo: "vencedor", confrontoId: "B4" }, placarA: null, placarB: null },
-    { id: "B6", chave: "inferior", data: "2026-09-10T17:00", status: "agendada", ladoA: { tipo: "perdedor", confrontoId: "A7" }, ladoB: { tipo: "vencedor", confrontoId: "B5" }, placarA: null, placarB: null },
+    { id: "B5", chave: "inferior", data: "2026-09-09T17:00", status: "encerrada", ladoA: { tipo: "vencedor", confrontoId: "B3" }, ladoB: { tipo: "vencedor", confrontoId: "B4" }, placarA: 2, placarB: 0 },
+    { id: "B6", chave: "inferior", data: "2026-09-10T17:00", status: "encerrada", ladoA: { tipo: "perdedor", confrontoId: "A7" }, ladoB: { tipo: "vencedor", confrontoId: "B5" }, placarA: 2, placarB: 3 },
 
-    // Grande final
-    { id: "FINAL", chave: "final", data: "2026-09-11T18:00", status: "agendada", ladoA: { tipo: "vencedor", confrontoId: "A7" }, ladoB: { tipo: "vencedor", confrontoId: "B6" }, placarA: null, placarB: null },
+    // Grande final -- campeão: TLV
+    { id: "FINAL", chave: "final", data: "2026-09-11T18:00", status: "encerrada", ladoA: { tipo: "vencedor", confrontoId: "A7" }, ladoB: { tipo: "vencedor", confrontoId: "B6" }, placarA: 3, placarB: 1 },
   ],
 };
