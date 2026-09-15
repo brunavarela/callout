@@ -640,7 +640,7 @@ function toSeasonMatchSummaries(
       agent: r.agentName,
       modo: r.match.modo,
       rankIconUrl: r.rankTierId !== null ? rankIconByTierId.get(r.rankTierId) ?? null : null,
-      score: `${score.own}—${score.opponent}`,
+      score: `${score.own}:${score.opponent}`,
       kda: `${r.kills}/${r.deaths}/${r.assists}`,
       kdaRatio,
       acs: r.acs,

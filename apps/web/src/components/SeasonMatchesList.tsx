@@ -258,7 +258,7 @@ function SeasonMatchRow({
         </div>
 
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10, flex: 'none' }}>
-          <StatCol label="PLACAR" value={m.score} bold />
+          <StatCol label="PLACAR" value={m.score} bold color={m.result === 'V' ? WIN : m.result === 'D' ? LOSS : DRAW} />
 
           {!compact && (
             <>
