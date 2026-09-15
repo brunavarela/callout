@@ -1,7 +1,13 @@
 import { createContext, useContext, useEffect, useMemo, type CSSProperties, type ReactNode } from 'react';
+import { useLocation } from 'react-router-dom';
 import { THEME_MODES, THEME_PALETTE, type ThemePreferences } from '@callout/shared';
 import { useSession } from './session';
 import { apiFetch } from './api';
+
+// Rotas públicas (fora do AppShell, ver App.tsx) -- o fundo de mapa é só
+// pro site logado, nunca aqui, mesmo que a pessoa já tenha sessão válida
+// (ex.: voltou pro /login com o cookie ainda ativo).
+const ROTAS_SEM_FUNDO_DE_MAPA = ['/login', '/cadastro', '/esqueci-senha', '/termos', '/privacidade'];
 
 export { THEME_MODES, THEME_PALETTE };
 
@@ -56,6 +62,8 @@ const ThemeContext = createContext<ThemeContextValue | null>(null);
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const { user, refresh } = useSession();
   const theme = user?.theme ?? DEFAULT_THEME;
+  const location = useLocation();
+  const paginaPublica = ROTAS_SEM_FUNDO_DE_MAPA.some((rota) => location.pathname.startsWith(rota));
 
   const cssVars = useMemo<CSSProperties>(() => {
     const glow = theme.glow / 100;
@@ -101,7 +109,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
             é só um jeito de sobrepor uma cor sólida translúcida em cima de
             uma background-image só (não dá pra empilhar background-color +
             background-image direto). */}
-        {theme.mapBackground && (
+        {theme.mapBackground && !paginaPublica && (
           <div
             aria-hidden="true"
             style={{
