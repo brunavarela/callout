@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { resolverLado, type CategoriaCompeticao, type Competicao, type Time } from '@callout/shared';
 import { apiFetch } from '../lib/api';
 import { LoadingFill } from '../components/Spinner';
@@ -66,47 +66,53 @@ function CompetitionCard({ competicao, onClick }: { competicao: Competicao; onCl
       onClick={onClick}
       style={{
         ...cardStyle,
-        position: 'relative',
-        height: 210,
         padding: 0,
         overflow: 'hidden',
         cursor: 'pointer',
         textAlign: 'left',
-        display: 'block',
-        backgroundImage: competicao.capaUrl
-          ? `linear-gradient(180deg, rgba(15,15,16,.15) 0%, rgba(15,15,16,.55) 55%, rgba(15,15,16,.92) 100%), url(${competicao.capaUrl})`
-          : 'linear-gradient(160deg, color-mix(in srgb, var(--acc, #EF4958) 30%, var(--surface)) 0%, var(--surface) 65%)',
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
+        display: 'flex',
+        flexDirection: 'column',
       }}
     >
-      <span
+      {/* Imagem ocupa só a metade de cima do card (não o card inteiro) --
+          encaixa melhor com o formato das artes/logos de campeonato, que
+          normalmente não são retrato o bastante pra cobrir um card alto. */}
+      <div
         style={{
-          position: 'absolute',
-          top: 14,
-          right: 14,
-          display: 'flex',
-          alignItems: 'center',
-          gap: 6,
-          padding: '5px 11px',
-          borderRadius: 'var(--radius-pill)',
-          fontSize: 11,
-          fontWeight: 700,
-          color: badge.color,
-          background: badge.bg,
-          backdropFilter: 'blur(4px)',
+          height: 110,
+          flex: 'none',
+          backgroundImage: competicao.capaUrl ? `url(${competicao.capaUrl})` : 'linear-gradient(160deg, color-mix(in srgb, var(--acc, #EF4958) 30%, var(--surface)) 0%, var(--surface) 65%)',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
         }}
-      >
-        {statusExibicaoCompeticao(competicao) === 'ao_vivo' && (
-          <span style={{ width: 6, height: 6, borderRadius: '50%', background: badge.color, flex: 'none' }} />
-        )}
-        {badge.label}
-      </span>
+      />
 
-      <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, padding: '16px 18px' }}>
-        <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 700, fontSize: 18, color: '#fff', lineHeight: 1.25 }}>{competicao.nome}</div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 8, flexWrap: 'wrap' }}>
-          <span style={{ fontSize: 12, color: 'rgba(255,255,255,.75)' }}>{periodoCompeticao(competicao)}</span>
+      <div style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
+          <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 700, fontSize: 16, lineHeight: 1.25 }}>{competicao.nome}</div>
+          <span
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              padding: '4px 10px',
+              borderRadius: 'var(--radius-pill)',
+              fontSize: 10.5,
+              fontWeight: 700,
+              color: badge.color,
+              background: badge.bg,
+              flex: 'none',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {statusExibicaoCompeticao(competicao) === 'ao_vivo' && (
+              <span style={{ width: 6, height: 6, borderRadius: '50%', background: badge.color, flex: 'none' }} />
+            )}
+            {badge.label}
+          </span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+          <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>{periodoCompeticao(competicao)}</span>
           {vencedor && (
             <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 600, color: '#E8B339' }}>
               {vencedor.logoUrl ? (
@@ -152,11 +158,28 @@ function FiltroCategorias({ filtro, setFiltro }: { filtro: CategoriaCompeticao; 
   );
 }
 
+// Só pra saber pra qual aba (filtro) voltar quando alguém sai do detalhe
+// de uma competição específica (ver CompetitionDetail -- o breadcrumb lê
+// isso de volta via query string).
+const CATEGORIAS_VALIDAS = new Set<string>(FILTROS.map((f) => f.key));
+function filtroDaUrl(valor: string | null): CategoriaCompeticao {
+  return valor && CATEGORIAS_VALIDAS.has(valor) ? (valor as CategoriaCompeticao) : 'inclusiva';
+}
+
 export function Competitions() {
   const navigate = useNavigate();
-  const [filtro, setFiltro] = useState<CategoriaCompeticao>('inclusiva');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [filtro, setFiltroState] = useState<CategoriaCompeticao>(() => filtroDaUrl(searchParams.get('filtro')));
   const [dados, setDados] = useState<Competicao[] | null>(null);
   const [erro, setErro] = useState<string | null>(null);
+
+  // Guarda o filtro atual na URL (?filtro=mista) -- é assim que o
+  // breadcrumb de volta em CompetitionDetail sabe pra qual aba retornar,
+  // em vez de sempre cair na aba padrão.
+  function setFiltro(f: CategoriaCompeticao) {
+    setFiltroState(f);
+    setSearchParams(f === 'inclusiva' ? {} : { filtro: f }, { replace: true });
+  }
 
   useEffect(() => {
     let cancelado = false;
@@ -172,7 +195,16 @@ export function Competitions() {
     };
   }, []);
 
-  const filtradas = useMemo(() => (dados ?? []).filter((c) => c.categorias.includes(filtro)), [dados, filtro]);
+  // Encerradas por último (da esquerda pra direita, já que o grid preenche
+  // nessa ordem) -- sort é estável, então dentro de "encerrada"/"não
+  // encerrada" a ordem original (a que já veio da API) se mantém.
+  const filtradas = useMemo(
+    () =>
+      (dados ?? [])
+        .filter((c) => c.categorias.includes(filtro))
+        .sort((a, b) => Number(statusExibicaoCompeticao(a) === 'encerrada') - Number(statusExibicaoCompeticao(b) === 'encerrada')),
+    [dados, filtro],
+  );
 
   return (
     <div style={{ padding: 26, display: 'flex', flexDirection: 'column', gap: 16 }}>

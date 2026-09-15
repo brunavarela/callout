@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Pencil } from 'lucide-react';
+import { ArrowLeft, ChevronDown, ChevronUp, Pencil } from 'lucide-react';
 import { resolverLado, type Competicao, type Confronto, type Time } from '@callout/shared';
 import { apiFetch } from '../lib/api';
 import { useSession } from '../lib/session';
@@ -339,10 +339,25 @@ function GrupoCard({
   const ordenados = [...confrontos].sort((a, b) => a.id.localeCompare(b.id));
   const timesGrupo = timesDoGrupo(confrontos, competicao.times);
   const classificacao = classificacaoGrupo(timesGrupo, confrontos, competicao.confrontos, competicao.times);
+  // Recolher só existe (visualmente) no mobile/tablet pequeno -- ver
+  // .grupo-toggle-btn e .grupo-matches no index.css. Em telas maiores o
+  // botão fica escondido e os confrontos sempre aparecem, mesmo que esse
+  // estado tenha ficado true de uma sessão em tela estreita.
+  const [colapsado, setColapsado] = useState(false);
 
   return (
     <div style={{ ...cardStyle, padding: 18, display: 'flex', flexDirection: 'column', gap: 14 }}>
-      <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 700, fontSize: 14, letterSpacing: '.04em', color: 'var(--acc, #EF4958)' }}>GRUPO {nome}</div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+        <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 700, fontSize: 14, letterSpacing: '.04em', color: 'var(--acc, #EF4958)' }}>GRUPO {nome}</div>
+        <button
+          className="grupo-toggle-btn"
+          onClick={() => setColapsado((v) => !v)}
+          title={colapsado ? 'Expandir grupo' : 'Recolher grupo'}
+          style={{ background: 'none', border: 'none', padding: 2, cursor: 'pointer', color: 'var(--text-faint)' }}
+        >
+          {colapsado ? <ChevronDown size={16} strokeWidth={2} /> : <ChevronUp size={16} strokeWidth={2} />}
+        </button>
+      </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
         {classificacao.map((c, i) => (
@@ -356,7 +371,7 @@ function GrupoCard({
         ))}
       </div>
 
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+      <div className={colapsado ? 'grupo-matches colapsado' : 'grupo-matches'} style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
         {ordenados.map((c) => (
           <MatchCard key={c.id} confronto={c} competicao={competicao} editavel={editavel} onSalvar={onSalvar} />
         ))}
@@ -390,7 +405,7 @@ function FaseDeGrupos({
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
       <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 15 }}>Fase de grupos</div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))', gap: 16 }}>
+      <div className="grupos-grid">
         {porGrupo.map(([nome, confrontos]) => (
           <GrupoCard key={nome} nome={nome} confrontos={confrontos} competicao={competicao} editavel={editavel} onSalvar={onSalvar} />
         ))}
@@ -441,7 +456,11 @@ function ResumoCompeticao({ competicao }: { competicao: Competicao }) {
 
   return (
     <div style={{ ...cardStyle, padding: '18px 20px', display: 'flex', alignItems: 'center', gap: 20, flexWrap: 'wrap' }}>
-      <div style={{ width: 40, height: 40, borderRadius: 10, background: 'var(--avatar-bg)', flex: 'none' }} />
+      {competicao.capaUrl ? (
+        <img src={competicao.capaUrl} alt="" style={{ width: 40, height: 40, borderRadius: 10, objectFit: 'cover', flex: 'none' }} />
+      ) : (
+        <div style={{ width: 40, height: 40, borderRadius: 10, background: 'var(--avatar-bg)', flex: 'none' }} />
+      )}
       <div style={{ flex: 1, minWidth: 200 }}>
         <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 17 }}>{competicao.nome}</div>
         <div style={{ fontSize: 12.5, color: 'var(--text-dim)', marginTop: 3 }}>{competicao.formato}</div>
@@ -517,7 +536,13 @@ export function CompetitionDetail() {
   return (
     <div style={{ padding: 26, display: 'flex', flexDirection: 'column', gap: 16 }}>
       <button
-        onClick={() => navigate('/competicoes')}
+        onClick={() => {
+          // Volta pra aba (mista/inclusiva) que essa competição pertence,
+          // não sempre a aba padrão -- senão sair de uma competição mista
+          // te jogava de volta na aba de inclusivas.
+          const filtro = competicao?.categorias.find((c) => c === 'mista' || c === 'inclusiva');
+          navigate(filtro && filtro !== 'inclusiva' ? `/competicoes?filtro=${filtro}` : '/competicoes');
+        }}
         style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontSize: 13, fontWeight: 600, color: 'var(--text-muted)', alignSelf: 'flex-start' }}
       >
         <ArrowLeft size={15} strokeWidth={2} />
