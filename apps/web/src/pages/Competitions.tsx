@@ -15,10 +15,10 @@ const FILTROS: Array<{ key: CategoriaCompeticao; label: string }> = [
 type StatusExibicao = 'encerrada' | 'ao_vivo' | 'em_andamento' | 'em_breve';
 
 const STATUS_BADGE: Record<StatusExibicao, { label: string; color: string; bg: string }> = {
-  encerrada: { label: 'Encerrada', color: 'var(--text-muted)', bg: 'rgba(255,255,255,.12)' },
-  em_breve: { label: 'Em breve', color: '#fff', bg: 'rgba(255,255,255,.16)' },
-  em_andamento: { label: 'Em andamento', color: 'var(--acc-text, #141415)', bg: 'var(--acc, #EF4958)' },
-  ao_vivo: { label: 'Ao vivo', color: 'var(--acc-text, #141415)', bg: 'var(--acc, #EF4958)' },
+  encerrada: { label: 'Encerrada', color: '#fff', bg: 'var(--neg, #EF4958)' },
+  em_breve: { label: 'Em breve', color: '#fff', bg: '#3B82F6' },
+  em_andamento: { label: 'Em andamento', color: '#0F0F10', bg: 'var(--pos, #18AAB7)' },
+  ao_vivo: { label: 'Ao vivo', color: '#fff', bg: 'var(--acc, #EF4958)' },
 };
 
 // "Ao vivo" tem prioridade sobre "em andamento" (mesmo status "em_andamento"
@@ -110,7 +110,7 @@ function CompetitionCard({ competicao, onClick }: { competicao: Competicao; onCl
           {vencedor && (
             <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 600, color: '#E8B339' }}>
               <span style={{ width: 8, height: 8, borderRadius: 2, background: vencedor.cor, flex: 'none' }} />
-              {vencedor.nome} venceu
+              {vencedor.nome} campeã
             </span>
           )}
         </div>
