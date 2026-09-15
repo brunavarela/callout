@@ -285,8 +285,42 @@ export async function buildSeasonOverview(
     const mmr = await getMmr(region, puuid);
     currentRank = { tierLabel: mmr.current_data.currenttierpatched, rr: mmr.current_data.ranking_in_tier, iconUrl: mmr.current_data.images.small };
     if (mmr.highest_rank) peakRank = { tierLabel: mmr.highest_rank.patched_tier, seasonShort: mmr.highest_rank.season };
+    // Dado de segurança temporário (até migrar pra API oficial da Riot):
+    // guarda o último elo obtido com sucesso, fire-and-forget, pra servir
+    // de fallback quando essa chamada falhar (ver catch abaixo).
+    void prisma.user
+      .updateMany({
+        where: { riotPuuid: puuid },
+        data: {
+          cachedRankTierLabel: currentRank.tierLabel,
+          cachedRankRr: currentRank.rr,
+          cachedRankIconUrl: currentRank.iconUrl,
+          cachedRankUpdatedAt: new Date(),
+          cachedPeakRankTierLabel: peakRank?.tierLabel ?? undefined,
+          cachedPeakRankSeasonShort: peakRank?.seasonShort ?? undefined,
+        },
+      })
+      .catch(() => {});
   } catch {
-    // sem MMR disponível — mantém null
+    // Chamada ao vivo à HenrikDev falhou — dado de segurança temporário:
+    // cai pro último elo cacheado (guardado acima na última vez que essa
+    // chamada teve sucesso) em vez de deixar a badge sem nada.
+    const cached = await prisma.user.findUnique({
+      where: { riotPuuid: puuid },
+      select: {
+        cachedRankTierLabel: true,
+        cachedRankRr: true,
+        cachedRankIconUrl: true,
+        cachedPeakRankTierLabel: true,
+        cachedPeakRankSeasonShort: true,
+      },
+    });
+    if (cached?.cachedRankTierLabel && cached.cachedRankRr !== null) {
+      currentRank = { tierLabel: cached.cachedRankTierLabel, rr: cached.cachedRankRr!, iconUrl: cached.cachedRankIconUrl ?? "" };
+    }
+    if (cached?.cachedPeakRankTierLabel) {
+      peakRank = { tierLabel: cached.cachedPeakRankTierLabel, seasonShort: cached.cachedPeakRankSeasonShort ?? "" };
+    }
   }
 
   if (statRows.length === 0) {

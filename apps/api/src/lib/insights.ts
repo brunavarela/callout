@@ -125,8 +125,24 @@ export async function buildRrAndInsights(
     if (p.acs > current) maxAcsByMatchTeam.set(key, p.acs);
   }
 
-  const points = rows
-    .filter((r) => r.rr !== null)
+  let rrRows = rows.filter((r) => r.rr !== null);
+
+  // Dado de segurança temporário (até migrar pra API oficial da Riot): se a
+  // janela pedida não tem nenhum rr (ex.: sync recente falhou em capturar o
+  // mmr-history pras partidas mais novas — ver sync.ts), não mostra "sem
+  // histórico" de cara — busca sem o teto da janela pra ainda achar o
+  // último gráfico que temos de verdade, em vez de deixar o card vazio.
+  if (rrRows.length === 0 && matchCount !== "all") {
+    const widerRows = await prisma.matchPlayer.findMany({
+      where: { puuid, rr: { not: null }, ...(Object.keys(matchWhere).length > 0 ? { match: matchWhere } : {}) },
+      include: { match: true },
+      orderBy: { match: { startedAt: "desc" } },
+      take: MAX_ALL_MATCHES,
+    });
+    rrRows = widerRows;
+  }
+
+  const points = rrRows
     .reverse() // volta pra ordem cronológica (mais antiga primeiro) pro gráfico
     .map((r) => {
       const match = r.match.rawJson as unknown as MatchV4Data;

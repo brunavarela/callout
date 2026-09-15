@@ -80,6 +80,26 @@ model User {
   // virar admin sozinho.
   isAdmin Boolean @default(false)
 
+  // Cache do último elo/RR obtido com sucesso na HenrikDev (mmr endpoint) —
+  // dado de segurança pra badge de elo nunca sumir: se a chamada ao vivo em
+  // buildSeasonOverview falhar (rate limit, API fora, etc.), cai aqui em vez
+  // de ficar null. Atualizado (fire-and-forget) toda vez que a chamada ao
+  // vivo funciona. Temporário até a migração pra API oficial da Riot.
+  cachedRankTierLabel      String?
+  cachedRankRr             Int?
+  cachedRankIconUrl        String?
+  cachedRankUpdatedAt      DateTime?
+  cachedPeakRankTierLabel  String?
+  cachedPeakRankSeasonShort String?
+
+  // Cache da última resposta bem-sucedida do mmr-history (array bruto da
+  // HenrikDev) — dado de segurança pro sync: se getMmrHistory falhar nessa
+  // rodada, usa esse cache pra ainda preencher rr/rankTierId das partidas
+  // dentro da janela, em vez de deixar null pra sempre. Temporário até a
+  // migração pra API oficial da Riot.
+  lastMmrHistoryJson Json?
+  lastMmrHistoryAt   DateTime?
+
   membrosEquipe    MembroEquipe[]
   equipesComoDono  Equipe[]     @relation("EquipeDono")
   strategiesFeitas Strategy[]  @relation("StrategyAuthor")

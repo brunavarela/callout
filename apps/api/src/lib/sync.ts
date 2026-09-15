@@ -109,14 +109,40 @@ export async function syncUserMatches(userId: string, puuid: string, region: str
     const rrByMatchId = new Map<string, number>();
     const rankTierByMatchId = new Map<string, number>();
     let mmrHistory: Awaited<ReturnType<typeof getMmrHistory>> = [];
+    // Dado de segurança temporário (até migrar pra API oficial da Riot): 1
+    // retry antes de desistir (falha isolada não deve perder rr/rankTierId
+    // da rodada inteira), e se mesmo assim falhar, cai pro último
+    // mmr-history que funcionou (cacheado em User na vez anterior que essa
+    // chamada teve sucesso) em vez de deixar tudo null.
     try {
-      mmrHistory = await getMmrHistory(region, puuid);
+      try {
+        mmrHistory = await getMmrHistory(region, puuid);
+      } catch {
+        mmrHistory = await getMmrHistory(region, puuid);
+      }
       for (const h of mmrHistory) {
         rrByMatchId.set(h.match_id, h.last_change);
         rankTierByMatchId.set(h.match_id, h.tier.id);
       }
+      await prisma.user.update({
+        where: { id: userId },
+        data: { lastMmrHistoryJson: mmrHistory as unknown as object, lastMmrHistoryAt: new Date() },
+      });
     } catch {
-      // sem histórico de RR agora — as partidas novas ficam com rr/rankTierId null
+      // getMmrHistory falhou (mesmo com retry) — usa o cache da última vez
+      // que funcionou, se tiver, pra ainda corrigir/preencher rr/rankTierId
+      // das partidas que continuam dentro da janela.
+      const cached = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { lastMmrHistoryJson: true },
+      });
+      if (cached?.lastMmrHistoryJson) {
+        mmrHistory = cached.lastMmrHistoryJson as unknown as typeof mmrHistory;
+        for (const h of mmrHistory) {
+          rrByMatchId.set(h.match_id, h.last_change);
+          rankTierByMatchId.set(h.match_id, h.tier.id);
+        }
+      }
     }
 
     // Paralelo, mas com teto — Promise.all sem limite chegou a abrir uma
