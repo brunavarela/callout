@@ -371,7 +371,7 @@ function GrupoCard({
         ))}
       </div>
 
-      <div className={colapsado ? 'grupo-matches colapsado' : 'grupo-matches'} style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+      <div className={colapsado ? 'grupo-matches colapsado' : 'grupo-matches'} style={{ display: 'flex', flexWrap: 'wrap', gap: 10, justifyContent: 'center' }}>
         {ordenados.map((c) => (
           <MatchCard key={c.id} confronto={c} competicao={competicao} editavel={editavel} onSalvar={onSalvar} />
         ))}

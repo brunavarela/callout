@@ -665,16 +665,17 @@ button {
 }
 
 /* Fase de grupos da tela de Competições — 4 colunas (uma por grupo) sempre
-   visíveis de uma vez, mais estreitas que um card normal (20% mais
-   estreitas que o antigo auto-fill de 360px, ou seja teto de 288px por
-   coluna) já que só precisam caber a classificação + confrontos de 4
-   times. minmax(0, 288px) trava o crescimento nesse teto sem forçar
-   overflow -- encolhe normalmente se não couber, até a próxima quebra.
-   Desce em dupla (2+2) antes de virar coluna única, em vez de ficar
-   afinando cada coluna pra sempre. */
+   visíveis de uma vez, teto de 331px por coluna (20% mais estreita que o
+   antigo auto-fill de 360px, +15% depois disso). minmax(0, 331px) trava o
+   crescimento nesse teto sem forçar overflow -- encolhe normalmente se
+   não couber, até a próxima quebra. justify-content:space-between espalha
+   as 4 colunas pela largura toda em vez de empacotar tudo à esquerda
+   quando a tela sobra espaço. Desce em dupla (2+2) antes de virar coluna
+   única, em vez de ficar afinando cada coluna pra sempre. */
 .grupos-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 288px));
+  grid-template-columns: repeat(4, minmax(0, 331px));
+  justify-content: space-between;
   gap: 16px;
 }
 @media (max-width: 1100px) {
