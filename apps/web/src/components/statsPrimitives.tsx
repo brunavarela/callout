@@ -3,7 +3,12 @@
 // formatos de card recorrentes (barra de winrate / ranking numerado).
 // Extraído de Dashboard.tsx (era tudo privado lá) sem mudar comportamento.
 
-export const cardStyle: React.CSSProperties = { borderRadius: 'var(--radius-lg)', background: 'var(--surface)', border: '1px solid var(--surface-border)' };
+// minWidth:0 evita que um card vire item de flex/grid "grudado" na largura
+// mínima do conteúdo mais largo lá dentro (ex.: a lista de partidas, que
+// tem um scroll interno pra conteúdo largo) -- sem isso, o card inteiro (e
+// a coluna dele) cresce pra caber o conteúdo em vez de travar na largura
+// disponível e deixar só o scroll interno (.scroll-x-mobile) resolver.
+export const cardStyle: React.CSSProperties = { borderRadius: 'var(--radius-lg)', background: 'var(--surface)', border: '1px solid var(--surface-border)', minWidth: 0 };
 
 export const WIN = 'var(--pos, #18AAB7)';
 export const LOSS = 'var(--neg, #EF4958)';

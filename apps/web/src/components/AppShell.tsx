@@ -346,7 +346,12 @@ export function AppShell() {
         {collapsed ? <ChevronRight size={13} strokeWidth={2} /> : <ChevronLeft size={13} strokeWidth={2} />}
       </button>
 
-      <main className="app-main" style={{ minWidth: 0, height: '100%', display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
+      {/* overflowX travado: sem isso, qualquer elemento um pouco mais largo
+          que a tela (ex.: um label sem quebra de linha num grid apertado)
+          arrasta a página inteira de lado em vez de só o card culpado --
+          scroll lateral deve ficar contido em quem já opta por ele
+          (.scroll-x-mobile), nunca no painel inteiro. */}
+      <main className="app-main" style={{ minWidth: 0, height: '100%', display: 'flex', flexDirection: 'column', overflowY: 'auto', overflowX: 'hidden' }}>
         <header className="app-header" style={{ padding: '16px 26px', borderBottom: '1px solid var(--divider)' }}>
           <RankLevelChip appData={appData} />
           <SearchBar appData={appData} />

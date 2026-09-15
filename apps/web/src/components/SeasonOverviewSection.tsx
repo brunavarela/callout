@@ -74,7 +74,7 @@ function InfoDot({ text }: { text: string }) {
 // de 30 dias, só que alimentado por SeasonOverview.attackDefense.
 function AttackDefenseCard({ sides, height }: { sides: SeasonOverview['attackDefense']; height?: number }) {
   return (
-    <div style={{ ...cardStyle, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 12, flex: height ? '0 0 auto' : 1, ...(height ? { height, overflow: 'hidden' } : {}) }}>
+    <div className="season-fixed-card" style={{ ...cardStyle, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 12, flex: height ? '0 0 auto' : 1, ...(height ? { height, overflow: 'hidden' } : {}) }}>
       <div>
         <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 15 }}>Ataque ou defesa</div>
         <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 3 }}>% de rounds ganhos em cada lado, no período</div>
@@ -160,12 +160,12 @@ function AccuracyBar({ accuracy, height }: { accuracy: SeasonOverview['accuracy'
     { label: 'Perna', percent: accuracy.legPercent, hits: accuracy.legHits, color: 'var(--neg, #EF4958)' },
   ];
   return (
-    <div style={{ ...cardStyle, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 12, flex: height ? '0 0 auto' : 1, ...(height ? { height, overflow: 'hidden' } : {}) }}>
+    <div className="season-fixed-card" style={{ ...cardStyle, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 12, flex: height ? '0 0 auto' : 1, ...(height ? { height, overflow: 'hidden' } : {}) }}>
       <div>
         <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 15 }}>Precisão</div>
         <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 3 }}>Onde seus tiros acertaram no período — cabeça, corpo ou perna.</div>
       </div>
-      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 40 }}>
+      <div className="accuracy-row" style={{ flex: 1 }}>
         <BodySilhouette headColor={segments[0]!.color} bodyColor={segments[1]!.color} legColor={segments[2]!.color} />
         <div style={{ display: 'flex', flexDirection: 'column', gap: 20, flex: '0 0 auto', minWidth: 0 }}>
           {segments.map((s) => (
@@ -208,7 +208,7 @@ function ExpandableCard({
   const [showAll, setShowAll] = useState(false);
   return (
     <>
-      <div style={{ ...cardStyle, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 11, ...(maxHeight ? { height: maxHeight, overflow: 'hidden' } : {}) }}>
+      <div className="season-fixed-card" style={{ ...cardStyle, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 11, ...(maxHeight ? { height: maxHeight, overflow: 'hidden' } : {}) }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
           <div>
             <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 15 }}>{title}</div>
@@ -339,7 +339,7 @@ function WeaponBlock({ weapons, maxHeight }: { weapons: SeasonOverview['topWeapo
               const color = isFirst ? GOLD : 'var(--pos, #18AAB7)';
               const killRatio = w.kills / maxKills;
               return (
-                <div key={w.weapon} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '12px 0', borderTop: i > 0 ? '1px solid var(--divider)' : 'none' }}>
+                <div key={w.weapon} className="weapon-row" style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '12px 0', borderTop: i > 0 ? '1px solid var(--divider)' : 'none' }}>
                   <span
                     style={{
                       width: 22,
@@ -552,7 +552,7 @@ function AgentBlock({ agents, agentIcons, maxHeight }: { agents: SeasonOverview[
                     </div>
                     <span style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 700, fontSize: 14, color, width: 36, textAlign: 'right', flex: 'none' }}>{a.winratePercent}%</span>
                   </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 8, marginTop: 9 }}>
+                  <div className="agent-stat-grid" style={{ gap: 8, marginTop: 9 }}>
                     {[
                       { label: 'K/D', value: fmtNum(a.kd, 2) },
                       { label: 'ADR', value: fmtNum(a.adr, 1) },
@@ -697,7 +697,14 @@ export function SeasonOverviewSection({
           exatamente a mesma largura (1fr cada), a largura de Partidas/RR
           bate com a soma das 2 sub-colunas de cards + esse gap de 4px. */}
       <div className="grid-responsive-season">
-        <div style={{ display: 'flex', flexDirection: 'column', gap: SEASON_CARD_GAP }}>
+        {/* minWidth:0 é o que importa aqui -- sem isso, um item de grid
+            "herda" a largura mínima do conteúdo mais largo lá dentro (o
+            min-width:560 do modo Detalhado da lista de partidas), fazendo a
+            COLUNA inteira crescer pra caber, em vez de travar na largura
+            disponível e deixar só o .scroll-x-mobile (por dentro do card)
+            rolar de lado -- ver comentário em .app-shell-grid/.app-main no
+            index.css pra a mesma ideia aplicada no nível de página. */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: SEASON_CARD_GAP, minWidth: 0 }}>
           <SeasonMatchesList
             matchesPage={matchesPage}
             loading={matchesLoading}
@@ -719,12 +726,12 @@ export function SeasonOverviewSection({
         </div>
 
         <div className="season-cards-grid">
-          <div style={{ display: 'flex', flexDirection: 'column', gap: SEASON_CARD_GAP }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: SEASON_CARD_GAP, minWidth: 0 }}>
             <MapBlock maps={data.topMaps} maxHeight={SEASON_CARD_HEIGHT} />
             <AgentBlock agents={data.topAgents} agentIcons={data.agentIcons} maxHeight={SEASON_CARD_HEIGHT} />
             <AttackDefenseCard sides={data.attackDefense} height={SEASON_CARD_HEIGHT} />
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: SEASON_CARD_GAP }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: SEASON_CARD_GAP, minWidth: 0 }}>
             <AccuracyBar accuracy={data.accuracy} height={SEASON_CARD_HEIGHT} />
             <WeaponBlock weapons={data.topWeapons} maxHeight={SEASON_CARD_HEIGHT} />
             <RoleBlock roles={data.roles} maxHeight={SEASON_CARD_HEIGHT} />

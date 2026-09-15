@@ -570,6 +570,63 @@ button {
   }
 }
 
+/* Mini-grid K/D · ADR · ACS · DDΔ · Melhor mapa de cada agente (card
+   Agentes da Visão do ato) — 5 colunas fixas espremem demais quando o card
+   vira largura cheia de mobile (season-cards-grid já stacka em 1 coluna a
+   720px). */
+.agent-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+}
+@media (max-width: 900px) {
+  .agent-stat-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+@media (max-width: 480px) {
+  .agent-stat-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Linha de arma (card "Armas mais usadas") — nome à esquerda, boneco +
+   distribuição de acerto + abates à direita (marginLeft:auto). Em telas
+   estreitas essas duas metades não cabem lado a lado; deixa quebrar em
+   duas linhas em vez de estourar a largura do card. */
+@media (max-width: 480px) {
+  .weapon-row {
+    flex-wrap: wrap;
+    row-gap: 10px;
+  }
+}
+
+/* Boneco + cabeça/corpo/perna do card Precisão — gap fixo de 40px fica
+   apertado em telas bem estreitas. */
+.accuracy-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 40px;
+}
+@media (max-width: 480px) {
+  .accuracy-row {
+    gap: 18px;
+  }
+}
+
+/* Cards de altura fixa da Visão do ato (Mapa/Agentes/Ataque-defesa/
+   Precisão/Armas/Funções, ver SEASON_CARD_HEIGHT) — no mobile, onde cada
+   card já ocupa a largura cheia empilhado verticalmente (não precisa mais
+   bater altura com o card ao lado), deixa crescer com o conteúdo em vez de
+   forçar um scroll interno dentro de uma página que já rola. */
+@media (max-width: 720px) {
+  .season-fixed-card {
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+}
+
 /* Pares de cards 50/50 do Painel do time (mapa+combinação, ACS+MVP etc.) */
 .grid-responsive-2 {
   display: grid;

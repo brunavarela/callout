@@ -229,7 +229,7 @@ export function RrHistoryCard({
     }
   }
   return (
-    <div style={{ ...cardStyle, padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: 4, ...(height ? { height, overflow: 'hidden' } : {}) }}>
+    <div className="season-fixed-card" style={{ ...cardStyle, padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: 4, ...(height ? { height } : {}) }}>
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
         <div>
           <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 16 }}>RR ganho e perdido</div>
@@ -255,44 +255,51 @@ export function RrHistoryCard({
           </span>
         )}
       </div>
-      {rrHistoryLoading ? (
-        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 150 }}>
-          <SnakeSpinner size={32} />
-        </div>
-      ) : rrHistory.length > 0 ? (
-        <div>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 14, fontSize: 11.5, color: 'var(--text-dim)', marginTop: 4 }}>
-            <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span style={{ width: 9, height: 9, borderRadius: 2, background: WIN }} /> partida ganhou RR
-            </span>
-            <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span style={{ width: 9, height: 9, borderRadius: 2, background: LOSS }} /> partida perdeu RR
-            </span>
+      {/* Só essa parte (gráfico + análises) rola por dentro quando `height`
+          trava a altura do card pra bater com a coluna ao lado -- o
+          cabeçalho (título/saldo) acima fica sempre visível. Sem isso, o
+          card inteiro tinha overflow:hidden e as análises de baixo ficavam
+          cortadas sem nenhum jeito de ver o resto (nem scroll, nem nada). */}
+      <div style={height ? { flex: 1, minHeight: 0, overflowY: 'auto' } : undefined}>
+        {rrHistoryLoading ? (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 150 }}>
+            <SnakeSpinner size={32} />
           </div>
-          <RrLineChart points={rrHistory} />
-          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, fontSize: 10.5, color: 'var(--text-faint)', borderTop: '1px solid var(--divider)', paddingTop: 8 }}>
-            <span>Vertical: RR acumulado no período (0 = onde {subject} começou)</span>
-            <span>Horizontal: data da partida</span>
+        ) : rrHistory.length > 0 ? (
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 14, fontSize: 11.5, color: 'var(--text-dim)', marginTop: 4 }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ width: 9, height: 9, borderRadius: 2, background: WIN }} /> partida ganhou RR
+              </span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ width: 9, height: 9, borderRadius: 2, background: LOSS }} /> partida perdeu RR
+              </span>
+            </div>
+            <RrLineChart points={rrHistory} />
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, fontSize: 10.5, color: 'var(--text-faint)', borderTop: '1px solid var(--divider)', paddingTop: 8 }}>
+              <span>Vertical: RR acumulado no período (0 = onde {subject} começou)</span>
+              <span>Horizontal: data da partida</span>
+            </div>
           </div>
-        </div>
-      ) : (
-        <div style={{ marginTop: 20, fontSize: 13, color: 'var(--text-dim)' }}>
-          {noRankedHistory ? 'Sem histórico de RR em partidas Sem Classificação.' : 'Sem histórico de RR ainda.'}
-        </div>
-      )}
-      {formInsights && formInsights.matchesAnalyzed > 0 && (
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 20, marginTop: 14, paddingTop: 12, borderTop: '1px solid var(--divider)' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flex: 1, minWidth: 220 }}>
-            {bullets.map((bullet, j) => (
-              <div key={j} style={{ display: 'flex', gap: 8, fontSize: 12.5, color: 'var(--text-dim)', lineHeight: 1.4 }}>
-                <span style={{ color: 'var(--text-faint)' }}>•</span>
-                {bullet}
-              </div>
-            ))}
+        ) : (
+          <div style={{ marginTop: 20, fontSize: 13, color: 'var(--text-dim)' }}>
+            {noRankedHistory ? 'Sem histórico de RR em partidas Sem Classificação.' : 'Sem histórico de RR ainda.'}
           </div>
-          {currentRank && <EloReinforcement currentRank={currentRank} />}
-        </div>
-      )}
+        )}
+        {formInsights && formInsights.matchesAnalyzed > 0 && (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 20, marginTop: 14, paddingTop: 12, borderTop: '1px solid var(--divider)' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flex: 1, minWidth: 220 }}>
+              {bullets.map((bullet, j) => (
+                <div key={j} style={{ display: 'flex', gap: 8, fontSize: 12.5, color: 'var(--text-dim)', lineHeight: 1.4 }}>
+                  <span style={{ color: 'var(--text-faint)' }}>•</span>
+                  {bullet}
+                </div>
+              ))}
+            </div>
+            {currentRank && <EloReinforcement currentRank={currentRank} />}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
