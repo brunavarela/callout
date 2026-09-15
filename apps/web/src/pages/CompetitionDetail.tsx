@@ -346,7 +346,7 @@ function GrupoCard({
   const [colapsado, setColapsado] = useState(false);
 
   return (
-    <div className="grupo-row" style={{ ...cardStyle, padding: 18, display: 'flex', alignItems: 'flex-start', gap: 20 }}>
+    <div className="grupo-row" style={{ ...cardStyle, padding: 18, display: 'flex', alignItems: 'center', gap: 20 }}>
       <div className="grupo-classificacao" style={{ display: 'flex', flexDirection: 'column', gap: 10, flex: 'none' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
           <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 700, fontSize: 14, letterSpacing: '.04em', color: 'var(--acc, #EF4958)' }}>GRUPO {nome}</div>
@@ -376,7 +376,10 @@ function GrupoCard({
       {/* minWidth:0 é o que deixa essa fileira encolher e rolar de lado
           (overflow-x:auto) em vez de forçar o card (e a página) inteira a
           crescer -- mesma lição do resto do painel, ver cardStyle. */}
-      <div className={colapsado ? 'grupo-matches colapsado' : 'grupo-matches'} style={{ display: 'flex', gap: 10, flex: 1, minWidth: 0, overflowX: 'auto', paddingBottom: 4 }}>
+      <div
+        className={colapsado ? 'grupo-matches colapsado' : 'grupo-matches'}
+        style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flex: 1, minWidth: 0, overflowX: 'auto', paddingBottom: 4 }}
+      >
         {ordenados.map((c) => (
           <MatchCard key={c.id} confronto={c} competicao={competicao} editavel={editavel} onSalvar={onSalvar} />
         ))}
