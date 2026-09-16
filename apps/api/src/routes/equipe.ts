@@ -3,7 +3,7 @@ import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import { MAX_FUNCOES, MAX_MAIN_AGENTS } from "@callout/shared";
 import { requireAuth } from "../lib/session.js";
-import { buildEquipeOverview, buildEquipeMatches, getUserEquipeId, criarEquipe, entrarEquipePorCodigo, isEquipeAdmin } from "../lib/equipe.js";
+import { buildEquipeOverview, getUserEquipeId, criarEquipe, entrarEquipePorCodigo, isEquipeAdmin } from "../lib/equipe.js";
 import { buildEquipePainel } from "../lib/equipePainel.js";
 import { buildEquipeSeasonOverview, buildEquipeSeasonMatchesPage } from "../lib/equipeSeasonOverview.js";
 import type { MatchCountFilter } from "@callout/shared";
@@ -268,19 +268,8 @@ export async function equipeRoutes(app: FastifyInstance) {
     return reply.code(204).send();
   });
 
-  // Só partidas com pelo menos MIN_TEAM_MATCH_PLAYERS membros da equipe
-  // juntos (ver buildEquipeMatches) — escopado por ato e paginado de 10 em
-  // 10. Sem `seasonId`, mostra o ato atual.
-  app.get("/equipe/partidas", { preHandler: requireAuth }, async (request, reply) => {
-    const equipeId = await getUserEquipeId(request.user!.id);
-    if (!equipeId) return reply.code(404).send({ error: "Você ainda não tem uma equipe." });
-    const { seasonId, page } = request.query as { seasonId?: string; page?: string };
-    const pageNumber = Number(page);
-    return buildEquipeMatches(equipeId, seasonId || undefined, Number.isFinite(pageNumber) && pageNumber > 0 ? pageNumber : 1);
-  });
-
-  // Agregado das mesmas "partidas da equipe" de /equipe/partidas — sem
-  // recorte de data, escopado à equipe de quem está logado.
+  // Agregado das "partidas da equipe" (5+ membros juntos na mesma partida)
+  // — sem recorte de data, escopado à equipe de quem está logado.
   app.get("/equipe/painel", { preHandler: requireAuth }, async (request, reply) => {
     const equipeId = await getUserEquipeId(request.user!.id);
     if (!equipeId) return reply.code(404).send({ error: "Você ainda não tem uma equipe." });

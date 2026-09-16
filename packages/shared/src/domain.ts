@@ -538,9 +538,9 @@ export interface ConfiguracoesMembroInput {
 export const MAX_FUNCOES = 2;
 export const MAX_MAIN_AGENTS = 3;
 
-// --- Histórico de partidas da equipe (GET /equipe/partidas) ---
+// --- Histórico de partidas da equipe ---
 // Só entram partidas com pelo menos MIN_TEAM_MATCH_PLAYERS membros da
-// equipe juntos — "meus números" vira uma lista, um item por membro que jogou.
+// equipe juntos.
 export const MIN_TEAM_MATCH_PLAYERS = 5;
 
 // Teto de quantas partidas qualificadas (>=MIN_TEAM_MATCH_PLAYERS juntos)
@@ -556,40 +556,6 @@ export const MIN_TEAM_MATCH_PLAYERS = 5;
 // serviço subido pra 2GB (ver LAUNCH.md), isso deixa folga confortável até
 // pra várias dessas requisições em paralelo.
 export const MAX_EQUIPE_MATCHES = 150;
-
-export interface ParticipanteEquipeMatch {
-  userId: string;
-  name: string;
-  agent: string;
-  kda: string;
-  acs: number;
-  hsPercent: number;
-  mvp: boolean;
-  ace: boolean;
-  rr: number | null;
-  result: "V" | "D" | "E";
-}
-
-export interface PartidaEquipeSummary {
-  id: string;
-  map: string;
-  score: string;
-  playedAtLabel: string;
-  participants: ParticipanteEquipeMatch[];
-}
-
-// Resposta de GET /equipe/partidas — paginada (10 por página) e escopada
-// por ato, igual a Visão do ato individual (ver SeasonMatchesPage). Sem
-// `seasonId` no request, o back resolve o ato atual sozinho.
-export interface EquipePartidasPage {
-  matches: PartidaEquipeSummary[];
-  seasonId: string | null;
-  seasonShort: string | null;
-  availableSeasons: SeasonOption[];
-  page: number;
-  pageSize: number;
-  total: number;
-}
 
 // --- Painel da equipe (GET /equipe/painel) ---
 // Agregado sobre as mesmas partidas "da equipe" do histórico em grupo

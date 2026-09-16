@@ -1,15 +1,12 @@
 import type { User, Equipe } from "@prisma/client";
 import { randomBytes } from "node:crypto";
 import { Prisma } from "@prisma/client";
-import type { PartidaEquipeSummary, EquipeOverview, EquipePartidasPage } from "@callout/shared";
-import { MIN_TEAM_MATCH_PLAYERS, MAX_EQUIPE_MATCHES } from "@callout/shared";
+import type { EquipeOverview } from "@callout/shared";
 import { prisma } from "./prisma.js";
 import { getMmr } from "./henrikdev.js";
 import { loadAgentsByUuid } from "./assets.js";
-import { mapNameFrom, scoreFor, hasAce, formatPlayedAt, getCurrentSeasonId } from "./dashboard.js";
-import { matchResult, countsTowardStats } from "./match-result.js";
+import { countsTowardStats } from "./match-result.js";
 import { resolveDisplayName, resolveAvatarUrl } from "./dto.js";
-import { listAvailableSeasons } from "./seasonOverview.js";
 
 // Multi-tenancy real (LAUNCH.md §5) — um usuário pertence a no máximo uma
 // equipe (MembroEquipe.userId é @unique). "Qual é a minha equipe" sempre se
@@ -203,125 +200,3 @@ export async function isEquipeAdmin(userId: string, equipeId: string): Promise<b
   return membership?.isAdmin ?? false;
 }
 
-const EQUIPE_MATCHES_PAGE_SIZE = 10;
-
-// Histórico de partidas com pelo menos MIN_TEAM_MATCH_PLAYERS membros da
-// equipe juntos — escopado por ato (não "todo o histórico" nem uma janela
-// de dias) e paginado de EQUIPE_MATCHES_PAGE_SIZE em EQUIPE_MATCHES_PAGE_SIZE,
-// mesmo padrão da Visão do ato individual (ver buildSeasonMatchesPage).
-// Sem `requestedSeasonId`, mostra o ato atual. Como um time de Valorant só
-// tem 5 vagas, exigir >=5 dos nossos jogados na mesma partida já significa
-// que a equipe inteira daquela partida é gente rastreada — não sobra vaga
-// pra ninguém de fora, então dá pra calcular MVP só entre os `list`, sem
-// query extra dos 10.
-export async function buildEquipeMatches(equipeId: string, requestedSeasonId?: string, page = 1): Promise<EquipePartidasPage> {
-  const availableSeasons = await listAvailableSeasons();
-  const seasonId = requestedSeasonId ?? (await getCurrentSeasonId());
-  const seasonShort = seasonId ? availableSeasons.find((s) => s.seasonId === seasonId)?.seasonShort ?? null : null;
-  const safePage = Math.max(1, page);
-  const empty = (total = 0): EquipePartidasPage => ({ matches: [], seasonId, seasonShort, availableSeasons, page: safePage, pageSize: EQUIPE_MATCHES_PAGE_SIZE, total });
-
-  if (!seasonId) return empty();
-
-  const equipe = await prisma.equipe.findUnique({ where: { id: equipeId }, include: { membros: { include: { user: true } } } });
-  if (!equipe) return empty();
-
-  const trackedMembers = equipe.membros.filter((m) => m.user.riotPuuid);
-  if (trackedMembers.length < MIN_TEAM_MATCH_PLAYERS) return empty();
-
-  const memberByPuuid = new Map(trackedMembers.map((m) => [m.user.riotPuuid as string, m]));
-  const puuids = [...memberByPuuid.keys()];
-
-  // Sem `include: { match: true }` aqui de propósito — isso puxaria o
-  // rawJson da partida (~400KB em média) uma vez POR JOGADOR rastreado
-  // nela, não uma vez por partida. Busca só os campos do jogador primeiro,
-  // decide quais partidas qualificam, e só então busca o rawJson das ~10
-  // da página atual — nunca das outras.
-  const rows = await prisma.matchPlayer.findMany({
-    where: { puuid: { in: puuids }, match: { seasonId } },
-    select: {
-      matchId: true,
-      puuid: true,
-      teamId: true, // lado Red/Blue bruto da HenrikDev — não é o id da nossa Equipe
-      won: true,
-      agentName: true,
-      acs: true,
-      kills: true,
-      deaths: true,
-      assists: true,
-      headshots: true,
-      bodyshots: true,
-      legshots: true,
-      rr: true,
-    },
-  });
-
-  const byMatch = new Map<string, typeof rows>();
-  for (const r of rows) {
-    const list = byMatch.get(r.matchId) ?? [];
-    list.push(r);
-    byMatch.set(r.matchId, list);
-  }
-  const qualifyingLists = [...byMatch.values()].filter((list) => new Set(list.map((r) => r.puuid)).size >= MIN_TEAM_MATCH_PLAYERS);
-  if (qualifyingLists.length === 0) return empty();
-
-  // Teto em duas etapas (ver MAX_EQUIPE_MATCHES): primeiro descobre a data
-  // de cada partida qualificada SEM o rawJson, pra decidir quais são as
-  // mais recentes (dentro do ato) e paginar; só busca o rawJson de verdade
-  // pras ~10 que sobrarem depois da paginação — nunca das outras ~140.
-  const qualifyingIds = qualifyingLists.map((list) => list[0]!.matchId);
-  const recentIds = (
-    await prisma.match.findMany({
-      where: { id: { in: qualifyingIds } },
-      select: { id: true },
-      orderBy: { startedAt: "desc" },
-      take: MAX_EQUIPE_MATCHES,
-    })
-  ).map((m) => m.id);
-
-  const total = recentIds.length;
-  const pageIds = recentIds.slice((safePage - 1) * EQUIPE_MATCHES_PAGE_SIZE, safePage * EQUIPE_MATCHES_PAGE_SIZE);
-  if (pageIds.length === 0) return empty(total);
-
-  const pageIdSet = new Set(pageIds);
-  const cappedQualifyingLists = qualifyingLists.filter((list) => pageIdSet.has(list[0]!.matchId));
-
-  const matches = await prisma.match.findMany({ where: { id: { in: pageIds } } });
-  const matchById = new Map(matches.map((m) => [m.id, m]));
-  const qualifying = cappedQualifyingLists
-    .map((list) => ({ match: matchById.get(list[0]!.matchId), list }))
-    .filter((x): x is { match: (typeof matches)[number]; list: typeof rows } => x.match !== undefined)
-    .sort((a, b) => b.match.startedAt.getTime() - a.match.startedAt.getTime());
-
-  const now = new Date();
-  const matchSummaries = qualifying.map(({ match, list }): PartidaEquipeSummary => {
-    const score = scoreFor(match.rawJson, list[0]!.teamId); // lado Red/Blue, não a Equipe
-    const maxAcs = Math.max(...list.map((r) => r.acs));
-
-    return {
-      id: match.id,
-      map: mapNameFrom(match.rawJson),
-      score: `${score.own}—${score.opponent}`,
-      playedAtLabel: formatPlayedAt(match.startedAt, now),
-      participants: list.map((r) => {
-        const member = memberByPuuid.get(r.puuid)!;
-        const rr = r.rr;
-        const shotsTotal = r.headshots + r.bodyshots + r.legshots;
-        return {
-          userId: member.userId,
-          name: resolveDisplayName(member.user),
-          agent: r.agentName,
-          kda: `${r.kills}/${r.deaths}/${r.assists}`,
-          acs: r.acs,
-          hsPercent: shotsTotal > 0 ? Math.round((r.headshots / shotsTotal) * 100) : 0,
-          mvp: r.acs === maxAcs,
-          ace: hasAce(match.rawJson, r.puuid),
-          rr,
-          result: matchResult(r.won, rr),
-        };
-      }),
-    };
-  });
-
-  return { matches: matchSummaries, seasonId, seasonShort, availableSeasons, page: safePage, pageSize: EQUIPE_MATCHES_PAGE_SIZE, total };
-}

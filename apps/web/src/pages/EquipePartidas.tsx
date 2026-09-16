@@ -1,150 +1,56 @@
-import { useEffect, useState } from 'react';
-import { useNavigate, useOutletContext } from 'react-router-dom';
-import { ArrowLeft, BarChart3, ChevronRight } from 'lucide-react';
-import type { ParticipanteEquipeMatch, PartidaEquipeSummary } from '@callout/shared';
+import { useCallback, useEffect, useState } from 'react';
+import { useNavigate, useOutletContext, useSearchParams } from 'react-router-dom';
+import { ArrowLeft, BarChart3 } from 'lucide-react';
+import type { SeasonMatchesPage, SeasonOverview } from '@callout/shared';
 import { MIN_TEAM_MATCH_PLAYERS } from '@callout/shared';
 import type { OutletContext } from '../components/AppShell';
 import { LoadingFill } from '../components/Spinner';
-import { AgentAvatar } from '../components/AgentAvatar';
-import { SeasonFilterSelect, PageControls } from '../components/SeasonFilters';
-import { formatSeasonShort } from '../lib/seasonFormat';
+import { SeasonMatchesList } from '../components/SeasonMatchesList';
+import { cardStyle } from '../components/statsPrimitives';
+import { apiFetch } from '../lib/api';
 
-const cardStyle: React.CSSProperties = { borderRadius: 'var(--radius-lg)', background: 'var(--surface)', border: '1px solid var(--surface-border)' };
-const WIN = 'var(--pos, #18AAB7)';
-const LOSS = 'var(--neg, #EF4958)';
-const DRAW = 'var(--text-muted, #9A9DA1)';
-
-// Colunas compartilhadas pelo cabeçalho e pelas linhas — dá bastante espaço
-// pra cada estatística respirar em vez de ficarem todas espremidas na
-// borda direita (o nome do jogador é a única coluna flexível).
-const PARTICIPANT_COLUMNS = '28px minmax(140px, 1fr) 110px 90px 90px 70px';
-
-const RESULT_LABEL: Record<ParticipanteEquipeMatch['result'], string> = { V: 'VITÓRIA', D: 'DERROTA', E: 'EMPATE' };
-
-function resultColor(result: ParticipanteEquipeMatch['result']): string {
-  return result === 'V' ? WIN : result === 'D' ? LOSS : DRAW;
-}
-
-function fmtRr(n: number): string {
-  const abs = Math.abs(n);
-  if (n > 0) return `+${abs}`;
-  if (n < 0) return `−${abs}`;
-  return String(abs);
-}
-
-function ParticipantHeader() {
-  return (
-    <div style={{ display: 'grid', gridTemplateColumns: PARTICIPANT_COLUMNS, gap: 20, padding: '4px 0 6px', fontSize: 9.5, letterSpacing: '.08em', color: 'var(--text-faint)' }}>
-      <span />
-      <span>JOGADOR · AGENTE</span>
-      <span style={{ textAlign: 'right' }}>K/D/A</span>
-      <span style={{ textAlign: 'right' }}>ACS</span>
-      <span style={{ textAlign: 'right' }}>HS%</span>
-      <span style={{ textAlign: 'right' }}>RR</span>
-    </div>
-  );
-}
-
-function ParticipantRow({ p }: { p: ParticipanteEquipeMatch }) {
-  return (
-    <div style={{ display: 'grid', gridTemplateColumns: PARTICIPANT_COLUMNS, gap: 20, alignItems: 'center', padding: '9px 0', borderTop: '1px solid var(--divider)', fontSize: 12.5 }}>
-      <AgentAvatar agent={p.agent} size={26} />
-      <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-        {p.name} <span style={{ color: 'var(--text-faint)' }}>· {p.agent}</span>
-        {p.mvp && (
-          <span style={{ marginLeft: 6, fontSize: 8.5, fontWeight: 700, borderRadius: 4, padding: '1px 5px', color: '#E8B339', background: 'color-mix(in srgb, #E8B339 18%, transparent)' }}>
-            MVP
-          </span>
-        )}
-        {p.ace && (
-          <span style={{ marginLeft: 6, fontSize: 8.5, fontWeight: 700, borderRadius: 4, padding: '1px 5px', color: '#A78BFA', background: 'color-mix(in srgb, #A78BFA 18%, transparent)' }}>
-            ACE
-          </span>
-        )}
-      </span>
-      <span style={{ color: 'var(--text-2)', textAlign: 'right' }}>{p.kda}</span>
-      <span style={{ color: 'var(--text-2)', textAlign: 'right' }}>{p.acs}</span>
-      <span style={{ color: 'var(--text-2)', textAlign: 'right' }}>{p.hsPercent}%</span>
-      <span style={{ fontWeight: 600, textAlign: 'right', color: p.rr === null ? 'var(--text-faint)' : p.rr >= 0 ? WIN : LOSS }}>
-        {p.rr === null ? '—' : fmtRr(p.rr)}
-      </span>
-    </div>
-  );
-}
-
-// Cada partida é uma linha só (mapa + placar + data), clicável — expande
-// pra mostrar os números de cada um, recolhe de novo no segundo clique.
-function EquipeMatchCard({ match }: { match: PartidaEquipeSummary }) {
-  const [expanded, setExpanded] = useState(false);
-  // Todo mundo rastreado nessa partida é do mesmo lado (é assim que a
-  // partida qualifica pro histórico da equipe), então o resultado do
-  // primeiro participante já vale pra partida inteira.
-  const result = match.participants[0]?.result ?? 'E';
-  const color = resultColor(result);
-
-  return (
-    <div style={{ ...cardStyle, border: `1px solid color-mix(in srgb, ${color} 50%, var(--surface-border))`, overflow: 'hidden' }}>
-      <button
-        onClick={() => setExpanded((v) => !v)}
-        style={{
-          width: '100%',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 12,
-          padding: '14px 18px',
-          background: 'none',
-          border: 'none',
-          cursor: 'pointer',
-          textAlign: 'left',
-          font: 'inherit',
-          color: 'inherit',
-        }}
-      >
-        <ChevronRight size={15} strokeWidth={2} style={{ flex: 'none', color: 'var(--text-faint)', transform: expanded ? 'rotate(90deg)' : 'none', transition: 'transform .15s ease' }} />
-        <span style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '.04em', color }}>{RESULT_LABEL[result]}</span>
-        <span style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 15 }}>{match.map}</span>
-        <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>Placar {match.score}</span>
-        <span style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--text-dim)', flex: 'none' }}>{match.playedAtLabel}</span>
-      </button>
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateRows: expanded ? '1fr' : '0fr',
-          opacity: expanded ? 1 : 0,
-          transition: 'grid-template-rows .28s ease, opacity .22s ease',
-        }}
-      >
-        <div style={{ overflow: 'hidden', minHeight: 0 }}>
-          <div className="scroll-x-mobile" style={{ padding: '0 18px 14px', borderTop: '1px solid var(--divider)' }}>
-            <ParticipantHeader />
-            {match.participants.map((p) => (
-              <ParticipantRow key={p.userId} p={p} />
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
+// Histórico completo de partidas da equipe (5+ membros juntos na mesma
+// partida) -- mesmo design/componente da página de Partidas individual
+// (SeasonMatchesList), sem filtro de ato (sempre o histórico mais recente,
+// igual à individual). Ao vir do painel da equipe com "?expand=<id>", essa
+// partida já abre expandida no lugar em vez de precisar clicar de novo.
 export function EquipePartidas() {
   const navigate = useNavigate();
-  const { equipePartidas, equipePartidasError, equipePartidasLoading, loadEquipePartidas } = useOutletContext<OutletContext>();
+  useOutletContext<OutletContext>();
+  const [searchParams] = useSearchParams();
+  const expandMatchId = searchParams.get('expand');
 
-  // null = ato atual (o back resolve sozinho) — equipePartidas.seasonId
-  // devolve qual foi escolhido de fato, igual ao seletor da Visão do ato.
-  const [seasonId, setSeasonId] = useState<string | null>(null);
+  const [matchesPage, setMatchesPage] = useState<SeasonMatchesPage | null>(null);
+  const [matchesLoading, setMatchesLoading] = useState(true);
+  const [matchesError, setMatchesError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
 
-  useEffect(() => {
-    loadEquipePartidas(seasonId, page);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [seasonId, page]);
+  // Só pra mapIcons/agentIcons (mesmas listas de ícones que a Visão do ato
+  // já resolve) -- o painel da equipe já tem isso em cache, mas essa página
+  // pode abrir direto (link/refresh) sem passar por lá.
+  const [icons, setIcons] = useState<{ mapIcons: Record<string, string>; agentIcons: Record<string, string> }>({ mapIcons: {}, agentIcons: {} });
 
-  function changeSeason(id: string | null) {
-    setSeasonId(id);
-    setPage(1);
-  }
+  const loadMatches = useCallback(async (p: number) => {
+    setMatchesLoading(true);
+    setMatchesError(null);
+    try {
+      setMatchesPage(await apiFetch<SeasonMatchesPage>(`/equipe/painel/season/matches?page=${p}`));
+    } catch {
+      setMatchesError('Falha ao carregar o histórico de partidas da equipe.');
+    } finally {
+      setMatchesLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadMatches(page);
+  }, [loadMatches, page]);
+
+  useEffect(() => {
+    apiFetch<SeasonOverview>('/equipe/painel/season')
+      .then((data) => setIcons({ mapIcons: data.mapIcons, agentIcons: data.agentIcons }))
+      .catch(() => {});
+  }, []);
 
   return (
     <div style={{ padding: 26, display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -157,42 +63,35 @@ export function EquipePartidas() {
             <ArrowLeft size={14} strokeWidth={1.75} />
             Voltar pra equipe
           </button>
-          <h1 style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 700, fontSize: 32, letterSpacing: '-.025em', margin: 0 }}>Histórico de partidas da equipe</h1>
+          <h1 style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 700, fontSize: 32, letterSpacing: '-.025em', margin: 0 }}>Partidas da equipe</h1>
           <div style={{ fontSize: 14, color: 'var(--text-muted)', marginTop: 6 }}>
-            Partidas {equipePartidas?.seasonShort ? `de ${formatSeasonShort(equipePartidas.seasonShort)}` : 'do ato'} com pelo menos {MIN_TEAM_MATCH_PLAYERS} membros da equipe juntos — os números de cada um aparecem separados.
+            Partidas com pelo menos {MIN_TEAM_MATCH_PLAYERS} membros da equipe juntos — clique numa pra ver os detalhes
           </div>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          {equipePartidas && (
-            <SeasonFilterSelect availableSeasons={equipePartidas.availableSeasons} seasonId={equipePartidas.seasonId} setSelectedSeasonId={changeSeason} />
-          )}
-          <button className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: 9 }} onClick={() => navigate('/equipe/painel')}>
-            <BarChart3 size={15} strokeWidth={1.75} />
-            Painel da equipe
-          </button>
-        </div>
+        <button className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: 9 }} onClick={() => navigate('/equipe/painel')}>
+          <BarChart3 size={15} strokeWidth={1.75} />
+          Painel da equipe
+        </button>
       </div>
 
-      {equipePartidasError ? (
-        <div style={{ ...cardStyle, padding: 22, display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'flex-start' }}>
-          <div style={{ fontSize: 14, color: 'var(--text-3)' }}>{equipePartidasError}</div>
-          <button className="btn-secondary" onClick={() => loadEquipePartidas(seasonId, page)}>
-            Tentar de novo
-          </button>
-        </div>
-      ) : equipePartidasLoading || equipePartidas === null ? (
+      {matchesLoading && !matchesPage ? (
         <LoadingFill />
-      ) : equipePartidas.matches.length === 0 ? (
-        <div style={{ ...cardStyle, padding: 40, textAlign: 'center', color: 'var(--text-muted)', fontSize: 14 }}>
-          Nenhuma partida ainda com {MIN_TEAM_MATCH_PLAYERS}+ membros da equipe juntos.
+      ) : matchesError && !matchesPage ? (
+        <div style={{ ...cardStyle, padding: 22, display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'flex-start' }}>
+          <div style={{ fontSize: 14, color: 'var(--text-3)' }}>{matchesError}</div>
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {equipePartidas.matches.map((m) => (
-            <EquipeMatchCard key={m.id} match={m} />
-          ))}
-          <PageControls page={equipePartidas.page} pageSize={equipePartidas.pageSize} total={equipePartidas.total} setPage={setPage} />
-        </div>
+        <SeasonMatchesList
+          matchesPage={matchesPage}
+          loading={matchesLoading}
+          error={matchesError}
+          mapIcons={icons.mapIcons}
+          agentIcons={icons.agentIcons}
+          setPage={setPage}
+          expandable
+          autoExpandMatchId={expandMatchId}
+          basePath="/equipe/partidas"
+        />
       )}
     </div>
   );

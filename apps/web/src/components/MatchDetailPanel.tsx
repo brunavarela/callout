@@ -35,7 +35,7 @@ export function MatchDetailPanel({ detail }: { detail: MatchDetail }) {
       </div>
 
       <div className="scroll-x-mobile">
-        <div style={{ display: 'grid', gridTemplateColumns: SCORE_COLUMNS, gap: 8, padding: '4px 0 6px', fontSize: 9.5, letterSpacing: '.08em', color: 'var(--text-faint)' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: SCORE_COLUMNS, gap: 36, padding: '4px 12px 6px 0', fontSize: 9.5, letterSpacing: '.08em', color: 'var(--text-faint)' }}>
           <span>JOGADOR · AGENTE</span>
           <span />
           <span style={{ textAlign: 'right' }}>ACS</span>
@@ -44,36 +44,54 @@ export function MatchDetailPanel({ detail }: { detail: MatchDetail }) {
           <span style={{ textAlign: 'right' }}>A</span>
           <span style={{ textAlign: 'right' }}>HS%</span>
         </div>
-        {detail.players.map((p) => (
-          <div
-            key={p.puuid}
-            style={{
-              display: 'grid',
-              gridTemplateColumns: SCORE_COLUMNS,
-              gap: 8,
-              alignItems: 'center',
-              padding: '8px 0',
-              borderTop: '1px solid var(--divider)',
-              fontSize: 12.5,
-              background: p.isSelf ? 'color-mix(in srgb, var(--acc, #EF4958) 9%, transparent)' : 'transparent',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0, overflow: 'hidden' }}>
-              <span style={{ width: 3, height: 14, borderRadius: 2, background: p.side === 'own' ? 'var(--acc, #EF4958)' : 'var(--text-faint)', flex: 'none' }} />
-              <AgentAvatar agent={p.agent} size={22} />
-              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: p.side === 'own' ? 'var(--text)' : 'var(--text-muted)', fontWeight: p.isSelf ? 600 : 400 }}>
-                {p.name}
-                <span style={{ marginLeft: 5, fontSize: 10, color: 'var(--text-faint)' }}>{p.tag}</span>
-              </span>
-            </div>
-            <span />
-            <div style={{ textAlign: 'right' }}>{p.acs}</div>
-            <div style={{ textAlign: 'right', color: 'var(--text-muted)' }}>{p.kills}</div>
-            <div style={{ textAlign: 'right', color: 'var(--text-muted)' }}>{p.deaths}</div>
-            <div style={{ textAlign: 'right', color: 'var(--text-muted)' }}>{p.assists}</div>
-            <div style={{ textAlign: 'right', color: 'var(--text-muted)' }}>{p.hsPercent}%</div>
-          </div>
-        ))}
+        {(() => {
+          const ownCount = detail.players.filter((p) => p.side === 'own').length;
+          return detail.players.map((p, i) => {
+            // Índice dentro do próprio time (não da lista inteira) -- os dois
+            // times vêm em blocos separados (aliado primeiro, depois
+            // inimigo), cada um com seu próprio zebrado.
+            const sideIndex = p.side === 'own' ? i : i - ownCount;
+            const zebraColor = p.side === 'own' ? 'var(--acc, #EF4958)' : 'var(--neg, #EF4958)';
+            const zebraPercent = sideIndex % 2 === 0 ? 7 : 2.5;
+            return (
+              <div
+                key={p.puuid}
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: SCORE_COLUMNS,
+                  gap: 36,
+                  alignItems: 'center',
+                  padding: '8px 12px 8px 0',
+                  borderTop: '1px solid var(--divider)',
+                  fontSize: 12.5,
+                  // Zebrado por time -- tons do time aliado (cor de destaque)
+                  // pro seu lado, tons da cor negativa pro time inimigo,
+                  // alternando mais claro/mais escuro. A sua linha continua
+                  // com um destaque mais forte, pra não se confundir com o
+                  // zebrado do resto do seu time.
+                  background: p.isSelf
+                    ? 'color-mix(in srgb, var(--acc, #EF4958) 16%, transparent)'
+                    : `color-mix(in srgb, ${zebraColor} ${zebraPercent}%, transparent)`,
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0, overflow: 'hidden' }}>
+                  <span style={{ width: 3, height: 14, borderRadius: 2, background: p.side === 'own' ? 'var(--acc, #EF4958)' : 'var(--text-faint)', flex: 'none' }} />
+                  <AgentAvatar agent={p.agent} size={22} />
+                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: p.side === 'own' ? 'var(--text)' : 'var(--text-muted)', fontWeight: p.isSelf ? 600 : 400 }}>
+                    {p.name}
+                    <span style={{ marginLeft: 5, fontSize: 10, color: 'var(--text-faint)' }}>{p.tag}</span>
+                  </span>
+                </div>
+                <span />
+                <div style={{ textAlign: 'right' }}>{p.acs}</div>
+                <div style={{ textAlign: 'right', color: 'var(--text-muted)' }}>{p.kills}</div>
+                <div style={{ textAlign: 'right', color: 'var(--text-muted)' }}>{p.deaths}</div>
+                <div style={{ textAlign: 'right', color: 'var(--text-muted)' }}>{p.assists}</div>
+                <div style={{ textAlign: 'right', color: 'var(--text-muted)' }}>{p.hsPercent}%</div>
+              </div>
+            );
+          });
+        })()}
       </div>
     </div>
   );

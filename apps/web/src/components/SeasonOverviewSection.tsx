@@ -584,6 +584,7 @@ export function SeasonOverviewSection({
   modoFilter,
   subject = 'você',
   showRr = true,
+  matchesBasePath = '/partidas',
 }: {
   data: SeasonOverview | null;
   loading: boolean;
@@ -601,6 +602,10 @@ export function SeasonOverviewSection({
   // painel da equipe passa isso como false pra não mostrar um card de RR
   // que nunca vai ter dado nenhum pra mostrar.
   showRr?: boolean;
+  // Pra onde a lista de partidas (SeasonMatchesList) navega em "Ver tudo" e
+  // ao clicar numa linha -- painel individual usa "/partidas" (padrão),
+  // painel da equipe passa "/equipe/partidas".
+  matchesBasePath?: string;
 }) {
   if (loading) return <LoadingFill />;
   if (error) return <div style={{ ...cardStyle, padding: 24, textAlign: 'center', color: 'var(--text-muted)', fontSize: 13.5 }}>{error}</div>;
@@ -708,6 +713,7 @@ export function SeasonOverviewSection({
             agentIcons={data.agentIcons}
             setPage={setMatchesPageNumber}
             height={showRr ? SEASON_MATCHES_HEIGHT : SEASON_COL_HEIGHT}
+            basePath={matchesBasePath}
           />
           {showRr && (
             <RrHistoryCard

@@ -13,7 +13,6 @@ import type {
   StratItem,
   SyncStatus,
   EquipePainelSummary,
-  EquipePartidasPage,
   EquipeOverview,
   SeasonMatchesPage,
   SeasonOverview,
@@ -228,30 +227,6 @@ export function useAppData(user: SessionUser | null) {
 
   const updateEquipeMembroNota = useCallback((userId: string, note: string) => {
     setEquipe((prev) => (prev ? { ...prev, members: prev.members.map((m) => (m.userId === userId ? { ...m, note } : m)) } : prev));
-  }, []);
-
-  const [equipePartidas, setEquipePartidas] = useState<EquipePartidasPage | null>(null);
-  const [equipePartidasError, setEquipePartidasError] = useState<string | null>(null);
-  const [equipePartidasLoading, setEquipePartidasLoading] = useState(false);
-
-  // Histórico da equipe — escopado por ato e paginado (10 por página, ver
-  // buildEquipeMatches). Carrega sob demanda, só quando a tela de histórico
-  // da equipe é aberta (pode envolver bastante chamada à HenrikDev pra
-  // resolver RR de cada membro); `EquipePartidas.tsx` chama de novo a cada
-  // troca de ato/página.
-  const loadEquipePartidas = useCallback(async (seasonId?: string | null, page = 1) => {
-    setEquipePartidasLoading(true);
-    try {
-      const params = new URLSearchParams();
-      if (seasonId) params.set('seasonId', seasonId);
-      params.set('page', String(page));
-      setEquipePartidas(await apiFetch<EquipePartidasPage>(`/equipe/partidas?${params.toString()}`));
-      setEquipePartidasError(null);
-    } catch {
-      setEquipePartidasError('Falha ao carregar o histórico de partidas da equipe.');
-    } finally {
-      setEquipePartidasLoading(false);
-    }
   }, []);
 
   const [equipePainel, setEquipePainel] = useState<EquipePainelSummary | null>(null);
@@ -502,10 +477,6 @@ export function useAppData(user: SessionUser | null) {
     equipeError,
     reloadEquipe: loadEquipe,
     updateEquipeMembroNota,
-    equipePartidas,
-    equipePartidasError,
-    equipePartidasLoading,
-    loadEquipePartidas,
     equipePainel,
     equipePainelError,
     equipePainelLoading,

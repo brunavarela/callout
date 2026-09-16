@@ -231,6 +231,7 @@ export function EquipePainel() {
           modoFilter="all"
           subject={selectedMember?.name ?? 'a equipe'}
           showRr={!!selectedMember}
+          matchesBasePath="/equipe/partidas"
         />
       )}
     </div>

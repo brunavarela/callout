@@ -151,12 +151,14 @@ function SeasonMatchRow({
   mapIcon,
   expandable,
   autoExpand,
+  basePath,
 }: {
   m: SeasonMatchSummary;
   agentIcon: string | null;
   mapIcon: string | null;
   expandable: boolean;
   autoExpand: boolean;
+  basePath: string;
 }) {
   const navigate = useNavigate();
   const resultColor = m.result === 'V' ? WIN : m.result === 'D' ? LOSS : DRAW;
@@ -183,7 +185,7 @@ function SeasonMatchRow({
 
   function handleClick() {
     if (!expandable) {
-      navigate(`/partidas?expand=${m.id}`);
+      navigate(`${basePath}?expand=${m.id}`);
       return;
     }
     setExpanded((v) => !v);
@@ -307,6 +309,7 @@ export function SeasonMatchesList({
   title = 'Partidas',
   expandable = false,
   autoExpandMatchId = null,
+  basePath = '/partidas',
   height,
 }: {
   matchesPage: SeasonMatchesPage | null;
@@ -316,12 +319,15 @@ export function SeasonMatchesList({
   agentIcons: Record<string, string>;
   setPage: (page: number) => void;
   title?: string;
-  // Sem isso, clicar numa partida navega pra "/partidas?expand=<id>" (usado
+  // Sem isso, clicar numa partida navega pra "<basePath>?expand=<id>" (usado
   // na Visão do ato). Com isso, o clique expande a linha no lugar (usado na
   // própria página de Partidas) -- `autoExpandMatchId` já abre uma linha
   // específica de cara, pra chegar direto expandida vindo daquele link.
   expandable?: boolean;
   autoExpandMatchId?: string | null;
+  // Pra onde "Ver tudo" e o clique numa linha (sem `expandable`) navegam --
+  // "/partidas" pro histórico individual, "/equipe/partidas" pro da equipe.
+  basePath?: string;
   // Trava a altura total do card (cabeçalho e paginação sempre visíveis) e
   // faz só a lista de partidas rolar por dentro -- usado na Visão do ato,
   // onde essa coluna precisa bater com a altura de RR logo abaixo.
@@ -346,7 +352,7 @@ export function SeasonMatchesList({
         </div>
         {!expandable && (
           <button
-            onClick={() => navigate('/partidas')}
+            onClick={() => navigate(basePath)}
             style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontSize: 11.5, fontWeight: 600, color: 'var(--acc, #EF4958)', whiteSpace: 'nowrap' }}
           >
             Ver tudo
@@ -368,6 +374,7 @@ export function SeasonMatchesList({
                     mapIcon={mapIcons[m.map] ?? null}
                     expandable={expandable}
                     autoExpand={expandable && m.id === autoExpandMatchId}
+                    basePath={basePath}
                   />
                 ))}
               </div>
