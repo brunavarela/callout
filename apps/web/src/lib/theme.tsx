@@ -27,7 +27,7 @@ const DEFAULT_THEME: ThemePreferences = {
 // reconhecer o mapa escolhido.
 const MAP_BACKGROUND_OVERLAY_BY_MODE: Record<ThemePreferences['mode'], string> = {
   dark: 'rgba(15, 15, 16, 0.84)',
-  light: 'rgba(255, 255, 255, 0.82)',
+  light: 'rgba(255, 255, 255, 0.6)',
 };
 
 function hexRgb(hex: string): [number, number, number] {
