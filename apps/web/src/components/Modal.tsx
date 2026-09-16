@@ -3,10 +3,22 @@ import type { ReactNode } from 'react';
 // Overlay centralizado reutilizável — mesmo padrão que já existia (inline)
 // no diálogo de confirmação de logout, agora compartilhado entre os modais
 // de Perfil/Tema também.
-export function Modal({ onClose, children, width = 420 }: { onClose: () => void; children: ReactNode; width?: number }) {
+export function Modal({
+  onClose,
+  children,
+  width = 420,
+  closeOnBackdrop = true,
+}: {
+  onClose: () => void;
+  children: ReactNode;
+  width?: number;
+  // false pros modais onde clicar fora sem querer (ex.: interagindo com um
+  // select por dentro) fecharia por acidente -- aí só o X mesmo fecha.
+  closeOnBackdrop?: boolean;
+}) {
   return (
     <div
-      onClick={onClose}
+      onClick={closeOnBackdrop ? onClose : undefined}
       style={{
         position: 'fixed',
         inset: 0,

@@ -8,7 +8,6 @@ import { AgentAvatar } from './AgentAvatar';
 import { InfoDot, plural } from './statsPrimitives';
 import { apiFetch } from '../lib/api';
 
-const WIN = 'var(--pos, #18AAB7)';
 const LOSS = 'var(--neg, #EF4958)';
 
 const PRIORITY_EXPLAIN =
@@ -94,7 +93,7 @@ export function SimularEquipeModal({
   }
 
   return (
-    <Modal onClose={onClose} width={560}>
+    <Modal onClose={onClose} width={560} closeOnBackdrop={false}>
       <ModalHeader title="Simular equipe" onClose={onClose} />
 
       {loading ? (
@@ -109,7 +108,7 @@ export function SimularEquipeModal({
             <InfoDot text={PRIORITY_EXPLAIN} align="right" />
           </div>
 
-          {!result.compositionValid && (
+          {!result.compositionValid && !result.players.some((p) => p.recommendedAgent === null) && (
             <div style={{ fontSize: 12, color: LOSS, background: 'color-mix(in srgb, var(--neg, #EF4958) 12%, transparent)', borderRadius: 8, padding: '8px 12px' }}>
               Não foi possível encaixar essa composição em nenhum dos 3 tipos válidos com os agentes elegíveis disponíveis — mostrando o melhor encaixe possível mesmo assim.
             </div>
@@ -123,26 +122,17 @@ export function SimularEquipeModal({
                     {p.avatarUrl ? <img src={p.avatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : initialsOf(p.name)}
                   </div>
                   <span style={{ fontSize: 13, fontWeight: 600, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: '1 1 auto' }}>{p.name}</span>
-                  <AgentAvatar agent={p.recommendedAgent} size={28} />
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', flex: 'none' }}>
-                    <span style={{ fontSize: 12.5, fontWeight: 600 }}>{p.recommendedAgent}</span>
-                    <span style={{ fontSize: 10, color: 'var(--text-faint)' }}>{p.role}</span>
-                  </div>
-                  <span
-                    style={{
-                      marginLeft: 'auto',
-                      fontSize: 9.5,
-                      fontWeight: 700,
-                      letterSpacing: '.03em',
-                      borderRadius: 5,
-                      padding: '3px 8px',
-                      flex: 'none',
-                      color: p.changed ? LOSS : WIN,
-                      background: `color-mix(in srgb, ${p.changed ? LOSS : WIN} 16%, transparent)`,
-                    }}
-                  >
-                    {p.changed ? 'TROCA' : 'MANTÉM'}
-                  </span>
+                  {p.recommendedAgent ? (
+                    <>
+                      <AgentAvatar agent={p.recommendedAgent} size={28} />
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', flex: 'none' }}>
+                        <span style={{ fontSize: 12.5, fontWeight: 600 }}>{p.recommendedAgent}</span>
+                        <span style={{ fontSize: 10, color: 'var(--text-faint)' }}>{p.role}</span>
+                      </div>
+                    </>
+                  ) : (
+                    <span style={{ fontSize: 12, color: 'var(--text-faint)', flex: 'none' }}>Sem dados suficientes</span>
+                  )}
                 </div>
                 {p.reason && <div style={{ fontSize: 11.5, color: 'var(--text-muted)', lineHeight: 1.4 }}>{p.reason}</div>}
               </div>

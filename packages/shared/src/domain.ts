@@ -685,8 +685,11 @@ export interface SimulacaoJogador {
   // Agente mais jogado por ela nas partidas usadas de base -- null quando
   // esse grupo de 5 nunca jogou esse mapa junto (basis "sem_dados").
   currentAgent: string | null;
-  recommendedAgent: string;
-  role: string; // label em português (Duelista/Iniciador/Controlador/Sentinela)
+  // null quando ela ainda não tem nenhum agente com partidas suficientes
+  // nesse mapa pra sugerir (ver MIN_AGENT_GAMES) -- sem dado nenhum pra se
+  // basear ainda, não é "sem necessidade de trocar".
+  recommendedAgent: string | null;
+  role: string | null; // label em português (Duelista/Iniciador/Controlador/Sentinela)
   kda: number; // KDA médio dela nas partidas usadas de base (0 em "sem_dados")
   changed: boolean;
   reason: string | null; // só preenchido quando vale a pena explicar (troca, ou "sem_dados")

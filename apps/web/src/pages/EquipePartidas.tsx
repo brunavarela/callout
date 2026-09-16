@@ -6,6 +6,7 @@ import { MIN_TEAM_MATCH_PLAYERS } from '@callout/shared';
 import type { OutletContext } from '../components/AppShell';
 import { LoadingFill } from '../components/Spinner';
 import { SeasonMatchesList } from '../components/SeasonMatchesList';
+import { SeasonMapFilterSelect } from '../components/SeasonFilters';
 import { cardStyle } from '../components/statsPrimitives';
 import { apiFetch } from '../lib/api';
 
@@ -24,17 +25,25 @@ export function EquipePartidas() {
   const [matchesLoading, setMatchesLoading] = useState(true);
   const [matchesError, setMatchesError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
+  const [mapFilter, setMapFilterState] = useState<string | null>(null);
 
-  // Só pra mapIcons/agentIcons (mesmas listas de ícones que a Visão do ato
-  // já resolve) -- o painel da equipe já tem isso em cache, mas essa página
-  // pode abrir direto (link/refresh) sem passar por lá.
-  const [icons, setIcons] = useState<{ mapIcons: Record<string, string>; agentIcons: Record<string, string> }>({ mapIcons: {}, agentIcons: {} });
+  function setMapFilter(mapId: string | null) {
+    setMapFilterState(mapId);
+    setPage(1);
+  }
 
-  const loadMatches = useCallback(async (p: number) => {
+  // Pra mapIcons/agentIcons (mesmas listas que a Visão do ato já resolve) e
+  // pro seletor de mapa (topMaps) -- o painel da equipe já tem isso em
+  // cache, mas essa página pode abrir direto (link/refresh) sem passar por lá.
+  const [overview, setOverview] = useState<SeasonOverview | null>(null);
+
+  const loadMatches = useCallback(async (p: number, mapId: string | null) => {
     setMatchesLoading(true);
     setMatchesError(null);
     try {
-      setMatchesPage(await apiFetch<SeasonMatchesPage>(`/equipe/painel/season/matches?page=${p}`));
+      const params = new URLSearchParams({ page: String(p) });
+      if (mapId) params.set('mapId', mapId);
+      setMatchesPage(await apiFetch<SeasonMatchesPage>(`/equipe/painel/season/matches?${params}`));
     } catch {
       setMatchesError('Falha ao carregar o histórico de partidas da equipe.');
     } finally {
@@ -43,12 +52,12 @@ export function EquipePartidas() {
   }, []);
 
   useEffect(() => {
-    loadMatches(page);
-  }, [loadMatches, page]);
+    loadMatches(page, mapFilter);
+  }, [loadMatches, page, mapFilter]);
 
   useEffect(() => {
     apiFetch<SeasonOverview>('/equipe/painel/season')
-      .then((data) => setIcons({ mapIcons: data.mapIcons, agentIcons: data.agentIcons }))
+      .then(setOverview)
       .catch(() => {});
   }, []);
 
@@ -68,10 +77,13 @@ export function EquipePartidas() {
             Partidas com pelo menos {MIN_TEAM_MATCH_PLAYERS} membros da equipe juntos — clique numa pra ver os detalhes
           </div>
         </div>
-        <button className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: 9 }} onClick={() => navigate('/equipe/painel')}>
-          <BarChart3 size={15} strokeWidth={1.75} />
-          Painel da equipe
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          {overview && <SeasonMapFilterSelect topMaps={overview.topMaps} mapFilter={mapFilter} setMapFilter={setMapFilter} />}
+          <button className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: 9 }} onClick={() => navigate('/equipe/painel')}>
+            <BarChart3 size={15} strokeWidth={1.75} />
+            Painel da equipe
+          </button>
+        </div>
       </div>
 
       {matchesLoading && !matchesPage ? (
@@ -85,8 +97,8 @@ export function EquipePartidas() {
           matchesPage={matchesPage}
           loading={matchesLoading}
           error={matchesError}
-          mapIcons={icons.mapIcons}
-          agentIcons={icons.agentIcons}
+          mapIcons={overview?.mapIcons ?? {}}
+          agentIcons={overview?.agentIcons ?? {}}
           setPage={setPage}
           expandable
           autoExpandMatchId={expandMatchId}

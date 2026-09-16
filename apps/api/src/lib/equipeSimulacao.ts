@@ -3,6 +3,12 @@ import { prisma } from "./prisma.js";
 import { ROLE_LABELS } from "./seasonOverview.js";
 import { resolveDisplayName, resolveAvatarUrl } from "./dto.js";
 
+// Diferente do resto do app (que mistura Competitivo/Sem classificação/
+// Premier pras estatísticas gerais, ver STATS_MODES_LIST), a simulação usa
+// SÓ Competitivo -- pedido explícito, é o modo que reflete melhor o nível
+// de jogo "de verdade" pra decidir composição.
+const SIMULACAO_MODO = "Competitive";
+
 // Só recomenda (pra TROCAR) um agente que o jogador já tenha jogado pelo
 // menos essa quantidade de vezes naquele mapa (solo + equipe somados) — sem
 // isso, um pick de 1-2 partidas poderia virar recomendação por sorte.
@@ -60,8 +66,11 @@ export async function buildSimulacao(equipeId: string, mapId: string, userIds: s
   // Partidas onde os 5 selecionados jogaram juntos, do mesmo lado, nesse
   // mapa -- como um time só tem 5 vagas, achar os 5 puuids no mesmo teamId
   // já garante que é o time inteiro (não sobra vaga pra ninguém de fora).
+  // Só modos com estatística de verdade (mesma allowlist do resto do app) --
+  // Deathmatch/Spike Rush etc não são 5x5 "de verdade" (ACS nem é calculado
+  // neles, ver countsTowardStats) e não deveriam entrar na comparação.
   const groupRows = await prisma.matchPlayer.findMany({
-    where: { puuid: { in: puuids }, match: { mapId } },
+    where: { puuid: { in: puuids }, match: { mapId, modo: SIMULACAO_MODO } },
     select: { matchId: true, puuid: true, teamId: true, won: true, agentName: true, kills: true, deaths: true, assists: true },
   });
   const byMatch = new Map<string, GroupRow[]>();
@@ -91,8 +100,9 @@ export async function buildSimulacao(equipeId: string, mapId: string, userIds: s
   // Histórico completo (solo + equipe, qualquer time) de cada um nesse
   // mapa, por agente -- base pra elegibilidade (>=MIN_AGENT_GAMES) e pra
   // achar "o melhor agente dela nesse mapa" fora do recorte da simulação.
+  // Mesmo filtro de modo do groupRows acima.
   const lifetimeRows = await prisma.matchPlayer.findMany({
-    where: { puuid: { in: puuids }, match: { mapId } },
+    where: { puuid: { in: puuids }, match: { mapId, modo: SIMULACAO_MODO } },
     select: { puuid: true, agentName: true, kills: true, deaths: true, assists: true },
   });
   const lifetimeByPuuid = new Map<string, Map<string, { kills: number; deaths: number; assists: number; games: number }>>();
@@ -107,16 +117,24 @@ export async function buildSimulacao(equipeId: string, mapId: string, userIds: s
     lifetimeByPuuid.set(r.puuid, byAgent);
   }
 
-  function lifetimeRanked(puuid: string): AgentStat[] {
+  function lifetimeRanked(puuid: string, minGames = MIN_AGENT_GAMES): AgentStat[] {
     const byAgent = lifetimeByPuuid.get(puuid) ?? new Map();
     return [...byAgent.entries()]
-      .filter(([, s]) => s.games >= MIN_AGENT_GAMES)
+      .filter(([, s]) => s.games >= minGames)
       .map(([agent, s]) => ({ agent, kda: kdaFromSums(s.kills, s.deaths, s.assists), games: s.games }))
       .sort((a, b) => b.kda - a.kda);
   }
   function lifetimeStat(puuid: string, agent: string): AgentStat | null {
     const s = lifetimeByPuuid.get(puuid)?.get(agent);
     return s ? { agent, kda: kdaFromSums(s.kills, s.deaths, s.assists), games: s.games } : null;
+  }
+  // Sempre sugere algo, mesmo sem bater o piso de MIN_AGENT_GAMES -- cai pro
+  // agente com mais dado que ela tiver nesse mapa (mesmo 1 partida só) em
+  // vez de deixar sem sugestão nenhuma. `games` no resultado continua
+  // mostrando quantas partidas embasam aquilo, pra dar noção de confiança.
+  function bestAvailable(puuid: string): AgentStat[] {
+    const eligible = lifetimeRanked(puuid);
+    return eligible.length > 0 ? eligible : lifetimeRanked(puuid, 1);
   }
 
   const agentAssets = await prisma.agentAsset.findMany({ select: { nome: true, funcao: true } });
@@ -143,17 +161,21 @@ export async function buildSimulacao(equipeId: string, mapId: string, userIds: s
     if (basisRows.length === 0) {
       // "sem_dados" -- esse grupo de 5 nunca jogou esse mapa junto. Sem
       // recorte da simulação pra comparar, só sugere o histórico geral dela.
-      const ranked = lifetimeRanked(puuid);
+      const ranked = bestAvailable(puuid);
       const pick = ranked[0] ?? null;
+      const lowSample = pick && pick.games < MIN_AGENT_GAMES;
       return {
         userId: m.userId,
         name,
         avatarUrl,
         currentAgent: null,
-        kda: 0,
+        // Sem partida de equipe pra comparar, usa o próprio KDA do melhor
+        // agente dela como prioridade na resolução de conflito abaixo --
+        // sem isso, todo mundo empataria em 0 e a ordem viraria arbitrária.
+        kda: pick?.kda ?? 0,
         candidates: pick ? ranked : [],
         initialReason: pick
-          ? `Esse grupo ainda não jogou ${map.nome} junto — sugestão baseada no histórico geral dela: KDA ${pick.kda} de ${pick.agent} (${pick.games} partidas nesse mapa).`
+          ? `Esse grupo ainda não jogou ${map.nome} junto — sugestão baseada no histórico geral dela: KDA ${pick.kda} de ${pick.agent} (${pick.games} ${pick.games === 1 ? 'partida' : 'partidas'} nesse mapa${lowSample ? ', amostra pequena' : ''}).`
           : null,
       };
     }
@@ -186,7 +208,7 @@ export async function buildSimulacao(equipeId: string, mapId: string, userIds: s
       const rankedInWins = [...byAgentInWins.entries()]
         .map(([agent, s]) => ({ agent, kda: kdaFromSums(s.kills, s.deaths, s.assists), games: s.games }))
         .sort((a, b) => b.kda - a.kda);
-      const lifetimePool = lifetimeRanked(puuid);
+      const lifetimePool = bestAvailable(puuid);
       const eligibleInWins = rankedInWins.filter((c) => c.agent === currentAgent || lifetimePool.some((l) => l.agent === c.agent));
       const best = eligibleInWins[0] ?? { agent: currentAgent, kda: actualKda, games: basisRowsForCurrent.length };
       const reason =
@@ -217,15 +239,16 @@ export async function buildSimulacao(equipeId: string, mapId: string, userIds: s
         avatarUrl,
         currentAgent,
         kda: actualKda,
-        candidates: [{ agent: currentAgent, kda: actualKda, games: basisRowsForCurrent.length }, ...lifetimeRanked(puuid).filter((c) => c.agent !== currentAgent)],
+        candidates: [{ agent: currentAgent, kda: actualKda, games: basisRowsForCurrent.length }, ...bestAvailable(puuid).filter((c) => c.agent !== currentAgent)],
         initialReason: null,
       };
     }
-    const alternatives = lifetimeRanked(puuid).filter((c) => c.agent !== currentAgent);
+    const alternatives = bestAvailable(puuid).filter((c) => c.agent !== currentAgent);
     const best = alternatives[0] ?? null;
     if (!best) {
-      // Ninguém mais elegível (>=MIN_AGENT_GAMES) pra sugerir -- mantém,
-      // mesmo vetado, por falta de alternativa.
+      // Ela só jogou esse mapa com o próprio agente atual (nenhum outro,
+      // nem com amostra pequena) -- mantém, mesmo vetado, por falta de
+      // qualquer alternativa.
       return {
         userId: m.userId,
         name,
@@ -236,7 +259,7 @@ export async function buildSimulacao(equipeId: string, mapId: string, userIds: s
         initialReason: null,
       };
     }
-    const reason = `Em ${map.nome}, o KDA dela nesse grupo foi ${actualKda} de ${currentAgent} — abaixo da própria média histórica com esse agente (${historicalAvg}). Com ${best.agent} ela tem KDA médio ${best.kda} nesse mapa (${best.games} partidas).`;
+    const reason = `Em ${map.nome}, o KDA dela nesse grupo foi ${actualKda} de ${currentAgent} — abaixo da própria média histórica com esse agente (${historicalAvg}). Com ${best.agent} ela tem KDA médio ${best.kda} nesse mapa (${best.games} ${best.games === 1 ? 'partida' : 'partidas'}${best.games < MIN_AGENT_GAMES ? ', amostra pequena' : ''}).`;
     return {
       userId: m.userId,
       name,
@@ -248,21 +271,30 @@ export async function buildSimulacao(equipeId: string, mapId: string, userIds: s
     };
   });
 
+  // Quem não tem candidato nenhum (nunca bateu MIN_AGENT_GAMES com agente
+  // nenhum nesse mapa) fica de fora da resolução de conflito/tipo -- não dá
+  // pra validar composição de 5 quando uma das pontas nem tem sugestão.
+  const withData = drafts.filter((d) => d.candidates.length > 0);
+  const withoutData = drafts.filter((d) => d.candidates.length === 0);
+
   // Resolve conflito de agente repetido + tenta encaixar num dos 3 tipos de
   // composição, sempre priorizando quem tem o PIOR KDA nessa simulação (ele
   // trava seu agente de melhor KDA primeiro; quem vem depois cai pro
   // próximo da própria lista se o de cima já foi levado).
-  const order = [...drafts].sort((a, b) => a.kda - b.kda);
-  const templates = [...COMPOSITION_TEMPLATES, NO_TEMPLATE];
-  let finalAssignment: Map<string, string> | null = null;
-  let usedTemplateIndex = -1;
+  const order = [...withData].sort((a, b) => a.kda - b.kda);
 
-  for (let t = 0; t < templates.length; t++) {
-    const roleCap = templates[t]!;
+  // Tenta os 3 tipos válidos (sem prioridade entre eles, ver conversa de
+  // design) e escolhe o que fecha com MENOS gente precisando sair da
+  // própria 1ª escolha -- sem isso, o primeiro tipo que coubesse "vencia"
+  // mesmo quando outro tipo permitiria todo mundo ficar com o próprio
+  // agente ideal (ex.: 2 duelistas de primeira escolha cabem no tipo
+  // 2D/1I/1C/1S, mas não no 1D/1I/1C/2S -- tentar só o primeiro forçaria
+  // uma troca desnecessária).
+  function attempt(roleCap: Record<string, number>): { assignment: Map<string, string>; cost: number } | null {
     const roleUsed: Record<string, number> = { Duelista: 0, Iniciador: 0, Controlador: 0, Sentinela: 0 };
     const usedAgents = new Set<string>();
     const assignment = new Map<string, string>();
-    let ok = true;
+    let cost = 0;
     for (const d of order) {
       let picked: string | null = null;
       for (const c of d.candidates) {
@@ -274,39 +306,91 @@ export async function buildSimulacao(equipeId: string, mapId: string, userIds: s
         roleUsed[role] = (roleUsed[role] ?? 0) + 1;
         break;
       }
-      if (!picked) {
-        ok = false;
-        break;
-      }
+      if (!picked) return null;
+      if (picked !== d.candidates[0]?.agent) cost++;
       assignment.set(d.userId, picked);
     }
-    if (ok) {
-      finalAssignment = assignment;
+    return { assignment, cost };
+  }
+
+  let finalAssignment: Map<string, string> | null = null;
+  let usedTemplateIndex = -1;
+  let bestCost = Infinity;
+  for (let t = 0; t < COMPOSITION_TEMPLATES.length; t++) {
+    const result = attempt(COMPOSITION_TEMPLATES[t]!);
+    if (result && result.cost < bestCost) {
+      finalAssignment = result.assignment;
       usedTemplateIndex = t;
-      break;
+      bestCost = result.cost;
+      if (bestCost === 0) break; // já achou um tipo sem trocar ninguém -- não tem como melhorar
     }
   }
-  // NO_TEMPLATE sempre aceita quando todo mundo tem pelo menos 1 candidato
-  // (o próprio agente atual, no pior caso) -- isso só falha se alguém não
-  // tiver candidato nenhum (nunca jogou nada elegível nesse mapa).
-  if (!finalAssignment) {
-    finalAssignment = new Map(drafts.map((d) => [d.userId, d.candidates[0]?.agent ?? d.currentAgent ?? "—"]));
+  // NO_TEMPLATE sempre aceita quando todo mundo (em `withData`) tem pelo
+  // menos 1 candidato ainda livre -- só usado quando nenhum dos 3 tipos
+  // coube. Mesmo esse pode falhar (ex.: duas pessoas só têm o mesmo único
+  // agente disponível nesse mapa) -- nesse caso NUNCA cai pra um fallback
+  // que ignore duplicata (agente repetido não é permitido de jeito nenhum,
+  // ver regra do jogo): resolve o máximo possível respeitando "sem
+  // repetir", e quem não sobrar opção nenhuma fica sem sugestão (null) em
+  // vez de colidir com o agente de outra pessoa.
+  if (!finalAssignment && withData.length > 0) {
+    const fallback = attempt(NO_TEMPLATE);
+    if (fallback) {
+      finalAssignment = fallback.assignment;
+    } else {
+      const usedAgents = new Set<string>();
+      const assignment = new Map<string, string>();
+      for (const d of order) {
+        const pick = d.candidates.find((c) => !usedAgents.has(c.agent));
+        if (pick) {
+          usedAgents.add(pick.agent);
+          assignment.set(d.userId, pick.agent);
+        }
+      }
+      finalAssignment = assignment;
+    }
   }
 
   const players: SimulacaoJogador[] = drafts.map((d) => {
+    if (d.candidates.length === 0 || !finalAssignment!.has(d.userId)) {
+      // Sem NENHUM agente com >=MIN_AGENT_GAMES nesse mapa (solo+equipe) --
+      // não tem base nenhuma pra sugerir nada pra ela ainda.
+      return {
+        userId: d.userId,
+        name: d.name,
+        avatarUrl: d.avatarUrl,
+        currentAgent: d.currentAgent,
+        recommendedAgent: null,
+        role: null,
+        kda: d.kda,
+        changed: false,
+        reason:
+          d.candidates.length === 0
+            ? `${d.name} ainda não jogou nenhuma partida em ${map.nome} (contando solo e em equipe) — sem dado nenhum pra sugerir um agente pra ela ainda.`
+            : `Todos os agentes elegíveis de ${d.name} nesse mapa já tinham sido escolhidos por outras pessoas com prioridade maior — sem opção sobrando pra ela dessa vez.`,
+      };
+    }
     const finalAgent = finalAssignment!.get(d.userId)!;
     const changed = d.currentAgent !== null && finalAgent !== d.currentAgent;
     // Se a resolução de conflito empurrou alguém pra uma opção diferente da
-    // inicial (agente ideal já levado por quem tinha prioridade), a
-    // justificativa original não bate mais -- troca por um texto genérico.
-    const reason = changed ? (d.candidates[0]?.agent === finalAgent ? d.initialReason : `O agente ideal pra ${d.name} nesse mapa já tinha sido escolhido por outra pessoa — fica com ${finalAgent} (KDA médio ${d.candidates.find((c) => c.agent === finalAgent)?.kda ?? "—"}).`) : d.currentAgent === null ? d.initialReason : null;
+    // 1ª escolha dela (agente ideal já levado por quem tinha prioridade), a
+    // justificativa original não bate mais com o agente final -- troca por
+    // um texto genérico. Vale tanto pra quem tinha motivo pra trocar quanto
+    // pra "sem_dados" (onde `changed` fica sempre false, mas o agente final
+    // ainda pode ter sido reatribuído pelo conflito).
+    const bumpedByConflict = finalAgent !== d.candidates[0]?.agent;
+    const reason = bumpedByConflict
+      ? `O agente ideal pra ${d.name} nesse mapa já tinha sido escolhido por outra pessoa — fica com ${finalAgent} (KDA médio ${d.candidates.find((c) => c.agent === finalAgent)?.kda ?? "—"}).`
+      : changed || d.currentAgent === null
+        ? d.initialReason
+        : null;
     return {
       userId: d.userId,
       name: d.name,
       avatarUrl: d.avatarUrl,
       currentAgent: d.currentAgent,
       recommendedAgent: finalAgent,
-      role: roleByAgent.get(finalAgent) ?? "—",
+      role: roleByAgent.get(finalAgent) ?? null,
       kda: d.kda,
       changed,
       reason,
@@ -318,7 +402,7 @@ export async function buildSimulacao(equipeId: string, mapId: string, userIds: s
     mapName: map.nome,
     basis,
     matchesConsidered: basisGroups.length,
-    compositionValid: usedTemplateIndex >= 0 && usedTemplateIndex < COMPOSITION_TEMPLATES.length,
+    compositionValid: withoutData.length === 0 && usedTemplateIndex >= 0,
     players,
   };
   cache.set(key, { result, expiresAt: Date.now() + CACHE_TTL_MS });
