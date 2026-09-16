@@ -19,11 +19,16 @@ const DEFAULT_THEME: ThemePreferences = {
   mapBackground: null,
 };
 
-// Opacidade do véu escuro por cima da arte do mapa -- fixa de propósito
-// (não é preferência da pessoa, ver ThemePreferences.mapBackground): forte
-// o bastante pra texto solto (fora de card) continuar legível em cima de
-// qualquer arte, mas ainda dá pra reconhecer o mapa escolhido.
-const MAP_BACKGROUND_OVERLAY = 'rgba(15, 15, 16, 0.84)';
+// Véu por cima da arte do mapa -- escuro no tema escuro, esbranquiçado no
+// tema claro (senão o preto do véu destoava total dos cards/fundo claros).
+// Opacidade fixa de propósito (não é preferência da pessoa, ver
+// ThemePreferences.mapBackground): forte o bastante pra texto solto (fora
+// de card) continuar legível em cima de qualquer arte, mas ainda dá pra
+// reconhecer o mapa escolhido.
+const MAP_BACKGROUND_OVERLAY_BY_MODE: Record<ThemePreferences['mode'], string> = {
+  dark: 'rgba(15, 15, 16, 0.84)',
+  light: 'rgba(255, 255, 255, 0.82)',
+};
 
 function hexRgb(hex: string): [number, number, number] {
   const h = hex.replace('#', '');
@@ -117,7 +122,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
               inset: 0,
               zIndex: 0,
               pointerEvents: 'none',
-              backgroundImage: `linear-gradient(${MAP_BACKGROUND_OVERLAY}, ${MAP_BACKGROUND_OVERLAY}), url(/img/maps/${theme.mapBackground}.png)`,
+              backgroundImage: `linear-gradient(${MAP_BACKGROUND_OVERLAY_BY_MODE[theme.mode]}, ${MAP_BACKGROUND_OVERLAY_BY_MODE[theme.mode]}), url(/img/maps/${theme.mapBackground}.png)`,
               backgroundSize: 'cover',
               backgroundPosition: 'center',
             }}
