@@ -525,11 +525,11 @@ export async function buildEquipeSeasonMatchesPage(
       modo: first.match.modo,
       rankIconUrl: null,
       score: `${score.own} : ${score.opponent}`,
-      // toFixed direto (não round1 interpolado) -- round1 devolve um number,
-      // e concatenar ele numa string reaproveita o toString() padrão do JS,
-      // que pode expor imprecisão de ponto flutuante (ex.: "28.200000000000003"
-      // em vez de "28.2"). toFixed sempre formata com exatamente 1 casa.
-      kda: `${kills.toFixed(1)}/${deaths.toFixed(1)}/${assists.toFixed(1)}`,
+      // Arredondado sem casa decimal (pedido explícito -- diferente do
+      // resumo do dia em DayHeaderRow, que mantém decimal). Math.round direto
+      // (não toFixed(0) interpolado) já formata como inteiro, sem risco de
+      // imprecisão de ponto flutuante tipo "28.200000000000003".
+      kda: `${Math.round(kills)}/${Math.round(deaths)}/${Math.round(assists)}`,
       kdaRatio,
       acs: acsRounded,
       ddPerRound,

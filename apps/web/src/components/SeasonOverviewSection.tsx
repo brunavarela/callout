@@ -277,7 +277,7 @@ function RoleBlock({ roles, maxHeight }: { roles: SeasonOverview['roles']; maxHe
                     </div>
                     <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
                       <span style={{ fontSize: 10, letterSpacing: '.06em', color: 'var(--text-faint)' }}>KDA</span>
-                      <span style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 700, fontSize: 15 }}>{fmtNum(r.kda, 1)}</span>
+                      <span style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 700, fontSize: 15 }}>{fmtNum(r.kda, 0)}</span>
                       <span style={{ fontSize: 11, color: 'var(--text-faint)' }}>
                         {r.kills} / {r.deaths} / {r.assists}
                       </span>

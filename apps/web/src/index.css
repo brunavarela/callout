@@ -539,6 +539,18 @@ button {
   transform: translateY(0);
 }
 
+/* Ancorada pela direita -- pro "?" que fica perto da borda direita de um
+   container estreito (ex.: modal), onde ancorar pela esquerda vaza a bolha
+   pra fora (ver comentário em .info-tip-bubble acima). */
+.info-tip.align-right .info-tip-bubble {
+  left: auto;
+  right: 0;
+}
+.info-tip.align-right .info-tip-bubble::before {
+  left: auto;
+  right: 6px;
+}
+
 /* Visão do ato: Partidas+RR (empilhados) à esquerda, os 6 cards (2 sub-
    colunas de 3) à direita -- as duas colunas têm a mesma largura (1fr
    cada), então Partidas/RR sempre bate com a largura da coluna de cards

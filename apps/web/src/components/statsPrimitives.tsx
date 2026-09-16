@@ -45,9 +45,9 @@ export function rateBarColor(wins: number, total: number): string {
 
 // "?" ao lado de um título de stat — passa o mouse (ou foca via teclado)
 // pra ver a legenda numa bolha, mesma linguagem visual do resto do app.
-export function InfoDot({ text }: { text: string }) {
+export function InfoDot({ text, align = 'left' }: { text: string; align?: 'left' | 'right' }) {
   return (
-    <span className="info-tip" tabIndex={0}>
+    <span className={`info-tip${align === 'right' ? ' align-right' : ''}`} tabIndex={0}>
       <span className="info-dot">?</span>
       <span className="info-tip-bubble">{text}</span>
     </span>

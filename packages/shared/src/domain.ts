@@ -672,6 +672,44 @@ export interface EquipePainelSummary {
   closestMatch: EquipePartidaDestaque | null;
 }
 
+// --- Simulação de composição (modal "Simular equipe" no painel) ---
+// Sugestão de agente por mapa pra um grupo específico de 5 jogadores da
+// equipe — não persiste (cacheada em memória por 15min, ver
+// equipeSimulacao.ts), roda sob pedido.
+export type SimulacaoBasis = "vitorias" | "derrotas" | "sem_dados";
+
+export interface SimulacaoJogador {
+  userId: string;
+  name: string;
+  avatarUrl: string | null;
+  // Agente mais jogado por ela nas partidas usadas de base -- null quando
+  // esse grupo de 5 nunca jogou esse mapa junto (basis "sem_dados").
+  currentAgent: string | null;
+  recommendedAgent: string;
+  role: string; // label em português (Duelista/Iniciador/Controlador/Sentinela)
+  kda: number; // KDA médio dela nas partidas usadas de base (0 em "sem_dados")
+  changed: boolean;
+  reason: string | null; // só preenchido quando vale a pena explicar (troca, ou "sem_dados")
+}
+
+export interface SimulacaoResult {
+  mapId: string;
+  mapName: string;
+  basis: SimulacaoBasis;
+  matchesConsidered: number;
+  // Se a composição final respeitou um dos 3 tipos válidos (1D/1I/1C/2S,
+  // 2D/1I/1C/1S, 1D/2I/1C/1S) -- false quando não sobrou combinação de
+  // agentes elegíveis pra fechar nenhum dos três.
+  compositionValid: boolean;
+  players: SimulacaoJogador[];
+}
+
+// Body de POST /equipe/painel/simular -- sempre exatamente 5 jogadores.
+export interface SimulacaoInput {
+  mapId: string;
+  userIds: string[];
+}
+
 // --- Board de estratégia ---
 
 export type StratItemKind = "agent" | "smoke" | "flash" | "molly" | "spike" | "arrow" | "line";

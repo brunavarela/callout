@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useOutletContext } from 'react-router-dom';
-import { ArrowLeft, History } from 'lucide-react';
+import { ArrowLeft, History, Swords } from 'lucide-react';
 import type { MatchCountFilter, RecentFormInsights, RrHistoryPoint, RrHistoryResponse, SeasonMatchesPage, SeasonOverview } from '@callout/shared';
 import type { OutletContext } from '../components/AppShell';
 import { LoadingFill } from '../components/Spinner';
@@ -10,6 +10,7 @@ import { Select } from '../components/Select';
 import { cardStyle, plural } from '../components/statsPrimitives';
 import { formatPlaytime } from '../lib/seasonFormat';
 import { apiFetch } from '../lib/api';
+import { SimularEquipeModal } from '../components/SimularEquipeModal';
 
 const FILTER_STYLE: React.CSSProperties = { width: 'auto', height: 40, padding: '0 14px', borderRadius: 9, fontSize: 12.5, fontWeight: 600 };
 
@@ -64,6 +65,7 @@ export function EquipePainel() {
   const { equipe } = useOutletContext<OutletContext>();
 
   const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
+  const [simularOpen, setSimularOpen] = useState(false);
   const [matchCountFilter, setMatchCountFilter] = useState<MatchCountFilter>(20);
   const [mapFilter, setMapFilter] = useState<string | null>(null);
   const [agentFilter, setAgentFilter] = useState<string | null>(null);
@@ -171,7 +173,7 @@ export function EquipePainel() {
 
   return (
     <div style={{ padding: 26, display: 'flex', flexDirection: 'column', gap: 16 }}>
-      <div style={{ display: 'flex', alignItems: 'flex-end', gap: 20, flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 20, flexWrap: 'wrap' }}>
         <div>
           <button
             onClick={() => navigate('/equipe')}
@@ -191,23 +193,28 @@ export function EquipePainel() {
               : `${equipe ? equipe.name : ''} · partidas com pelo menos 5 membros da equipe juntos`}
           </div>
         </div>
-        <div className="dashboard-header-actions">
-          <TeamMemberFilterSelect equipe={equipe} selectedMemberId={selectedMemberId} setSelectedMemberId={setSelectedMemberId} />
-          {overview && (
-            <>
-              <SeasonAgentFilterSelect topAgents={overview.topAgents} agentFilter={agentFilter} setAgentFilter={setAgentFilter} />
-              <SeasonMapFilterSelect topMaps={overview.topMaps} mapFilter={mapFilter} setMapFilter={setMapFilter} />
-              <SeasonModoFilterSelect availableModos={overview.availableModos} modoFilter={modoFilter} setModoFilter={setModoFilter} />
-            </>
-          )}
-          <MatchCountFilterSelect matchCountFilter={matchCountFilter} setMatchCountFilter={setMatchCountFilter} />
-          <div className="dashboard-action-buttons">
-            <button className="btn-secondary" style={{ minHeight: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 17px', gap: 9 }} onClick={() => navigate('/equipe/partidas')}>
-              <History size={15} strokeWidth={1.75} />
-              Histórico de partidas
-            </button>
-          </div>
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+          <button className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: 9 }} onClick={() => setSimularOpen(true)}>
+            <Swords size={15} strokeWidth={1.75} />
+            Simular equipe
+          </button>
+          <button className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: 9 }} onClick={() => navigate('/equipe/partidas')}>
+            <History size={15} strokeWidth={1.75} />
+            Histórico de partidas
+          </button>
         </div>
+      </div>
+
+      <div className="dashboard-header-actions" style={{ marginLeft: 0, marginTop: -6, justifyContent: 'flex-end' }}>
+        <TeamMemberFilterSelect equipe={equipe} selectedMemberId={selectedMemberId} setSelectedMemberId={setSelectedMemberId} />
+        {overview && (
+          <>
+            <SeasonAgentFilterSelect topAgents={overview.topAgents} agentFilter={agentFilter} setAgentFilter={setAgentFilter} />
+            <SeasonMapFilterSelect topMaps={overview.topMaps} mapFilter={mapFilter} setMapFilter={setMapFilter} />
+            <SeasonModoFilterSelect availableModos={overview.availableModos} modoFilter={modoFilter} setModoFilter={setModoFilter} />
+          </>
+        )}
+        <MatchCountFilterSelect matchCountFilter={matchCountFilter} setMatchCountFilter={setMatchCountFilter} />
       </div>
 
       {overviewLoading ? (
@@ -234,6 +241,8 @@ export function EquipePainel() {
           matchesBasePath="/equipe/partidas"
         />
       )}
+
+      {simularOpen && <SimularEquipeModal equipe={equipe} topMaps={overview?.topMaps ?? []} onClose={() => setSimularOpen(false)} />}
     </div>
   );
 }

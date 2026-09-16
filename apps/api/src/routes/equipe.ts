@@ -6,10 +6,16 @@ import { requireAuth } from "../lib/session.js";
 import { buildEquipeOverview, getUserEquipeId, criarEquipe, entrarEquipePorCodigo, isEquipeAdmin } from "../lib/equipe.js";
 import { buildEquipePainel } from "../lib/equipePainel.js";
 import { buildEquipeSeasonOverview, buildEquipeSeasonMatchesPage } from "../lib/equipeSeasonOverview.js";
+import { buildSimulacao } from "../lib/equipeSimulacao.js";
 import type { MatchCountFilter } from "@callout/shared";
 import { prisma } from "../lib/prisma.js";
 
 const noteBodySchema = z.object({ note: z.string().max(280) });
+
+const simularBodySchema = z.object({
+  mapId: z.string().min(1),
+  userIds: z.array(z.string().min(1)).length(5),
+});
 
 const settingsBodySchema = z.object({
   funcoes: z.array(z.enum(["controlador", "duelista", "iniciador", "sentinela", "flex"])).min(1).max(MAX_FUNCOES),
@@ -309,6 +315,23 @@ export async function equipeRoutes(app: FastifyInstance) {
       Number.isFinite(pageNumber) && pageNumber > 0 ? pageNumber : 1,
     );
     if (!result) return reply.code(404).send({ error: "Nenhuma equipe encontrada." });
+    return result;
+  });
+
+  // Modal "Simular equipe" — sugestão de composição de agentes pra um mapa
+  // e um grupo específico de 5 jogadores (ver equipeSimulacao.ts). Sem
+  // persistência, cacheado em memória por 15min.
+  app.post("/equipe/painel/simular", { preHandler: requireAuth }, async (request, reply) => {
+    const equipeId = await getUserEquipeId(request.user!.id);
+    if (!equipeId) return reply.code(404).send({ error: "Você ainda não tem uma equipe." });
+
+    const parsed = simularBodySchema.safeParse(request.body);
+    if (!parsed.success) {
+      return reply.code(400).send({ error: parsed.error.issues[0]?.message ?? "Dado inválido — selecione o mapa e os 5 jogadores." });
+    }
+
+    const result = await buildSimulacao(equipeId, parsed.data.mapId, parsed.data.userIds);
+    if ("error" in result) return reply.code(400).send(result);
     return result;
   });
 }
