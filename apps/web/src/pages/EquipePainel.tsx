@@ -1,351 +1,177 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useOutletContext } from 'react-router-dom';
-import { ArrowLeft, ChevronRight, History, TrendingDown, TrendingUp } from 'lucide-react';
-import { MIN_TEAM_MATCH_PLAYERS, type BestAgentComposition, type LineupCombo, type LineupComboMatch, type EquipeAgentePerformance } from '@callout/shared';
+import { ArrowLeft, History } from 'lucide-react';
+import type { MatchCountFilter, RecentFormInsights, RrHistoryPoint, RrHistoryResponse, SeasonMatchesPage, SeasonOverview } from '@callout/shared';
 import type { OutletContext } from '../components/AppShell';
 import { LoadingFill } from '../components/Spinner';
-import { cardStyle, WIN, LOSS, DRAW, rateBarColor, plural, RateBlock, RankingBlock, type RankingRow } from '../components/statsPrimitives';
-import { AgentAvatar } from '../components/AgentAvatar';
+import { SeasonOverviewSection } from '../components/SeasonOverviewSection';
+import { MatchCountFilterSelect, SeasonMapFilterSelect, SeasonAgentFilterSelect, SeasonModoFilterSelect } from '../components/SeasonFilters';
+import { Select } from '../components/Select';
+import { cardStyle, plural } from '../components/statsPrimitives';
+import { formatPlaytime } from '../lib/seasonFormat';
+import { apiFetch } from '../lib/api';
 
-// Altura fixa dos 4 cards médios (Variações de equipe, Destaques da equipe,
-// Em quais mapas a equipe ganha, Melhores agentes da equipe) — pra ficarem
-// todos do mesmo tamanho independente de quanto conteúdo cada um tem. O que
-// não couber rola dentro do próprio card (título/cabeçalho de coluna
-// continuam fixos, só a lista rola).
-const MEDIUM_CARD_HEIGHT = 320;
+const FILTER_STYLE: React.CSSProperties = { width: 'auto', height: 40, padding: '0 14px', borderRadius: 9, fontSize: 12.5, fontWeight: 600 };
 
-function PlayerInitials({ name, size }: { name: string; size: number }) {
+// Mesmo filtro de membro do painel individual (MemberFilterSelect em
+// SeasonFilters.tsx), mas o padrão aqui é "Todos" (média da equipe
+// inteira), não "Você" -- e a própria pessoa aparece na lista junto com o
+// resto do time, já que "sem filtro" não é mais "meus dados", é "todo
+// mundo". Por isso um componente à parte em vez de reusar aquele.
+function TeamMemberFilterSelect({
+  equipe,
+  selectedMemberId,
+  setSelectedMemberId,
+}: {
+  equipe: OutletContext['equipe'];
+  selectedMemberId: string | null;
+  setSelectedMemberId: (id: string | null) => void;
+}) {
+  const options = (equipe?.members ?? []).filter((m) => m.hasRiotLinked);
+  if (options.length === 0) return null;
+
   return (
-    <div
-      title={name}
-      style={{
-        width: size,
-        height: size,
-        borderRadius: 7,
-        flex: 'none',
-        background: 'var(--avatar-bg)',
-        border: '1px solid var(--surface-border)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        fontSize: 9,
-        fontWeight: 700,
-        color: 'var(--text-muted)',
-      }}
-    >
-      {name.slice(0, 2).toUpperCase()}
-    </div>
+    <Select
+      value={selectedMemberId ?? 'all'}
+      onChange={(v) => setSelectedMemberId(v === 'all' ? null : v)}
+      options={[{ value: 'all', label: 'Todos' }, ...options.map((m) => ({ value: m.userId, label: m.isSelf ? 'Você' : m.name }))]}
+      title="Ver a equipe inteira ou um membro específico"
+      style={FILTER_STYLE}
+    />
   );
 }
 
-function ResultIcon({ isWin }: { isWin: boolean }) {
-  const Icon = isWin ? TrendingUp : TrendingDown;
-  return <Icon size={13} strokeWidth={2.5} style={{ flex: 'none', color: isWin ? WIN : LOSS }} />;
-}
-
-function KpiTile({ label, value, sub }: { label: string; value: string; sub: string }) {
-  return (
-    <div style={{ ...cardStyle, padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
-      <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-3)' }}>{label}</span>
-      <span style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 26, letterSpacing: '-.02em', lineHeight: 1.15 }}>{value}</span>
-      <div style={{ borderTop: '1px solid var(--divider)', paddingTop: 8 }}>
-        <span style={{ fontSize: 11.5, lineHeight: 1.35, color: 'var(--text-dim)' }}>{sub}</span>
-      </div>
-    </div>
-  );
-}
-
-// Mesmo formato do KpiTile, mas o "valor" é a fileira de ícones dos 5
-// agentes em vez de texto — não tem um número único que resuma "melhor
-// composição de agentes" do jeito que resume "melhor mapa".
-function AgentComboKpiTile({ compo }: { compo: BestAgentComposition | null }) {
-  return (
-    <div style={{ ...cardStyle, padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
-      <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-3)' }}>Melhor composição de agentes</span>
-      {compo ? (
-        <div style={{ display: 'flex', gap: 5 }}>
-          {compo.agents.map((agent, i) => (
-            <AgentAvatar key={`${agent}-${i}`} agent={agent} size={32} />
-          ))}
-        </div>
-      ) : (
-        <span style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 26 }}>—</span>
-      )}
-      <div style={{ borderTop: '1px solid var(--divider)', paddingTop: 8 }}>
-        <span style={{ fontSize: 11.5, lineHeight: 1.35, color: 'var(--text-dim)' }}>
-          {compo
-            ? compo.isFallback
-              ? `Última vitória da equipe com essa composição — ${compo.playedAtLabel}.`
-              : `${plural(compo.wins, 'vitória')} em ${plural(compo.total, 'partida')} com essa composição.`
-            : 'Ainda sem vitórias registradas.'}
-        </span>
-      </div>
-    </div>
-  );
-}
-
-// Iniciais de cada jogador da formação (hover mostra o nome completo) —
-// quem são, não "quem falta", e sem ordenar por winrate: "variações de
-// equipe" é sobre o que aconteceu, não um ranking de qual formação é
-// "melhor" (isso soaria como "a equipe rende mais sem Fulano"). Ordenado
-// por quantas vezes cada formação jogou.
-const LINEUP_COLUMNS = '16px 1fr 74px 74px 56px 50px 66px';
-
-function comboResultColor(result: LineupComboMatch['result']): string {
-  return result === 'V' ? WIN : result === 'D' ? LOSS : DRAW;
-}
-
-// Linha de uma partida específica dentro de uma formação expandida — sem
-// legenda, só V/D/E, mapa, placar e os agentes daquela partida (que podem
-// variar partida a partida, diferente do agente "mais jogado" da linha
-// principal).
-function ComboMatchRow({ m }: { m: LineupComboMatch }) {
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 0 7px 24px', borderTop: '1px solid var(--divider)' }}>
-      <span style={{ width: 14, flex: 'none', fontSize: 10.5, fontWeight: 700, textAlign: 'center', color: comboResultColor(m.result) }}>{m.result}</span>
-      <span style={{ fontSize: 12, color: 'var(--text-3)', whiteSpace: 'nowrap' }}>{m.map}</span>
-      <span style={{ fontSize: 12, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{m.score}</span>
-      <div style={{ display: 'flex', gap: 3, marginLeft: 'auto', flex: 'none' }}>
-        {m.agents.map((a) => (
-          <AgentAvatar key={a.userId} agent={a.agent} size={20} title={a.name} />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-// Linha principal de uma formação — clicável, expande pra listar as
-// partidas específicas dessa formação (ComboMatchRow acima).
-function ComboRow({ combo }: { combo: LineupCombo }) {
-  const [expanded, setExpanded] = useState(false);
-  const otRate = combo.total ? Math.round(((combo.overtimeWins + combo.overtimeLosses) / combo.total) * 100) : 0;
-
-  return (
-    <div style={{ borderTop: '1px solid var(--divider)' }}>
-      <button
-        onClick={() => setExpanded((v) => !v)}
-        style={{
-          width: '100%',
-          display: 'grid',
-          gridTemplateColumns: LINEUP_COLUMNS,
-          gap: 8,
-          alignItems: 'center',
-          padding: '9px 0',
-          background: 'none',
-          border: 'none',
-          cursor: 'pointer',
-          textAlign: 'left',
-          font: 'inherit',
-          color: 'inherit',
-        }}
-      >
-        <ChevronRight size={13} strokeWidth={2} style={{ flex: 'none', color: 'var(--text-faint)', transform: expanded ? 'rotate(90deg)' : 'none', transition: 'transform .15s ease' }} />
-        <div style={{ display: 'flex', gap: 4 }}>
-          {combo.members.map((m) => (
-            <PlayerInitials key={m.userId} name={m.name} size={26} />
-          ))}
-        </div>
-        <span style={{ fontSize: 12.5, fontWeight: 600, color: WIN, textAlign: 'right', whiteSpace: 'nowrap' }}>
-          {combo.wins}
-          {combo.overtimeWins > 0 && (
-            <span style={{ fontWeight: 400, color: 'var(--text-faint)' }}>
-              {' ('}
-              <span style={{ fontWeight: 700, color: WIN }}>{combo.overtimeWins}</span>OT)
-            </span>
-          )}
-        </span>
-        <span style={{ fontSize: 12.5, fontWeight: 600, color: LOSS, textAlign: 'right', whiteSpace: 'nowrap' }}>
-          {combo.losses}
-          {combo.overtimeLosses > 0 && (
-            <span style={{ fontWeight: 400, color: 'var(--text-faint)' }}>
-              {' ('}
-              <span style={{ fontWeight: 700, color: LOSS }}>{combo.overtimeLosses}</span>OT)
-            </span>
-          )}
-        </span>
-        <span style={{ fontSize: 12.5, color: 'var(--text-muted)', textAlign: 'right' }}>{combo.draws}</span>
-        <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--text-3)', textAlign: 'right' }}>{combo.winratePercent}%</span>
-        <span style={{ fontSize: 12.5, color: 'var(--text-muted)', textAlign: 'right' }}>{otRate}%</span>
-      </button>
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateRows: expanded ? '1fr' : '0fr',
-          opacity: expanded ? 1 : 0,
-          transition: 'grid-template-rows .28s ease, opacity .22s ease',
-        }}
-      >
-        <div style={{ overflow: 'hidden', minHeight: 0 }}>{combo.matches.map((m) => <ComboMatchRow key={m.matchId} m={m} />)}</div>
-      </div>
-    </div>
-  );
-}
-
-function LineupVariations({ combos }: { combos: LineupCombo[] }) {
-  return (
-    <div style={{ ...cardStyle, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 11, height: MEDIUM_CARD_HEIGHT }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
-        <div>
-          <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 15 }}>Variações de equipe - Jogadores</div>
-          <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 3 }}>Formações de 5 jogadores diferentes nas partidas da equipe</div>
-        </div>
-        <span style={{ fontSize: 10.5, color: 'var(--text-faint)', whiteSpace: 'nowrap' }}>OT = overtime</span>
-      </div>
-      {combos.length === 0 ? (
-        <div style={{ fontSize: 12.5, color: 'var(--text-faint)' }}>Sem dados ainda.</div>
-      ) : (
-        <div className="scroll-x-mobile" style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
-          <div style={{ display: 'grid', gridTemplateColumns: LINEUP_COLUMNS, gap: 8, padding: '0 0 6px', fontSize: 9.5, letterSpacing: '.08em', color: 'var(--text-faint)' }}>
-            <span />
-            <span>COMPOSIÇÃO</span>
-            <span style={{ textAlign: 'right' }}>VITÓRIAS</span>
-            <span style={{ textAlign: 'right' }}>DERROTAS</span>
-            <span style={{ textAlign: 'right' }}>EMPATE</span>
-            <span style={{ textAlign: 'right' }}>TAXA</span>
-            <span style={{ textAlign: 'right' }}>TAXA OT</span>
-          </div>
-          <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
-            {combos.map((c) => (
-              <ComboRow key={c.comboKey} combo={c} />
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// Kills/assistências/first bloods são média por partida jogada com o
-// agente (mesma base do impacto/ACS) — total puro premiaria só quem foi
-// mais pickado, não quem rendeu mais quando jogado.
-function BestAgentsTable({ agents }: { agents: EquipeAgentePerformance[] }) {
-  return (
-    <div style={{ ...cardStyle, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 11, height: MEDIUM_CARD_HEIGHT }}>
-      <div>
-        <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 15 }}>Melhores agentes da equipe</div>
-        <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 3 }}>Kills, assistências e first bloods são média por partida com o agente</div>
-      </div>
-      {agents.length === 0 ? (
-        <div style={{ fontSize: 12.5, color: 'var(--text-faint)' }}>Sem dados ainda.</div>
-      ) : (
-        <div className="scroll-x-mobile" style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 46px 52px 36px 58px 56px', gap: 8, padding: '0 0 6px', fontSize: 9.5, letterSpacing: '.08em', color: 'var(--text-faint)' }}>
-            <span>AGENTE</span>
-            <span style={{ textAlign: 'right' }}>KILLS</span>
-            <span style={{ textAlign: 'right' }}>ASSIST</span>
-            <span style={{ textAlign: 'right' }}>FB</span>
-            <span style={{ textAlign: 'right' }}>IMPACTO</span>
-            <span style={{ textAlign: 'right' }}>PARTIDAS</span>
-          </div>
-          <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
-            {agents.map((a) => (
-              <div
-                key={a.agent}
-                style={{ display: 'grid', gridTemplateColumns: '1fr 46px 52px 36px 58px 56px', gap: 8, alignItems: 'center', padding: '8px 0', borderTop: '1px solid var(--divider)' }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
-                  <AgentAvatar agent={a.agent} size={24} />
-                  <span style={{ fontSize: 13, color: 'var(--text-3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.agent}</span>
-                </div>
-                <span style={{ fontSize: 12.5, color: 'var(--text-2)', textAlign: 'right' }}>{a.kills}</span>
-                <span style={{ fontSize: 12.5, color: 'var(--text-2)', textAlign: 'right' }}>{a.assists}</span>
-                <span style={{ fontSize: 12.5, color: 'var(--text-2)', textAlign: 'right' }}>{a.firstBloods}</span>
-                <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--text-3)', textAlign: 'right' }}>{a.impact}</span>
-                <span style={{ fontSize: 12.5, color: 'var(--text-muted)', textAlign: 'right' }}>{a.picks}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function DestaquesDaEquipe({ insights }: { insights: string[] }) {
-  return (
-    <div style={{ ...cardStyle, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 11, height: MEDIUM_CARD_HEIGHT }}>
-      <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 15 }}>Destaques da equipe</div>
-      {insights.length === 0 ? (
-        <div style={{ fontSize: 12.5, color: 'var(--text-faint)' }}>Sem destaques ainda.</div>
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flex: 1, minHeight: 0, overflowY: 'auto' }}>
-          {insights.map((text, i) => (
-            <div key={i} style={{ display: 'flex', gap: 8, fontSize: 12.5, color: 'var(--text-dim)', lineHeight: 1.4 }}>
-              <span style={{ color: 'var(--text-faint)' }}>•</span>
-              <span>{text}</span>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
+// Painel da equipe -- praticamente idêntico ao painel individual (mesmos
+// cards/filtros/design, ver SeasonOverviewSection). Sem filtro de membro,
+// cada número é a média de todos os jogadores da equipe nas partidas que
+// jogaram juntos (>=5 membros do mesmo lado -- ver equipeSeasonOverview.ts
+// no back). Escolhendo um membro específico (mesmo MemberFilterSelect do
+// painel individual), a tela troca pra reusar a rota individual de "ver
+// painel de outro membro" (/dashboard/season?userId=) que já existe --
+// vira o painel de UMA pessoa só, com título "Painel da equipe (Fulano)" e
+// RR de volta (RR é individual, só faz sentido nesse modo).
+//
+// Estado local (não no appData.ts compartilhado, de propósito) -- só essa
+// página usa esses dados, e assim não infla o contexto global com mais um
+// conjunto inteiro de filtros/fetches que o resto do app não precisa.
+//
+// Os cards antigos de ranking (ACS/MVP/assistências/clutches/etc.),
+// variações de equipe e melhor composição de agentes saíram da tela, mas
+// o back que já calculava esses dados (buildEquipePainel) continua intacto
+// -- só não tá sendo chamado por essa página agora.
 export function EquipePainel() {
   const navigate = useNavigate();
-  const { equipe, equipePainel: data, equipePainelError: error, equipePainelLoading: loading, loadEquipePainel } = useOutletContext<OutletContext>();
+  const { equipe } = useOutletContext<OutletContext>();
+
+  const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
+  const [matchCountFilter, setMatchCountFilter] = useState<MatchCountFilter>(20);
+  const [mapFilter, setMapFilter] = useState<string | null>(null);
+  const [agentFilter, setAgentFilter] = useState<string | null>(null);
+  const [modoFilter, setModoFilterState] = useState<string | null>(null);
+  const [matchesPageNumber, setMatchesPageNumber] = useState(1);
+
+  // Trocar o modo também volta a janela de partidas (Todas/20/7) pro padrão
+  // (20) -- combinar "Todas" (até 150) com um modo filtrado (ex.: Premier,
+  // bem mais raro) não tem necessidade nenhuma na prática e só deixa a
+  // query mais pesada à toa.
+  const setModoFilter = useCallback((modo: string | null) => {
+    setModoFilterState(modo);
+    setMatchCountFilter(20);
+  }, []);
+
+  const [overview, setOverview] = useState<SeasonOverview | null>(null);
+  const [overviewLoading, setOverviewLoading] = useState(true);
+  const [overviewError, setOverviewError] = useState<string | null>(null);
+
+  const [matchesPage, setMatchesPage] = useState<SeasonMatchesPage | null>(null);
+  const [matchesLoading, setMatchesLoading] = useState(true);
+  const [matchesError, setMatchesError] = useState<string | null>(null);
+
+  const [rr, setRr] = useState<RrHistoryResponse | null>(null);
+  const [rrLoading, setRrLoading] = useState(false);
+
+  const selectedMember = selectedMemberId ? (equipe?.members.find((m) => m.userId === selectedMemberId) ?? null) : null;
+
+  const loadOverview = useCallback(async () => {
+    setOverviewLoading(true);
+    setOverviewError(null);
+    try {
+      const params = new URLSearchParams({ matches: String(matchCountFilter) });
+      if (mapFilter) params.set('mapId', mapFilter);
+      if (agentFilter) params.set('agent', agentFilter);
+      if (modoFilter) params.set('modo', modoFilter);
+      if (selectedMemberId) params.set('userId', selectedMemberId);
+      const path = selectedMemberId ? '/dashboard/season' : '/equipe/painel/season';
+      setOverview(await apiFetch<SeasonOverview>(`${path}?${params}`));
+    } catch {
+      setOverviewError('Não deu pra carregar o painel. Tenta recarregar a página.');
+    } finally {
+      setOverviewLoading(false);
+    }
+  }, [matchCountFilter, mapFilter, agentFilter, modoFilter, selectedMemberId]);
+
+  const loadMatches = useCallback(async () => {
+    setMatchesLoading(true);
+    setMatchesError(null);
+    try {
+      const params = new URLSearchParams({ page: String(matchesPageNumber) });
+      if (mapFilter) params.set('mapId', mapFilter);
+      if (agentFilter) params.set('agent', agentFilter);
+      if (modoFilter) params.set('modo', modoFilter);
+      if (selectedMemberId) params.set('userId', selectedMemberId);
+      const path = selectedMemberId ? '/dashboard/season/matches' : '/equipe/painel/season/matches';
+      setMatchesPage(await apiFetch<SeasonMatchesPage>(`${path}?${params}`));
+    } catch {
+      setMatchesError('Não deu pra carregar as partidas.');
+    } finally {
+      setMatchesLoading(false);
+    }
+  }, [matchesPageNumber, mapFilter, agentFilter, modoFilter, selectedMemberId]);
+
+  // RR só existe pra uma pessoa (não pra "a equipe") -- só busca quando um
+  // membro específico tá selecionado, e limpa quando volta pra visão geral.
+  const loadRr = useCallback(async () => {
+    if (!selectedMemberId) {
+      setRr(null);
+      return;
+    }
+    setRrLoading(true);
+    try {
+      const params = new URLSearchParams({ matches: String(matchCountFilter), userId: selectedMemberId });
+      if (mapFilter) params.set('mapId', mapFilter);
+      if (modoFilter) params.set('modo', modoFilter);
+      setRr(await apiFetch<RrHistoryResponse>(`/dashboard/rr-history?${params}`));
+    } catch {
+      setRr(null);
+    } finally {
+      setRrLoading(false);
+    }
+  }, [selectedMemberId, matchCountFilter, mapFilter, modoFilter]);
 
   useEffect(() => {
-    if (data === null && !loading) loadEquipePainel();
-  }, [data, loading, loadEquipePainel]);
+    loadOverview();
+  }, [loadOverview]);
 
-  // Maior taxa de vitória, sem piso de amostra — mapWinrates já vem
-  // ordenado desc por winratePercent, então é só pegar o primeiro (mesmo
-  // que seja 1 vitória em 1 partida só).
-  const bestMap = data?.mapWinrates[0] ?? null;
+  useEffect(() => {
+    loadMatches();
+  }, [loadMatches]);
 
-  const acsRows: RankingRow[] = (data?.acsRanking ?? []).map((r) => ({ key: r.userId, name: r.name, value: String(r.value), caption: `(${plural(r.matchesPlayed, 'partida')})` }));
-  const mvpRows: RankingRow[] = (data?.mvpRanking ?? []).map((r) => ({
-    key: r.userId,
-    name: r.name,
-    value: `${r.value} ${r.value === 1 ? 'vez' : 'vezes'}`,
-    caption: `(${plural(r.matchesPlayed, 'partida')})`,
-  }));
-  const assistRows: RankingRow[] = (data?.assistRanking ?? []).map((r) => ({
-    key: r.userId,
-    name: r.name,
-    value: String(r.value),
-    caption: `(${plural(r.matchesPlayed, 'partida')})`,
-  }));
-  const clutchRows: RankingRow[] = (data?.clutchRanking ?? []).map((r) => ({
-    key: r.userId,
-    name: r.name,
-    value: `${r.clutchesWon} de ${r.clutchesPlayed}`,
-    caption: `(${plural(r.matchesPlayed, 'partida')})`,
-  }));
-  const firstBloodRows: RankingRow[] = (data?.firstBloodRanking ?? []).map((r) => ({
-    key: r.userId,
-    name: r.name,
-    value: String(r.value),
-    caption: `(${plural(r.matchesPlayed, 'partida')})`,
-  }));
-  const firstDeathRows: RankingRow[] = (data?.firstDeathRanking ?? []).map((r) => ({
-    key: r.userId,
-    name: r.name,
-    value: String(r.value),
-    caption: `(${plural(r.matchesPlayed, 'partida')})`,
-  }));
-  const agentRows: RankingRow[] = (data?.mostPickedAgents ?? []).map((a) => ({ key: a.agent, name: a.agent, value: plural(a.count, 'pick'), dot: a.color }));
+  useEffect(() => {
+    loadRr();
+  }, [loadRr]);
 
-  const insights: string[] = [];
-  if (data) {
-    if (data.acsRanking[0]) insights.push(`${data.acsRanking[0].name} lidera o ranking de ACS da equipe, com ${data.acsRanking[0].value} de média.`);
-    if (data.mvpRanking[0] && data.mvpRanking[0].value > 0) {
-      insights.push(`${data.mvpRanking[0].name} foi MVP em ${plural(data.mvpRanking[0].value, 'partida')} da equipe.`);
-    }
-    if (data.assistRanking[0]) insights.push(`${data.assistRanking[0].name} lidera em assistências, com ${data.assistRanking[0].value} no total.`);
-    if (data.clutchRanking[0] && data.clutchRanking[0].clutchesWon > 0) {
-      insights.push(`${data.clutchRanking[0].name} lidera em clutches (${data.clutchRanking[0].clutchesWon} de ${data.clutchRanking[0].clutchesPlayed}).`);
-    }
-    if (data.firstBloodRanking[0]) insights.push(`${data.firstBloodRanking[0].name} lidera em first bloods, com ${data.firstBloodRanking[0].value}.`);
-    if (data.firstDeathRanking[0]) insights.push(`${data.firstDeathRanking[0].name} é quem mais morre primeiro nos rounds, ${data.firstDeathRanking[0].value} vezes.`);
-    if (data.biggestWin) insights.push(`Maior goleada: ${data.biggestWin.score} no ${data.biggestWin.map} (${data.biggestWin.playedAtLabel}).`);
-    if (data.closestMatch) insights.push(`Partida mais apertada: ${data.closestMatch.score} no ${data.closestMatch.map} (${data.closestMatch.playedAtLabel}).`);
-  }
+  // Filtro novo (mapa/agente/modo/membro) reseta a paginação da lista de
+  // partidas -- mesmo comportamento do painel individual (appData.ts).
+  useEffect(() => {
+    setMatchesPageNumber(1);
+  }, [mapFilter, agentFilter, modoFilter, selectedMemberId]);
+
+  const rrHistory: RrHistoryPoint[] = rr?.points ?? [];
+  const rrFormInsights: RecentFormInsights | null = rr?.formInsights ?? null;
 
   return (
     <div style={{ padding: 26, display: 'flex', flexDirection: 'column', gap: 16 }}>
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', alignItems: 'flex-end', gap: 20, flexWrap: 'wrap' }}>
         <div>
           <button
             onClick={() => navigate('/equipe')}
@@ -354,125 +180,58 @@ export function EquipePainel() {
             <ArrowLeft size={14} strokeWidth={1.75} />
             Voltar pra equipe
           </button>
-          <h1 style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 700, fontSize: 32, letterSpacing: '-.025em', margin: 0 }}>Painel da equipe</h1>
+          <h1 style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 700, fontSize: 34, letterSpacing: '-.025em', margin: 0 }}>
+            Painel da equipe{selectedMember ? ` (${selectedMember.name})` : ''}
+          </h1>
           <div style={{ fontSize: 14, color: 'var(--text-muted)', marginTop: 6 }}>
-            {data
-              ? `${plural(data.qualifyingMatchCount, 'partida')} juntos · ${data.wins}V–${data.losses}D · ${data.winratePercent}%`
-              : `${equipe ? equipe.name : ''} · partidas com pelo menos ${MIN_TEAM_MATCH_PLAYERS} membros da equipe juntos`}
+            {overview
+              ? selectedMember
+                ? `${plural(overview.matchesCount, 'partida')} · ${formatPlaytime(overview.playtimeMs)} jogadas · ${overview.wins}V–${overview.losses}D`
+                : `${plural(overview.matchesCount, 'partida')} juntos · ${overview.wins}V–${overview.losses}D · ${overview.winratePercent}%`
+              : `${equipe ? equipe.name : ''} · partidas com pelo menos 5 membros da equipe juntos`}
           </div>
         </div>
-        <button className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: 9 }} onClick={() => navigate('/equipe/partidas')}>
-          <History size={15} strokeWidth={1.75} />
-          Histórico de partidas
-        </button>
+        <div className="dashboard-header-actions">
+          <TeamMemberFilterSelect equipe={equipe} selectedMemberId={selectedMemberId} setSelectedMemberId={setSelectedMemberId} />
+          {overview && (
+            <>
+              <SeasonAgentFilterSelect topAgents={overview.topAgents} agentFilter={agentFilter} setAgentFilter={setAgentFilter} />
+              <SeasonMapFilterSelect topMaps={overview.topMaps} mapFilter={mapFilter} setMapFilter={setMapFilter} />
+              <SeasonModoFilterSelect availableModos={overview.availableModos} modoFilter={modoFilter} setModoFilter={setModoFilter} />
+            </>
+          )}
+          <MatchCountFilterSelect matchCountFilter={matchCountFilter} setMatchCountFilter={setMatchCountFilter} />
+          <div className="dashboard-action-buttons">
+            <button className="btn-secondary" style={{ minHeight: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 17px', gap: 9 }} onClick={() => navigate('/equipe/partidas')}>
+              <History size={15} strokeWidth={1.75} />
+              Histórico de partidas
+            </button>
+          </div>
+        </div>
       </div>
 
-      {error ? (
-        <div style={{ ...cardStyle, padding: 22, display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'flex-start' }}>
-          <div style={{ fontSize: 14, color: 'var(--text-3)' }}>{error}</div>
-          <button className="btn-secondary" onClick={loadEquipePainel}>
-            Tentar de novo
-          </button>
-        </div>
-      ) : data === null ? (
+      {overviewLoading ? (
         <LoadingFill />
-      ) : data.qualifyingMatchCount === 0 ? (
-        <div style={{ ...cardStyle, padding: 40, textAlign: 'center', color: 'var(--text-muted)', fontSize: 14 }}>
-          Nenhuma partida ainda com {MIN_TEAM_MATCH_PLAYERS}+ membros da equipe juntos.
+      ) : overviewError && !overview ? (
+        <div style={{ ...cardStyle, padding: 22, display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'flex-start' }}>
+          <div style={{ fontSize: 14, color: 'var(--text-3)' }}>{overviewError}</div>
         </div>
       ) : (
-        <>
-          <div className="grid-responsive-4">
-            <KpiTile label="Vitórias e derrotas" value={`${data.wins}V–${data.losses}D`} sub={`${data.winratePercent}% de aproveitamento em ${plural(data.qualifyingMatchCount, 'partida')}.`} />
-            <KpiTile
-              label="Melhor mapa"
-              value={bestMap ? bestMap.map : '—'}
-              sub={bestMap ? `${plural(bestMap.total, 'partida')} jogada${bestMap.total === 1 ? '' : 's'} e ${plural(bestMap.wins, 'vitória')}.` : 'Ainda sem partidas.'}
-            />
-            <KpiTile
-              label="Sequência atual"
-              value={data.currentStreak.type ? plural(data.currentStreak.count, data.currentStreak.type === 'V' ? 'vitória' : 'derrota') : '—'}
-              sub={`Melhor sequência: ${plural(data.bestWinStreak, 'vitória')} seguidas.`}
-            />
-            <AgentComboKpiTile compo={data.bestAgentComposition} />
-          </div>
-
-          {/* 4 cards médios, 2 colunas x 2 linhas */}
-          <div className="grid-responsive-2">
-            <LineupVariations combos={data.lineupCombos} />
-            <BestAgentsTable agents={data.bestAgents} />
-            <RateBlock
-              title="Em quais mapas a equipe ganha"
-              sub="% de partidas vencidas em cada mapa"
-              rows={data.mapWinrates.map((m) => ({ key: m.map, name: m.map, wins: m.wins, total: m.total }))}
-              colorFor={rateBarColor}
-              maxHeight={MEDIUM_CARD_HEIGHT}
-            />
-            <DestaquesDaEquipe insights={insights} />
-          </div>
-
-          {/* 8 cards pequenos, 4 colunas x 2 linhas */}
-          <div className="grid-responsive-4">
-            <RankingBlock title="Ranking de ACS" sub="Média de ACS nas partidas da equipe" rows={acsRows} />
-            <RankingBlock title="Ranking de MVP" sub="Maior ACS da equipe na partida" rows={mvpRows} />
-            <RankingBlock title="Ranking de assistências" sub="Total de assistências nas partidas da equipe" rows={assistRows} />
-            <RankingBlock title="Ranking de clutches" sub="Rounds ganhos sozinho contra a vantagem numérica" rows={clutchRows} />
-            <RankingBlock title="Ranking de first bloods" sub="Primeira eliminação do round" rows={firstBloodRows} />
-            <RankingBlock title="Ranking de primeira morte" sub="Primeiro a morrer no round" rows={firstDeathRows} />
-            <RankingBlock title="Agentes mais pickados" sub="Nas últimas partidas da equipe" rows={agentRows} />
-            <div style={{ ...cardStyle, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 14 }}>
-              <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 15 }}>Destaques de placar</div>
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <ResultIcon isWin />
-                  <span style={{ fontSize: 11, letterSpacing: '.08em', color: 'var(--text-faint)' }}>MAIOR PLACAR APLICADO</span>
-                </div>
-                {data.biggestWin ? (
-                  <>
-                    <div style={{ fontSize: 15, fontWeight: 600, color: WIN, marginTop: 3 }}>{data.biggestWin.score}</div>
-                    <div style={{ fontSize: 12, color: 'var(--text-dim)' }}>
-                      {data.biggestWin.map} · {data.biggestWin.playedAtLabel}
-                    </div>
-                  </>
-                ) : (
-                  <div style={{ fontSize: 12.5, color: 'var(--text-faint)', marginTop: 3 }}>Sem vitórias ainda.</div>
-                )}
-              </div>
-              <div style={{ borderTop: '1px solid var(--divider)', paddingTop: 12 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <ResultIcon isWin={(data.closestMatch?.marginRounds ?? 0) >= 0} />
-                  <span style={{ fontSize: 11, letterSpacing: '.08em', color: 'var(--text-faint)' }}>PARTIDA MAIS APERTADA</span>
-                </div>
-                {data.closestMatch ? (
-                  <>
-                    <div style={{ fontSize: 15, fontWeight: 600, color: data.closestMatch.marginRounds >= 0 ? WIN : LOSS, marginTop: 3 }}>{data.closestMatch.score}</div>
-                    <div style={{ fontSize: 12, color: 'var(--text-dim)' }}>
-                      {data.closestMatch.map} · {data.closestMatch.playedAtLabel}
-                    </div>
-                  </>
-                ) : (
-                  <div style={{ fontSize: 12.5, color: 'var(--text-faint)', marginTop: 3 }}>Sem dados ainda.</div>
-                )}
-              </div>
-              <div style={{ borderTop: '1px solid var(--divider)', paddingTop: 12 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <ResultIcon isWin={false} />
-                  <span style={{ fontSize: 11, letterSpacing: '.08em', color: 'var(--text-faint)' }}>MAIOR PLACAR SOFRIDO</span>
-                </div>
-                {data.worstLoss ? (
-                  <>
-                    <div style={{ fontSize: 15, fontWeight: 600, color: LOSS, marginTop: 3 }}>{data.worstLoss.score}</div>
-                    <div style={{ fontSize: 12, color: 'var(--text-dim)' }}>
-                      {data.worstLoss.map} · {data.worstLoss.playedAtLabel}
-                    </div>
-                  </>
-                ) : (
-                  <div style={{ fontSize: 12.5, color: 'var(--text-faint)', marginTop: 3 }}>Sem derrotas ainda.</div>
-                )}
-              </div>
-            </div>
-          </div>
-        </>
+        <SeasonOverviewSection
+          data={overview}
+          loading={false}
+          error={overviewError}
+          matchesPage={matchesPage}
+          matchesLoading={matchesLoading}
+          matchesError={matchesError}
+          setMatchesPageNumber={setMatchesPageNumber}
+          rrHistory={rrHistory}
+          rrHistoryLoading={rrLoading}
+          rrFormInsights={rrFormInsights}
+          modoFilter="all"
+          subject={selectedMember?.name ?? 'a equipe'}
+          showRr={!!selectedMember}
+        />
       )}
     </div>
   );

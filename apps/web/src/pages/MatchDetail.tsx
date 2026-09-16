@@ -8,7 +8,7 @@ const cardStyle: React.CSSProperties = { borderRadius: 'var(--radius-lg)', backg
 const scoreCols = '1fr 100px 62px 54px 54px 54px 62px';
 
 function fmtKda(v: number) {
-  return v.toFixed(2);
+  return v.toFixed(1);
 }
 
 export function MatchDetail() {

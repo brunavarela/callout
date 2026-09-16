@@ -212,8 +212,13 @@ export function useAppData(user: SessionUser | null) {
     setSeasonMatchesPageNumberState(1);
   }, []);
 
+  // Trocar o modo também volta a janela de partidas (Todas/20/7) pro padrão
+  // (20) -- combinar "Todas" (até 150) com um modo filtrado (ex.: Premier,
+  // bem mais raro que Competitivo/Sem classificação) não tem necessidade
+  // nenhuma na prática e só deixa a query mais pesada à toa.
   const setSeasonModoFilter = useCallback((modo: string | null) => {
     setSeasonModoFilterState(modo);
+    setMatchCountFilterState(20);
     setSeasonMatchesPageNumberState(1);
   }, []);
 

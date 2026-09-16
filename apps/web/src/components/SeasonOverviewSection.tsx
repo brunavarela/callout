@@ -277,7 +277,7 @@ function RoleBlock({ roles, maxHeight }: { roles: SeasonOverview['roles']; maxHe
                     </div>
                     <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
                       <span style={{ fontSize: 10, letterSpacing: '.06em', color: 'var(--text-faint)' }}>KDA</span>
-                      <span style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 700, fontSize: 15 }}>{fmtNum(r.kda, 2)}</span>
+                      <span style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 700, fontSize: 15 }}>{fmtNum(r.kda, 1)}</span>
                       <span style={{ fontSize: 11, color: 'var(--text-faint)' }}>
                         {r.kills} / {r.deaths} / {r.assists}
                       </span>
@@ -544,7 +544,7 @@ function AgentBlock({ agents, agentIcons, maxHeight }: { agents: SeasonOverview[
                   </div>
                   <div className="agent-stat-grid" style={{ gap: 8, marginTop: 9 }}>
                     {[
-                      { label: 'K/D', value: fmtNum(a.kd, 2) },
+                      { label: 'K/D', value: fmtNum(a.kd, 1) },
                       { label: 'ADR', value: fmtNum(a.adr, 1) },
                       { label: 'ACS', value: fmtNum(a.acs, 1) },
                       { label: 'DDΔ', value: fmtDelta(a.ddPerRound, 0), color: a.ddPerRound >= 0 ? WIN : LOSS },
@@ -583,6 +583,7 @@ export function SeasonOverviewSection({
   rrFormInsights,
   modoFilter,
   subject = 'você',
+  showRr = true,
 }: {
   data: SeasonOverview | null;
   loading: boolean;
@@ -596,6 +597,10 @@ export function SeasonOverviewSection({
   rrFormInsights: RecentFormInsights | null;
   modoFilter: MatchModeFilter;
   subject?: string;
+  // RR é individual (a conta de cada jogador tem a própria fila/elo) -- o
+  // painel da equipe passa isso como false pra não mostrar um card de RR
+  // que nunca vai ter dado nenhum pra mostrar.
+  showRr?: boolean;
 }) {
   if (loading) return <LoadingFill />;
   if (error) return <div style={{ ...cardStyle, padding: 24, textAlign: 'center', color: 'var(--text-muted)', fontSize: 13.5 }}>{error}</div>;
@@ -614,7 +619,7 @@ export function SeasonOverviewSection({
     { label: 'ADR', value: String(data.adr), explain: 'Dano médio causado por round no período.', ratio: Math.min(1, data.adr / 300) },
     {
       label: 'K/D',
-      value: data.deaths > 0 ? fmtNum(data.kills / data.deaths, 2) : String(data.kills),
+      value: data.deaths > 0 ? fmtNum(data.kills / data.deaths, 1) : String(data.kills),
       explain: 'Abates divididos pelas mortes, no período.',
       ratio: Math.min(1, (data.deaths > 0 ? data.kills / data.deaths : data.kills) / 2.5),
     },
@@ -625,7 +630,7 @@ export function SeasonOverviewSection({
       explain: `${plural(data.wins, 'vitória')} em ${plural(data.matchesCount, 'partida')} no período.`,
       ratio: Math.min(1, data.winratePercent / 100),
     },
-    { label: 'KDA', value: fmtNum(data.kda, 2), explain: 'Abates mais assistências divididos pelas mortes, por partida em média.', ratio: Math.min(1, data.kda / 3) },
+    { label: 'KDA', value: fmtNum(data.kda, 1), explain: 'Abates mais assistências divididos pelas mortes, por partida em média.', ratio: Math.min(1, data.kda / 3) },
     { label: 'V/D', value: `${data.wins}V–${data.losses}D`, explain: 'Vitórias e derrotas somadas no período.', ratio: Math.min(1, data.winratePercent / 100) },
   ];
 
@@ -702,17 +707,19 @@ export function SeasonOverviewSection({
             mapIcons={data.mapIcons}
             agentIcons={data.agentIcons}
             setPage={setMatchesPageNumber}
-            height={SEASON_MATCHES_HEIGHT}
+            height={showRr ? SEASON_MATCHES_HEIGHT : SEASON_COL_HEIGHT}
           />
-          <RrHistoryCard
-            rrHistory={rrHistory}
-            rrHistoryLoading={rrHistoryLoading}
-            formInsights={rrFormInsights}
-            subject={subject}
-            noRankedHistory={modoFilter === 'Unrated'}
-            currentRank={data.currentRank}
-            height={SEASON_RR_HEIGHT}
-          />
+          {showRr && (
+            <RrHistoryCard
+              rrHistory={rrHistory}
+              rrHistoryLoading={rrHistoryLoading}
+              formInsights={rrFormInsights}
+              subject={subject}
+              noRankedHistory={modoFilter === 'Unrated'}
+              currentRank={data.currentRank}
+              height={SEASON_RR_HEIGHT}
+            />
+          )}
         </div>
 
         <div className="season-cards-grid">

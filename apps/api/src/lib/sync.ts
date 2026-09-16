@@ -52,7 +52,9 @@ export async function syncUserMatches(userId: string, puuid: string, region: str
     // que o `size` pedido (visto na prática: pedindo 30, vêm só ~10), e
     // avançar por um valor fixo nesse caso pularia registros no meio.
     const PAGE_REQUEST_SIZE = 30;
-    const MAX_PAGES = 3; // teto de segurança -- a HenrikDev tem rate limit apertado por chave (CONTEXT.md §5.2), poucas páginas por sync evita estourar
+    // Teto de segurança -- a HenrikDev tem rate limit apertado por chave
+    // (CONTEXT.md §5.2), poucas páginas por sync evita estourar.
+    const MAX_PAGES = 3;
     const matches: MatchV4Data[] = [];
     for (let i = 0; i < MAX_PAGES; i++) {
       let batch: MatchV4Data[];

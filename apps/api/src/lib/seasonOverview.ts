@@ -2,7 +2,7 @@ import type { AccuracyBreakdown, MapWinrate, MatchBadge, MatchCountFilter, RoleS
 import { prisma } from "./prisma.js";
 import { getMmr, getMmrHistory } from "./henrikdev.js";
 import { mapNameFrom, scoreFor, formatPlayedAt } from "./dashboard.js";
-import { matchResult, countsTowardStats } from "./match-result.js";
+import { matchResult, STATS_MODES_LIST } from "./match-result.js";
 import { loadAgentColorsByName } from "./assets.js";
 
 // Teto de partidas (de qualquer modo) lidas de uma vez — mesmo valor e
@@ -13,11 +13,14 @@ import { loadAgentColorsByName } from "./assets.js";
 // mas o teto entra do mesmo jeito por consistência e porque `allPlayers`
 // (pro DDΔ/round) escala 10x esse número. Também é o teto usado pra "Todas
 // as partidas" do filtro de contagem (ver `takeFor`).
-const MAX_SEASON_MATCHES = 150;
+// Exportado -- reusado por equipeSeasonOverview.ts (painel do time, médias
+// do time em vez de um puuid só) pra não duplicar teto/tipo de linha/mapas
+// ativos/rótulos de função entre os dois arquivos.
+export const MAX_SEASON_MATCHES = 150;
 
 // "all" pede o teto de segurança MAX_SEASON_MATCHES; 7/20 pedem exatamente
 // esse tanto (não faz sentido buscar mais do que a pessoa pediu).
-function takeFor(matchCountFilter: MatchCountFilter): number {
+export function takeFor(matchCountFilter: MatchCountFilter): number {
   return matchCountFilter === "all" ? MAX_SEASON_MATCHES : matchCountFilter;
 }
 
@@ -28,19 +31,19 @@ function takeFor(matchCountFilter: MatchCountFilter): number {
 // precisa atualizar essa lista na mão sempre que o pool mudar de novo.
 // Sem isso, o card de Mapa só mostraria os mapas que a pessoa já jogou,
 // escondendo os que ainda estão na rotação mas ela não jogou ainda.
-const ACTIVE_MAP_POOL = ["Split", "Haven", "Sunset", "Summit", "Abyss", "Lotus", "Ascent"];
+export const ACTIVE_MAP_POOL = ["Split", "Haven", "Sunset", "Summit", "Abyss", "Lotus", "Ascent"];
 
 // Mesmo padrão inglês->português usado pro resto do texto do app.
 // AgentAsset.funcao vem do `role.displayName` da valorant-api.com (ver
 // seedAgents em assets.ts), sempre em inglês.
-const ROLE_LABELS: Record<string, string> = {
+export const ROLE_LABELS: Record<string, string> = {
   Duelist: "Duelista",
   Initiator: "Iniciador",
   Controller: "Controlador",
   Sentinel: "Sentinela",
 };
 
-const rowArgs = {
+export const rowArgs = {
   select: {
     matchId: true,
     puuid: true,
@@ -69,7 +72,7 @@ const rowArgs = {
   },
 } satisfies Parameters<typeof prisma.matchPlayer.findMany>[0];
 
-type Row = Awaited<ReturnType<typeof prisma.matchPlayer.findMany<typeof rowArgs>>>[number];
+export type Row = Awaited<ReturnType<typeof prisma.matchPlayer.findMany<typeof rowArgs>>>[number];
 
 // Nota própria do callout (0-100) — não é o "Tracker Score" de outra
 // plataforma (algoritmo deles, não documentado, não é dado bruto). Combina
@@ -78,7 +81,7 @@ type Row = Awaited<ReturnType<typeof prisma.matchPlayer.findMany<typeof rowArgs>
 // K/D/ACS/DDΔ normalizados contra uma faixa "boa" de referência (não um
 // máximo teórico, pra não achatar todo mundo perto de 0). Usada tanto pro
 // agregado do ato quanto por partida (aí `resultPercent` é 0 ou 100).
-function calcularIndiceCallout(resultPercent: number, kda: number, acs: number, ddPerRound: number): number {
+export function calcularIndiceCallout(resultPercent: number, kda: number, acs: number, ddPerRound: number): number {
   const clamp01 = (n: number) => Math.max(0, Math.min(1, n));
   const kdaScore = clamp01(kda / 1.5) * 100;
   const acsScore = clamp01(acs / 280) * 100;
@@ -102,7 +105,7 @@ export async function listAvailableSeasons(): Promise<SeasonOption[]> {
   return rows.map((r) => ({ seasonId: r.seasonId!, seasonShort: r.seasonShort ?? r.seasonId! }));
 }
 
-function emptySides(): SidesBreakdown {
+export function emptySides(): SidesBreakdown {
   return {
     attack: { winratePercent: 0, wins: 0, total: 0 },
     defense: { winratePercent: 0, wins: 0, total: 0 },
@@ -239,7 +242,7 @@ async function buildTopAgents(rows: Row[]): Promise<TopAgentStat[]> {
 // pool ativo (ver ACTIVE_MAP_POOL) que a pessoa ainda não jogou nesse ato
 // entram com 0/0, pra ficar visível que o mapa está na rotação mas ainda
 // não foi jogado, em vez de simplesmente não aparecer no card.
-function buildTopMaps(rows: Row[], activeMapAssets: Array<{ id: string; nome: string }>): MapWinrate[] {
+export function buildTopMaps(rows: Row[], activeMapAssets: Array<{ id: string; nome: string }>): MapWinrate[] {
   const byMap = new Map<string, { wins: number; total: number; mapId: string | null }>();
   for (const r of rows) {
     const mapName = r.match.map?.nome ?? "—";
@@ -264,20 +267,35 @@ export async function buildSeasonOverview(
   agentNameFilter?: string,
   modoFilter?: string,
 ): Promise<SeasonOverview | null> {
-  const rows = await prisma.matchPlayer.findMany({
-    where: { puuid },
+  // Filtra por modo NA QUERY (antes do `take`) -- sem isso, "Últimas 20
+  // partidas" pegava as 20 mais recentes de QUALQUER modo primeiro, e só
+  // depois filtrava por modo; numa conta que joga muito mais Competitivo
+  // que Premier (ex.), isso deixava a janela praticamente sem partida
+  // nenhuma de Premier antes do filtro de modo ter qualquer chance de
+  // funcionar. Sem `modoFilter`, mistura só os modos com estatística de
+  // verdade (Competitivo/Sem classificação/Premier — ver countsTowardStats,
+  // ACS zerado nos outros na sincronização). Com um modo específico
+  // escolhido, mostra só esse — mesmo que normalmente não conte pra
+  // estatística (ex.: Deathmatch), já que a pessoa pediu explicitamente.
+  const modoWhere = modoFilter ? { modo: modoFilter } : { modo: { in: [...STATS_MODES_LIST] } };
+  const statRows = await prisma.matchPlayer.findMany({
+    where: { puuid, match: modoWhere },
     orderBy: { match: { startedAt: "desc" } },
     take: takeFor(matchCountFilter),
     ...rowArgs,
   });
 
-  // Sem `modoFilter`, o painel mistura só os modos com estatística de
-  // verdade (Competitivo/Sem classificação/Premier — ver countsTowardStats,
-  // ACS zerado nos outros na sincronização). Com um modo específico
-  // escolhido no seletor, mostra só esse — mesmo que normalmente não conte
-  // pra estatística (ex.: Deathmatch), já que a pessoa pediu explicitamente.
-  const statRows = modoFilter ? rows.filter((r) => r.match.modo === modoFilter) : rows.filter((r) => countsTowardStats(r.match.modo));
-  const availableModos = [...new Set(rows.map((r) => r.match.modo))];
+  // Modos disponíveis pro seletor -- consulta separada e leve (só o modo,
+  // não os campos pesados de rowArgs), sem o filtro de modo acima, senão o
+  // seletor só mostraria os modos que sobraram dentro da própria janela já
+  // filtrada por ele mesmo.
+  const availableModosRows = await prisma.matchPlayer.findMany({
+    where: { puuid },
+    orderBy: { match: { startedAt: "desc" } },
+    take: takeFor(matchCountFilter),
+    select: { accountLevel: true, match: { select: { modo: true } } },
+  });
+  const availableModos = [...new Set(availableModosRows.map((r) => r.match.modo))];
 
   let currentRank: SeasonOverview["currentRank"] = null;
   let peakRank: SeasonOverview["peakRank"] = null;
@@ -326,7 +344,7 @@ export async function buildSeasonOverview(
   if (statRows.length === 0) {
     return {
       availableModos,
-      accountLevel: rows[0]?.accountLevel ?? null,
+      accountLevel: availableModosRows[0]?.accountLevel ?? null,
       currentRank,
       peakRank,
       playtimeMs: 0,
@@ -389,7 +407,7 @@ export async function buildSeasonOverview(
   if (filteredStatRows.length === 0) {
     return {
       availableModos,
-      accountLevel: rows[0]?.accountLevel ?? null,
+      accountLevel: availableModosRows[0]?.accountLevel ?? null,
       currentRank,
       peakRank,
       playtimeMs: 0,
@@ -571,7 +589,7 @@ export async function buildSeasonOverview(
 
   return {
     availableModos,
-    accountLevel: rows[0]?.accountLevel ?? null,
+    accountLevel: availableModosRows[0]?.accountLevel ?? null,
     currentRank,
     peakRank,
     playtimeMs,
@@ -675,14 +693,16 @@ export async function buildSeasonMatchesPage(
   modoFilter?: string,
   page = 1,
 ): Promise<SeasonMatchesPage | null> {
-  const rows = await prisma.matchPlayer.findMany({
-    where: { puuid },
+  // Mesmo motivo do buildSeasonOverview acima -- filtra por modo NA QUERY,
+  // não depois de já ter pego só as 150 mais recentes de qualquer modo.
+  const modoWhere = modoFilter ? { modo: modoFilter } : { modo: { in: [...STATS_MODES_LIST] } };
+  const statRows = await prisma.matchPlayer.findMany({
+    where: { puuid, match: modoWhere },
     orderBy: { match: { startedAt: "desc" } },
     take: MAX_SEASON_MATCHES,
     ...rowArgs,
   });
 
-  const statRows = modoFilter ? rows.filter((r) => r.match.modo === modoFilter) : rows.filter((r) => countsTowardStats(r.match.modo));
   const filteredStatRows = statRows.filter(
     (r) => (!mapIdFilter || r.match.mapId === mapIdFilter) && (!agentNameFilter || r.agentName === agentNameFilter),
   );
@@ -746,9 +766,9 @@ export async function buildSeasonMatchesPage(
   return { matches, page: safePage, pageSize: MATCHES_PAGE_SIZE, total };
 }
 
-function round1(n: number): number {
+export function round1(n: number): number {
   return Math.round(n * 10) / 10;
 }
-function round2(n: number): number {
+export function round2(n: number): number {
   return Math.round(n * 100) / 100;
 }

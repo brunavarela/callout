@@ -10,7 +10,10 @@ export async function syncRoutes(app: FastifyInstance) {
     }
 
     const current = getSyncProgress(user.id);
-    if (current.state === "syncing" || recentlySynced(user.id)) {
+    if (current.state === "syncing") {
+      return reply.code(202).send(current);
+    }
+    if (recentlySynced(user.id)) {
       return reply.code(202).send(current);
     }
 

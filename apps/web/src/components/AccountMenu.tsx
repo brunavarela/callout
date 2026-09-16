@@ -7,10 +7,11 @@ import { Switch } from './Switch';
 import { ProfileModal } from './ProfileModal';
 import { ThemeModal } from './ThemeModal';
 
-function MenuItem({ icon, label, onClick }: { icon: React.ReactNode; label: string; onClick: () => void }) {
+function MenuItem({ icon, label, onClick, disabled }: { icon: React.ReactNode; label: string; onClick: () => void; disabled?: boolean }) {
   return (
     <button
       onClick={onClick}
+      disabled={disabled}
       style={{
         display: 'flex',
         alignItems: 'center',
@@ -21,7 +22,8 @@ function MenuItem({ icon, label, onClick }: { icon: React.ReactNode; label: stri
         color: 'var(--text)',
         fontSize: 13.5,
         fontWeight: 500,
-        cursor: 'pointer',
+        cursor: disabled ? 'default' : 'pointer',
+        opacity: disabled ? 0.6 : 1,
         textAlign: 'left',
       }}
       className="account-menu-item"
@@ -32,7 +34,13 @@ function MenuItem({ icon, label, onClick }: { icon: React.ReactNode; label: stri
   );
 }
 
-export function AccountMenu({ className, onClose }: { className: string; onClose: () => void }) {
+export function AccountMenu({
+  className,
+  onClose,
+}: {
+  className: string;
+  onClose: () => void;
+}) {
   const { theme, setTheme } = useTheme();
   const { user, logout, adminMode, setAdminMode } = useSession();
   const navigate = useNavigate();

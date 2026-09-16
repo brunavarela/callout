@@ -5,6 +5,8 @@ import { MAX_FUNCOES, MAX_MAIN_AGENTS } from "@callout/shared";
 import { requireAuth } from "../lib/session.js";
 import { buildEquipeOverview, buildEquipeMatches, getUserEquipeId, criarEquipe, entrarEquipePorCodigo, isEquipeAdmin } from "../lib/equipe.js";
 import { buildEquipePainel } from "../lib/equipePainel.js";
+import { buildEquipeSeasonOverview, buildEquipeSeasonMatchesPage } from "../lib/equipeSeasonOverview.js";
+import type { MatchCountFilter } from "@callout/shared";
 import { prisma } from "../lib/prisma.js";
 
 const noteBodySchema = z.object({ note: z.string().max(280) });
@@ -286,5 +288,38 @@ export async function equipeRoutes(app: FastifyInstance) {
     const summary = await buildEquipePainel(equipeId);
     if (!summary) return reply.code(404).send({ error: "Nenhuma equipe encontrada." });
     return summary;
+  });
+
+  // Painel da equipe "estilo Visão do ato" — mesmos cards/filtros do painel
+  // individual (ver /dashboard/season), mas cada número é a média de todos
+  // os jogadores da equipe nas partidas que jogaram juntos (ver
+  // equipeSeasonOverview.ts). Mesmos nomes de query param que /dashboard/season
+  // pra reusar a mesma lógica de parse no front.
+  app.get("/equipe/painel/season", { preHandler: requireAuth }, async (request, reply) => {
+    const equipeId = await getUserEquipeId(request.user!.id);
+    if (!equipeId) return reply.code(404).send({ error: "Você ainda não tem uma equipe." });
+
+    const { matches, mapId, agent, modo } = request.query as { matches?: string; mapId?: string; agent?: string; modo?: string };
+    const matchCount: MatchCountFilter = matches === "7" ? 7 : matches === "all" ? "all" : 20;
+    const overview = await buildEquipeSeasonOverview(equipeId, matchCount, mapId || undefined, agent || undefined, modo || undefined);
+    if (!overview) return reply.code(404).send({ error: "Nenhuma equipe encontrada." });
+    return overview;
+  });
+
+  app.get("/equipe/painel/season/matches", { preHandler: requireAuth }, async (request, reply) => {
+    const equipeId = await getUserEquipeId(request.user!.id);
+    if (!equipeId) return reply.code(404).send({ error: "Você ainda não tem uma equipe." });
+
+    const { mapId, agent, modo, page } = request.query as { mapId?: string; agent?: string; modo?: string; page?: string };
+    const pageNumber = Number(page);
+    const result = await buildEquipeSeasonMatchesPage(
+      equipeId,
+      mapId || undefined,
+      agent || undefined,
+      modo || undefined,
+      Number.isFinite(pageNumber) && pageNumber > 0 ? pageNumber : 1,
+    );
+    if (!result) return reply.code(404).send({ error: "Nenhuma equipe encontrada." });
+    return result;
   });
 }

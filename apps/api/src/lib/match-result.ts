@@ -18,7 +18,12 @@ export function matchResult(won: boolean, rrDelta: number | null | undefined): "
 // round — dividir por esse "round" único já inflou ACS pra milhares.
 // Partidas fora da lista continuam sincronizadas e aparecem nas listas
 // normalmente, só não contam pra nenhuma média/KPI.
-const STATS_MODES = new Set(["Competitive", "Unrated", "Premier"]);
+// Exportado como array (não só o Set) pra dar pra usar direto num `where:
+// { modo: { in: STATS_MODES_LIST } }` do Prisma -- ver seasonOverview.ts/
+// equipeSeasonOverview.ts, que filtram por modo NA QUERY (antes do `take`),
+// não depois de já ter buscado um teto de partidas de qualquer modo.
+export const STATS_MODES_LIST = ["Competitive", "Unrated", "Premier"] as const;
+const STATS_MODES = new Set<string>(STATS_MODES_LIST);
 
 export function countsTowardStats(modo: string): boolean {
   return STATS_MODES.has(modo);

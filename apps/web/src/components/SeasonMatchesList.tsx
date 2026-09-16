@@ -70,6 +70,15 @@ function parseKda(kda: string): [number, number, number] {
   return [k ?? 0, d ?? 0, a ?? 0];
 }
 
+// Some várias partidas de um dia (soma de floats, ex.: KDA médio da
+// equipe por partida) sem cair em imprecisão de ponto flutuante tipo
+// "28.200000000000003" -- mas continua mostrando número inteiro limpo
+// (sem ".0") quando o resultado já é redondo, caso do painel individual
+// (kills/deaths/assists sempre inteiros lá).
+function fmtKdaPart(n: number): string {
+  return Number.isInteger(n) ? String(n) : n.toFixed(1);
+}
+
 // Linha de resumo do dia — contagem V/D e a média das mesmas métricas que
 // cada linha de partida mostra, pra dar o "placar do dia" antes de listar
 // as partidas dele.
@@ -103,7 +112,7 @@ function DayHeaderRow({ label, matches }: { label: string; matches: SeasonMatchS
           K/D <b style={{ color: 'var(--text-3)', fontWeight: 600 }}>{kd}</b>
         </span>
         <span style={{ color: 'var(--text-2)' }}>
-          {k}/{d}/{a}
+          {fmtKdaPart(k)}/{fmtKdaPart(d)}/{fmtKdaPart(a)}
         </span>
         <span>
           DDΔ <b style={{ color: avgDd >= 0 ? WIN : LOSS, fontWeight: 600 }}>{fmtDelta(avgDd, 0)}</b>
