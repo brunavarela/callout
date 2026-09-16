@@ -29,7 +29,7 @@ export function MatchDetailPanel({ detail }: { detail: MatchDetail }) {
         </div>
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 3, alignItems: 'flex-end' }}>
           {detail.rounds.map((r) => (
-            <div key={r.number} style={{ width: 7, borderRadius: 2, height: 18, background: r.wonBySelf ? WIN : 'var(--bar-dim)' }} />
+            <div key={r.number} style={{ width: 7, borderRadius: 2, height: 18, background: r.wonBySelf ? WIN : 'var(--neg, #EF4958)' }} />
           ))}
         </div>
       </div>

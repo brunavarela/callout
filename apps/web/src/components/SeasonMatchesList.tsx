@@ -140,14 +140,12 @@ function SeasonMatchRow({
   m,
   agentIcon,
   mapIcon,
-  compact,
   expandable,
   autoExpand,
 }: {
   m: SeasonMatchSummary;
   agentIcon: string | null;
   mapIcon: string | null;
-  compact: boolean;
   expandable: boolean;
   autoExpand: boolean;
 }) {
@@ -250,25 +248,19 @@ function SeasonMatchRow({
               </span>
             ))}
           </div>
-          {!compact && (
-            <div style={{ fontSize: 10.5, color: 'var(--text-dim)', marginTop: 3 }}>
-              {m.playedAtLabel} <span style={{ color: 'var(--text-faint)' }}>· {MODO_LABELS[m.modo] ?? m.modo}</span>
-            </div>
-          )}
+          <div style={{ fontSize: 10.5, color: 'var(--text-dim)', marginTop: 3 }}>
+            {m.playedAtLabel} <span style={{ color: 'var(--text-faint)' }}>· {MODO_LABELS[m.modo] ?? m.modo}</span>
+          </div>
         </div>
 
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10, flex: 'none' }}>
           <StatCol label="PLACAR" value={m.score} bold color={m.result === 'V' ? WIN : m.result === 'D' ? LOSS : DRAW} />
 
-          {!compact && (
-            <>
-              <StatCol label="K/D" value={fmtNum(m.kdaRatio, 1)} />
-              <StatCol label="K/D/A" value={m.kda} width={62} />
-              <StatCol label="DDΔ" value={fmtDelta(m.ddPerRound, 0)} color={m.ddPerRound >= 0 ? WIN : LOSS} />
-              <StatCol label="HS%" value={`${fmtNum(m.hsPercent, 0)}%`} />
-              <StatCol label="ACS" value={String(m.acs)} bold />
-            </>
-          )}
+          <StatCol label="K/D" value={fmtNum(m.kdaRatio, 1)} />
+          <StatCol label="K/D/A" value={m.kda} width={62} />
+          <StatCol label="DDΔ" value={fmtDelta(m.ddPerRound, 0)} color={m.ddPerRound >= 0 ? WIN : LOSS} />
+          <StatCol label="HS%" value={`${fmtNum(m.hsPercent, 0)}%`} />
+          <StatCol label="ACS" value={String(m.acs)} bold />
           <span style={{ fontSize: 13, fontWeight: 600, textAlign: 'right', width: 36, flex: 'none', color: m.rr === null ? 'var(--text-faint)' : m.rr >= 0 ? WIN : LOSS }}>
             {m.rr === null ? '—' : fmtRr(m.rr)}
           </span>
@@ -292,8 +284,8 @@ function SeasonMatchRow({
   );
 }
 
-// Card completo de lista de partidas — cabeçalho (título + toggle
-// Detalhado/Compacto), partidas agrupadas por dia, paginação de 12 em 12.
+// Card completo de lista de partidas — cabeçalho (título), partidas
+// agrupadas por dia, paginação de 12 em 12.
 // Usado tanto na Visão do ato (Dashboard) quanto na página de Partidas
 // (histórico individual completo) — mesmo componente, dados diferentes.
 export function SeasonMatchesList({
@@ -326,8 +318,6 @@ export function SeasonMatchesList({
   // onde essa coluna precisa bater com a altura de RR logo abaixo.
   height?: number;
 }) {
-  const [compact, setCompact] = useState(false);
-
   const navigate = useNavigate();
 
   if (loading) return <LoadingFill />;
@@ -345,28 +335,7 @@ export function SeasonMatchesList({
           <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 16 }}>{title}</div>
           <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>{plural(matchesPage.total, 'partida')} no ato</div>
         </div>
-        {expandable ? (
-          <div style={{ display: 'flex', gap: 4, background: 'var(--input-bg)', border: '1px solid var(--surface-border)', borderRadius: 9, padding: 3 }}>
-            {(['Detalhado', 'Compacto'] as const).map((opt) => (
-              <button
-                key={opt}
-                onClick={() => setCompact(opt === 'Compacto')}
-                style={{
-                  padding: '5px 11px',
-                  borderRadius: 6,
-                  border: 'none',
-                  cursor: 'pointer',
-                  fontSize: 11.5,
-                  whiteSpace: 'nowrap',
-                  background: (opt === 'Compacto') === compact ? 'var(--acc, #EF4958)' : 'transparent',
-                  color: (opt === 'Compacto') === compact ? 'var(--acc-text, #141415)' : 'var(--text-muted)',
-                }}
-              >
-                {opt}
-              </button>
-            ))}
-          </div>
-        ) : (
+        {!expandable && (
           <button
             onClick={() => navigate('/partidas')}
             style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontSize: 11.5, fontWeight: 600, color: 'var(--acc, #EF4958)', whiteSpace: 'nowrap' }}
@@ -377,7 +346,7 @@ export function SeasonMatchesList({
       </div>
 
       <div className="scroll-x-mobile" style={height ? { flex: 1, minHeight: 0, overflowY: 'auto' } : undefined}>
-        <div style={{ minWidth: compact ? undefined : 560 }}>
+        <div style={{ minWidth: 560 }}>
           {dayGroups.map((g) => (
             <div key={g.key}>
               <DayHeaderRow label={g.label} matches={g.matches} />
@@ -388,7 +357,6 @@ export function SeasonMatchesList({
                     m={m}
                     agentIcon={agentIcons[m.agent] ?? null}
                     mapIcon={mapIcons[m.map] ?? null}
-                    compact={compact}
                     expandable={expandable}
                     autoExpand={expandable && m.id === autoExpandMatchId}
                   />

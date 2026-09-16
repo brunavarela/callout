@@ -9,7 +9,7 @@ import { LogoMark } from './Logo';
 export function Footer() {
   const year = new Date().getFullYear();
   return (
-    <footer style={{ borderTop: '1px solid var(--divider)', marginTop: 'auto', background: 'var(--bg)' }}>
+    <footer style={{ borderTop: '1px solid var(--divider)', marginTop: 'auto', background: 'var(--surface)' }}>
       <div style={{ padding: '14px 26px', display: 'flex', flexDirection: 'column', gap: 8 }}>
         <div style={{ fontSize: 11, color: 'var(--text-faint)', lineHeight: 1.6, maxWidth: '70ch' }}>
           Ferramenta independente. Sem vínculo com a Riot Games. Dados de partida vindos de API pública não-oficial.

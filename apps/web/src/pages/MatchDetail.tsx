@@ -90,7 +90,7 @@ export function MatchDetail() {
         </div>
         <div style={{ position: 'relative', marginLeft: 'auto', display: 'flex', gap: 3, alignItems: 'flex-end' }}>
           {match.rounds.map((r) => (
-            <div key={r.number} style={{ width: 12, borderRadius: 3, height: 26, background: r.wonBySelf ? 'var(--pos, #18AAB7)' : 'var(--bar-dim)' }} />
+            <div key={r.number} style={{ width: 12, borderRadius: 3, height: 26, background: r.wonBySelf ? 'var(--pos, #18AAB7)' : 'var(--neg, #EF4958)' }} />
           ))}
         </div>
       </div>
