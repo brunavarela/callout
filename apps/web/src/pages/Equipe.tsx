@@ -99,7 +99,7 @@ export function Equipe() {
           </div>
         </div>
 
-        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 44 }}>
           <button className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: 9 }} onClick={() => navigate('/equipe/painel')}>
             <BarChart3 size={15} strokeWidth={1.75} />
             Painel da equipe
