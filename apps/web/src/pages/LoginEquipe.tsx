@@ -4,6 +4,7 @@ import { LoginShell } from '../components/LoginShell';
 import { EquipeSetupForm } from '../components/EquipeSetupForm';
 import { useSession } from '../lib/session';
 import { routeForStep } from '../lib/onboarding';
+import { marcarEntrando } from '../lib/entrada';
 
 export function LoginEquipe() {
   const navigate = useNavigate();
@@ -22,9 +23,12 @@ export function LoginEquipe() {
     if (user.proximoPasso !== 'equipe') navigate(routeForStep(user.proximoPasso), { replace: true });
   }, [loading, user, navigate]);
 
-  async function handleDone() {
+  async function handleDone(mode: 'criar' | 'entrar') {
+    marcarEntrando(mode === 'criar' ? 'Estamos preparando tudo pra você criar sua equipe.' : 'Estamos preparando tudo pra você ingressar na equipe.');
     await refresh();
-    navigate('/');
+    // Cai direto na tela da equipe (não na dashboard) -- acabou de
+    // criar/entrar, faz sentido ver a equipe primeiro.
+    navigate('/equipe');
   }
 
   async function handleTrocar(e: React.MouseEvent) {

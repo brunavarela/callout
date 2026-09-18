@@ -8,7 +8,9 @@ type Mode = 'criar' | 'entrar';
 // LoginEquipe.tsx (onboarding) pra reusar aqui e na tela de Equipe, quando
 // a pessoa não tem equipe nenhuma (fluxo agora é opcional, ver
 // resolveOnboardingStep) e decide criar/entrar depois, fora do cadastro.
-export function EquipeSetupForm({ onDone }: { onDone: () => void }) {
+// `onDone` recebe o modo usado -- quem chama decide a mensagem da tela de
+// entrada (ver EntradaOverlay/lib/entrada.ts) com base nisso.
+export function EquipeSetupForm({ onDone }: { onDone: (mode: 'criar' | 'entrar') => void }) {
   const [mode, setMode] = useState<Mode>('criar');
   const [nome, setNome] = useState('');
   const [code, setCode] = useState('');
@@ -37,7 +39,7 @@ export function EquipeSetupForm({ onDone }: { onDone: () => void }) {
       } else {
         await apiFetch('/equipes/entrar', { method: 'POST', body: JSON.stringify({ code: code.trim() }) });
       }
-      onDone();
+      onDone(mode);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Falha ao continuar. Tenta de novo.');
     } finally {

@@ -1,5 +1,6 @@
+import { useState } from 'react';
 import { useNavigate, useOutletContext } from 'react-router-dom';
-import { Settings, History, BarChart3 } from 'lucide-react';
+import { Settings, History, BarChart3, Eye, EyeOff, Copy, Check } from 'lucide-react';
 import type { MembroEquipeCard } from '@callout/shared';
 import type { OutletContext } from '../components/AppShell';
 import { LoadingFill } from '../components/Spinner';
@@ -11,6 +12,42 @@ import { CARGO_LABEL } from '../lib/cargo';
 
 function initialsOf(name: string) {
   return name.slice(0, 2).toUpperCase();
+}
+
+// Botão de convite -- saiu de Configurações da equipe pra ficar direto na
+// tela principal da equipe (mais visível, admin não precisa entrar em
+// Configurações só pra convidar alguém). Clicar revela o código no lugar
+// do texto, igual o comportamento antigo.
+function InviteCodeButton({ code }: { code: string }) {
+  const [visible, setVisible] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  async function handleCopy() {
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
+    } catch {
+      // clipboard indisponível — código continua visível pra copiar à mão
+    }
+  }
+
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+      <button
+        className="btn-secondary"
+        style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 14px', fontSize: 12.5, ...(visible ? { fontFamily: 'monospace', letterSpacing: '.04em' } : {}) }}
+        onClick={() => setVisible((v) => !v)}
+        title={visible ? 'Ocultar código de convite' : 'Mostrar código de convite'}
+      >
+        {visible ? <EyeOff size={14} strokeWidth={1.75} /> : <Eye size={14} strokeWidth={1.75} />}
+        {visible ? code : 'Adicionar membros'}
+      </button>
+      <button className="btn-secondary" style={{ display: 'flex', alignItems: 'center', padding: '9px 11px' }} onClick={handleCopy} title="Copiar código de convite">
+        {copied ? <Check size={14} strokeWidth={1.75} /> : <Copy size={14} strokeWidth={1.75} />}
+      </button>
+    </div>
+  );
 }
 
 // Mesmas colunas (e mesmo espaçamento) da tabela de Membros em
@@ -122,6 +159,7 @@ export function Equipe() {
         }
         actions={
           <>
+            {isAdmin && equipe.codigoConvite && <InviteCodeButton code={equipe.codigoConvite} />}
             <button className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 14px', fontSize: 12.5 }} onClick={() => navigate('/equipe/painel')}>
               <BarChart3 size={14} strokeWidth={1.75} />
               Painel

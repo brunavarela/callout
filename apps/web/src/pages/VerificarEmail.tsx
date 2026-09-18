@@ -6,6 +6,7 @@ import { SnakeSpinner } from '../components/Spinner';
 import { useSession } from '../lib/session';
 import { apiFetch, ApiError } from '../lib/api';
 import { routeForStep } from '../lib/onboarding';
+import { marcarEntrando } from '../lib/entrada';
 
 const RESEND_COOLDOWN_S = 60;
 
@@ -64,7 +65,12 @@ export function VerificarEmail() {
         body: JSON.stringify({ email, codigo }),
       });
       await refresh();
-      navigate(routeForStep(data.proximoPasso));
+      const proximaRota = routeForStep(data.proximoPasso);
+      // Se o próximo passo já é a dashboard (não marcou "administrar_equipe"
+      // no cadastro), avisa que tá preparando tudo -- sem isso a dashboard
+      // apareceria vazia por um instante enquanto a Visão do ato carrega.
+      if (proximaRota === '/') marcarEntrando('Estamos preparando tudo pra você.');
+      navigate(proximaRota);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Falha ao verificar. Tenta de novo.');
     } finally {

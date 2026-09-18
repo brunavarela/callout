@@ -9,6 +9,8 @@ import { AccountMenu } from './AccountMenu';
 import { Logo, LogoMark } from './Logo';
 import { Footer } from './Footer';
 import { CardStyleProvider, glassSurfaceStyle } from './statsPrimitives';
+import { EntradaOverlay } from './EntradaOverlay';
+import { lerEntrando, limparEntrando } from '../lib/entrada';
 
 const BASE_NAV_ITEMS = [
   { to: '/', label: 'Painel', icon: LayoutDashboard, match: (p: string) => p === '/' },
@@ -194,9 +196,24 @@ export function AppShell() {
   const { user, loading } = useSession();
   const { theme } = useTheme();
   const appData = useAppData(user);
-  const { equipe, equipeNaoTemNenhuma } = appData;
+  const { equipe, equipeError, equipeNaoTemNenhuma, seasonOverviewLoading } = appData;
   const [settingsOpen, setSettingsOpen] = useState(false);
   const accountMenuRef = useRef<HTMLDivElement>(null);
+
+  // Tela de "estamos preparando tudo" logo depois de cadastro/criar-equipe/
+  // entrar-em-equipe (ver lib/entrada.ts) -- some assim que os dados
+  // relevantes pra primeira tela terminarem de carregar de verdade, não num
+  // tempo fixo: Visão do ato (pra quem cai na dashboard) E equipe (pra quem
+  // acabou de criar/entrar numa e cai direto em /equipe). Lazy init lê o
+  // sessionStorage só uma vez, no mount.
+  const equipePronta = equipe !== null || equipeNaoTemNenhuma || equipeError !== null;
+  const [entrandoMsg, setEntrandoMsg] = useState<string | null>(() => lerEntrando());
+  useEffect(() => {
+    if (entrandoMsg && !seasonOverviewLoading && equipePronta) {
+      limparEntrando();
+      setEntrandoMsg(null);
+    }
+  }, [entrandoMsg, seasonOverviewLoading, equipePronta]);
 
   useEffect(() => {
     if (!settingsOpen) return;
@@ -229,6 +246,7 @@ export function AppShell() {
   if (loading) return null;
   if (!user) return <Navigate to="/login" replace />;
   if (user.proximoPasso !== 'completo' || !user.riotId) return <Navigate to={routeForStep(user.proximoPasso)} replace />;
+  if (entrandoMsg) return <EntradaOverlay message={entrandoMsg} />;
   const riotId = user.riotId;
 
   const navItems = [
