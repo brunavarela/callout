@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { INTUITOS, INTUITO_LABELS } from '@callout/shared';
-import { LoginShell } from '../components/LoginShell';
-import { AuthTabs } from '../components/AuthTabs';
 import { AuthStepFrame } from '../components/AuthStepFrame';
 import { DataNascimentoField } from '../components/DataNascimentoField';
 import { PasswordField } from '../components/PasswordField';
 import { PasswordRequirements } from '../components/PasswordRequirements';
+import { LegalModal } from '../components/LegalModal';
+import { AuthArrow } from '../components/AuthArrow';
 import { senhaValida } from '../lib/senha';
 import { SnakeSpinner } from '../components/Spinner';
 import { apiFetch, ApiError } from '../lib/api';
@@ -25,6 +25,8 @@ export function Cadastro() {
   const [senha, setSenha] = useState('');
   const [confirmarSenha, setConfirmarSenha] = useState('');
   const [intuitos, setIntuitos] = useState<string[]>([]);
+  const [aceitouTermos, setAceitouTermos] = useState(false);
+  const [legalModal, setLegalModal] = useState<'termos' | 'privacidade' | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -52,6 +54,7 @@ export function Cadastro() {
     } else if (step === 2) {
       if (!senhaValida(senha)) return setError('Sua senha ainda não atende todos os requisitos abaixo.');
       if (senha !== confirmarSenha) return setError('As senhas não coincidem.');
+      if (!aceitouTermos) return setError('Você precisa aceitar os Termos de Uso e a Política de Privacidade pra continuar.');
       setStep(3);
     }
   }
@@ -81,15 +84,14 @@ export function Cadastro() {
   }
 
   return (
-    <LoginShell>
-      <AuthTabs active="criar-conta" />
+    <>
       <h1 className="login-heading" style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 700, lineHeight: 1.06, letterSpacing: '-.03em', margin: '0 0 16px' }}>
         Vamos te
         <br />
         conhecer.
       </h1>
       <p style={{ fontSize: 16, lineHeight: 1.6, color: 'var(--text-muted)', margin: '0 0 20px', maxWidth: '40ch' }}>
-        Seu RiotID liga suas partidas à sua conta — a gente confirma que é sua daqui a pouco.
+        Queremos personalizar sua experiência ao máximo.
       </p>
 
       <AuthStepFrame animKey={`step-${step}`}>
@@ -104,7 +106,7 @@ export function Cadastro() {
             {error && <div style={{ fontSize: 13, color: 'var(--acc, #EF4958)' }}>{error}</div>}
             <button className="btn-primary" style={{ width: '100%', justifyContent: 'space-between' }} type="submit">
               <span>Continuar</span>
-              <span>→</span>
+              <AuthArrow />
             </button>
           </form>
         )}
@@ -120,7 +122,7 @@ export function Cadastro() {
               </button>
               <button className="btn-primary" style={{ flex: 1, justifyContent: 'space-between' }} type="submit">
                 <span>Continuar</span>
-                <span>→</span>
+                <AuthArrow />
               </button>
             </div>
           </form>
@@ -131,6 +133,52 @@ export function Cadastro() {
             <PasswordField value={senha} onChange={setSenha} placeholder="Senha" autoComplete="new-password" autoFocus />
             <PasswordRequirements senha={senha} />
             <PasswordField value={confirmarSenha} onChange={setConfirmarSenha} placeholder="Confirmar senha" autoComplete="new-password" />
+
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 9, fontSize: 12.5, lineHeight: 1.5, color: 'var(--text-muted)' }}>
+              <button
+                type="button"
+                onClick={() => setAceitouTermos((v) => !v)}
+                aria-pressed={aceitouTermos}
+                style={{
+                  marginTop: 1,
+                  width: 16,
+                  height: 16,
+                  flex: 'none',
+                  padding: 0,
+                  borderRadius: 4,
+                  border: `1.5px solid ${aceitouTermos ? 'var(--acc, #EF4958)' : 'var(--text-faint)'}`,
+                  background: aceitouTermos ? 'var(--acc, #EF4958)' : 'transparent',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#fff',
+                  fontSize: 11,
+                  cursor: 'pointer',
+                }}
+              >
+                {aceitouTermos ? '✓' : ''}
+              </button>
+              <span>
+                Li e aceito os{' '}
+                <button
+                  type="button"
+                  onClick={() => setLegalModal('termos')}
+                  style={{ color: 'var(--acc, #EF4958)', fontWeight: 600, textDecoration: 'underline', background: 'none', border: 'none', padding: 0, font: 'inherit', cursor: 'pointer' }}
+                >
+                  Termos de Uso
+                </button>{' '}
+                e a{' '}
+                <button
+                  type="button"
+                  onClick={() => setLegalModal('privacidade')}
+                  style={{ color: 'var(--acc, #EF4958)', fontWeight: 600, textDecoration: 'underline', background: 'none', border: 'none', padding: 0, font: 'inherit', cursor: 'pointer' }}
+                >
+                  Política de Privacidade
+                </button>
+                .
+              </span>
+            </div>
+
             {error && <div style={{ fontSize: 13, color: 'var(--acc, #EF4958)' }}>{error}</div>}
             <div style={{ display: 'flex', gap: 10 }}>
               <button type="button" className="btn-secondary" onClick={goBack}>
@@ -138,7 +186,7 @@ export function Cadastro() {
               </button>
               <button className="btn-primary" style={{ flex: 1, justifyContent: 'space-between' }} type="submit">
                 <span>Continuar</span>
-                <span>→</span>
+                <AuthArrow />
               </button>
             </div>
           </form>
@@ -203,7 +251,7 @@ export function Cadastro() {
                 ) : (
                   <>
                     <span>Cadastrar</span>
-                    <span>→</span>
+                    <AuthArrow />
                   </>
                 )}
               </button>
@@ -211,6 +259,8 @@ export function Cadastro() {
           </form>
         )}
       </AuthStepFrame>
-    </LoginShell>
+
+      {legalModal && <LegalModal doc={legalModal} onClose={() => setLegalModal(null)} />}
+    </>
   );
 }

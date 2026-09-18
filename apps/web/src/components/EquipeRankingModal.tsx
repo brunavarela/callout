@@ -117,7 +117,7 @@ export function EquipeRankingModal({ onClose }: { onClose: () => void }) {
   const pageMatches = combo ? combo.matches.slice((page - 1) * MATCHES_PER_PAGE, page * MATCHES_PER_PAGE) : [];
 
   return (
-    <Modal onClose={onClose} width={860} closeOnBackdrop={false}>
+    <Modal onClose={onClose} width={1480} closeOnBackdrop={false} noScroll>
       <ModalHeader title="Ranking da equipe" onClose={onClose} />
 
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 18 }}>
@@ -180,7 +180,7 @@ export function EquipeRankingModal({ onClose }: { onClose: () => void }) {
           )}
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 14 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14 }}>
           <RankingBlock title="Ranking de ACS" sub="Média de ACS nas partidas da equipe" rows={acsRows} />
           <RankingBlock title="Ranking de MVP" sub="Maior ACS da equipe na partida" rows={mvpRows} />
           <RankingBlock title="Ranking de assistências" sub="Total de assistências nas partidas da equipe" rows={assistRows} />

@@ -1,5 +1,6 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { AppShell } from './components/AppShell';
+import { AuthLayout } from './components/AuthLayout';
 import { Login } from './pages/Login';
 import { Cadastro } from './pages/Cadastro';
 import { EsqueciSenha } from './pages/EsqueciSenha';
@@ -22,8 +23,10 @@ import { Privacidade } from './pages/Privacidade';
 function App() {
   return (
     <Routes>
-      <Route path="/login" element={<Login />} />
-      <Route path="/cadastro" element={<Cadastro />} />
+      <Route element={<AuthLayout />}>
+        <Route path="/login" element={<Login />} />
+        <Route path="/cadastro" element={<Cadastro />} />
+      </Route>
       <Route path="/esqueci-senha" element={<EsqueciSenha />} />
       <Route path="/cadastro/verificar-email" element={<VerificarEmail />} />
       <Route path="/login/equipe" element={<LoginEquipe />} />

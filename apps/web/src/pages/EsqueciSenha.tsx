@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import type { SessionUser } from '@callout/shared';
 import { LoginShell } from '../components/LoginShell';
+import { AuthArrow } from '../components/AuthArrow';
 import { PasswordField } from '../components/PasswordField';
 import { PasswordRequirements } from '../components/PasswordRequirements';
 import { SnakeSpinner } from '../components/Spinner';
@@ -109,7 +110,7 @@ export function EsqueciSenha() {
             ) : (
               <>
                 <span>Enviar código</span>
-                <span>→</span>
+                <AuthArrow />
               </>
             )}
           </button>
@@ -144,7 +145,7 @@ export function EsqueciSenha() {
               ) : (
                 <>
                   <span>Redefinir senha</span>
-                  <span>→</span>
+                  <AuthArrow />
                 </>
               )}
             </button>

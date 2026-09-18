@@ -9,6 +9,7 @@ export function Modal({
   width = 420,
   padding = 24,
   closeOnBackdrop = true,
+  noScroll = false,
 }: {
   onClose: () => void;
   children: ReactNode;
@@ -17,6 +18,11 @@ export function Modal({
   // false pros modais onde clicar fora sem querer (ex.: interagindo com um
   // select por dentro) fecharia por acidente -- aí só o X mesmo fecha.
   closeOnBackdrop?: boolean;
+  // true tira o teto de 85vh/scroll interno -- pros modais largos que já
+  // cabem o conteúdo inteiro sem precisar rolar (ver EquipeRankingModal).
+  // Continua limitado pela altura da tela via maxHeight:100% do overlay,
+  // só não força scroll dentro do card quando não precisa.
+  noScroll?: boolean;
 }) {
   return (
     <div
@@ -41,8 +47,7 @@ export function Modal({
           padding,
           width,
           maxWidth: '100%',
-          maxHeight: '85vh',
-          overflowY: 'auto',
+          ...(noScroll ? { maxHeight: '100%', overflowY: 'visible' } : { maxHeight: '85vh', overflowY: 'auto' }),
           boxShadow: '0 12px 28px rgba(0,0,0,.5)',
         }}
       >

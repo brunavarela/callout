@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import type { SessionUser } from '@callout/shared';
 import { LoginShell } from '../components/LoginShell';
+import { AuthArrow } from '../components/AuthArrow';
 import { SnakeSpinner } from '../components/Spinner';
 import { useSession } from '../lib/session';
 import { apiFetch, ApiError } from '../lib/api';
@@ -118,7 +119,7 @@ export function VerificarEmail() {
             ) : (
               <>
                 <span>Enviar código</span>
-                <span>→</span>
+                <AuthArrow />
               </>
             )}
           </button>
@@ -144,7 +145,7 @@ export function VerificarEmail() {
               ) : (
                 <>
                   <span>Confirmar</span>
-                  <span>→</span>
+                  <AuthArrow />
                 </>
               )}
             </button>

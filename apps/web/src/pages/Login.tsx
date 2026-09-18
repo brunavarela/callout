@@ -1,8 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import type { SessionUser } from '@callout/shared';
-import { LoginShell } from '../components/LoginShell';
-import { AuthTabs } from '../components/AuthTabs';
+import { AuthArrow } from '../components/AuthArrow';
 import { AuthStepFrame } from '../components/AuthStepFrame';
 import { PasswordField } from '../components/PasswordField';
 import { SnakeSpinner } from '../components/Spinner';
@@ -42,15 +41,14 @@ export function Login() {
   }
 
   return (
-    <LoginShell>
-      <AuthTabs active="entrar" />
+    <>
       <h1 className="login-heading" style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 700, lineHeight: 1.06, letterSpacing: '-.03em', margin: '0 0 16px' }}>
         O que a memória
         <br />
         não guarda.
       </h1>
       <p style={{ fontSize: 16, lineHeight: 1.6, color: 'var(--text-muted)', margin: '0 0 28px', maxWidth: '38ch', textWrap: 'pretty' }}>
-        Suas últimas partidas e as estratégias que sua equipe desenhou.
+        Seu desempenho individual e as estratégias que sua equipe desenhou para alcançar o topo.
       </p>
 
       <AuthStepFrame animKey="entrar">
@@ -71,7 +69,7 @@ export function Login() {
             ) : (
               <>
                 <span>Entrar</span>
-                <span>→</span>
+                <AuthArrow />
               </>
             )}
           </button>
@@ -80,6 +78,6 @@ export function Login() {
           </div>
         </form>
       </AuthStepFrame>
-    </LoginShell>
+    </>
   );
 }

@@ -74,7 +74,13 @@ export function Select({
         <ChevronDown size={14} strokeWidth={2} className="select-chevron" />
       </button>
       {open && (
-        <div className={`select-panel${align === 'right' ? ' align-right' : ''}${panelClassName ? ` ${panelClassName}` : ''}`} role="listbox">
+        <div
+          className={`select-panel${align === 'right' ? ' align-right' : ''}${panelClassName ? ` ${panelClassName}` : ''}`}
+          role="listbox"
+          // Scroll só entra com mais de 20 opções -- painéis menores devem
+          // caber inteiros na tela sem rolar.
+          style={options.length > 20 ? { maxHeight: 280, overflowY: 'auto' } : undefined}
+        >
           {options.map((o) => (
             <button
               key={o.value}

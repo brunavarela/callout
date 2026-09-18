@@ -276,6 +276,9 @@ button {
   transform: rotate(180deg);
 }
 
+/* max-height/overflow-y ficam inline no Select.tsx (só entram com mais de
+   20 opções) em vez de fixos aqui -- painéis com poucas opções não devem
+   nunca rolar. */
 .select-panel {
   position: absolute;
   z-index: 500;
@@ -285,8 +288,6 @@ button {
   min-width: 100%;
   width: max-content;
   max-width: min(360px, 90vw);
-  max-height: 280px;
-  overflow-y: auto;
   background: var(--bg);
   isolation: isolate;
   border: 1px solid var(--surface-border);
@@ -1146,6 +1147,26 @@ button {
 @media (max-width: 640px) {
   .login-shell-col {
     padding: 28px 22px;
+  }
+}
+
+@keyframes pulseRing {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.35;
+  }
+  50% {
+    transform: scale(1.06);
+    opacity: 0.6;
+  }
+}
+.login-hero-ring {
+  animation: pulseRing 6s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .login-hero-ring {
+    animation: none;
   }
 }
 

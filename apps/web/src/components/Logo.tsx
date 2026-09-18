@@ -53,15 +53,17 @@ export function Logo({ height = 22, weight = 3 }: { height?: number; weight?: nu
 }
 
 // Só a mira — sidebar recolhida, qualquer lugar que precise de um ícone
-// quadrado em vez do wordmark inteiro.
-export function LogoMark({ size = 20, weight = 3 }: { size?: number; weight?: number }) {
+// quadrado em vez do wordmark inteiro. `dotColor` sobrepõe o ponto central
+// (padrão var(--acc)) — precisa pra usar a mira em cima de um fundo que já
+// é da cor de destaque (ex.: botão primário), onde o ponto ficaria invisível.
+export function LogoMark({ size = 20, weight = 3, dotColor = 'var(--acc, #EF4958)' }: { size?: number; weight?: number; dotColor?: string }) {
   const strokeProps = STROKE_PROPS(weight);
   return (
     <svg width={size} height={size} viewBox="158.832 0 114 114" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="callout">
       {MARK_PATHS.map((d, i) => (
         <path key={i} d={d} fill="currentColor" {...strokeProps} />
       ))}
-      <path d={MARK_DOT} fill="var(--acc, #EF4958)" />
+      <path d={MARK_DOT} fill={dotColor} />
     </svg>
   );
 }
