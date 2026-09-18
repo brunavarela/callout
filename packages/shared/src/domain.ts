@@ -479,7 +479,18 @@ export interface MatchDetail {
 
 // --- Equipe ---
 
-export type Cargo = "jogador" | "treinador_principal" | "treinador_assistente";
+// "igl" (in-game leader) foi adicionado em 18/09/2026 -- junto com
+// treinador_principal/treinador_assistente e admin, é um dos cargos com
+// permissão pra criar/editar estratégia DE EQUIPE (ver
+// canManageEquipeStrategies em apps/api/src/lib/equipe.ts). "jogador" só
+// visualiza.
+export type Cargo = "jogador" | "igl" | "treinador_principal" | "treinador_assistente";
+
+// Cargos com permissão de criar/editar/apagar estratégia DE EQUIPE (além de
+// isAdmin, que sempre pode) -- fonte única usada tanto pelo back
+// (canManageEquipeStrategies) quanto pelo front (Board.tsx), pra não
+// duplicar essa lista em dois lugares que podem descolar.
+export const CARGOS_GERENCIAM_ESTRATEGIA: Cargo[] = ["igl", "treinador_principal", "treinador_assistente"];
 
 export interface MainAgent {
   uuid: string;
@@ -738,7 +749,9 @@ export interface StratItem {
 
 export interface Strategy {
   id: string;
-  equipeId: string;
+  // null = estratégia individual (dona é só quem criou, sem equipe nenhuma
+  // envolvida) -- ver canManageEquipeStrategies/POST /strategies.
+  equipeId: string | null;
   mapId: string;
   mapName: string;
   mapDisplayIcon: string | null;

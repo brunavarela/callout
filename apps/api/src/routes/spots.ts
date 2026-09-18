@@ -36,29 +36,54 @@ const createBodySchema = z.object({
     .optional(),
 });
 
+const SEM_EQUIPE_ERROR = "Você ainda não tem uma equipe.";
+
+const createBodySchemaComScope = createBodySchema.extend({
+  // "equipe" continua compartilhado com todo mundo do time, sem restrição
+  // extra de cargo (qualquer membro cria/apaga, diferente de Strategy).
+  // "individual" não depende de equipe nenhuma -- PRO ainda não existe
+  // (LAUNCH.md §5/§12), gate entra aqui quando existir, mesmo esquema de
+  // POST /strategies.
+  scope: z.enum(["equipe", "individual"]),
+});
+
 export async function spotsRoutes(app: FastifyInstance) {
   // Spot é escopado por equipe desde a migration team_multi_tenancy_1 —
   // antes era global (PROGRESS.md, Fase 4), qualquer usuário logado
-  // via/apagava spot de qualquer equipe.
+  // via/apagava spot de qualquer equipe. Individual (18/09/2026) segue o
+  // mesmo scope=equipe|individual de /strategies.
   app.get("/spots", { preHandler: requireAuth }, async (request, reply) => {
+    const { scope } = request.query as { scope?: string };
     const equipeId = await getUserEquipeId(request.user!.id);
-    if (!equipeId) return reply.code(404).send({ error: "Você ainda não tem uma equipe." });
+    const usarEquipe = scope === "individual" ? false : scope === "equipe" ? true : Boolean(equipeId);
+
+    if (usarEquipe) {
+      if (!equipeId) return reply.code(404).send({ error: SEM_EQUIPE_ERROR });
+      const [spots, agentsByUuid] = await Promise.all([
+        prisma.spot.findMany({ where: { equipeId }, include: SPOT_INCLUDE, orderBy: { createdAt: "desc" } }),
+        loadAgentsByUuid(),
+      ]);
+      return spots.map((spot) => toSpotDTO(spot, agentsByUuid));
+    }
 
     const [spots, agentsByUuid] = await Promise.all([
-      prisma.spot.findMany({ where: { equipeId }, include: SPOT_INCLUDE, orderBy: { createdAt: "desc" } }),
+      prisma.spot.findMany({ where: { equipeId: null, criadoPorId: request.user!.id }, include: SPOT_INCLUDE, orderBy: { createdAt: "desc" } }),
       loadAgentsByUuid(),
     ]);
     return spots.map((spot) => toSpotDTO(spot, agentsByUuid));
   });
 
   app.post("/spots", { preHandler: requireAuth }, async (request, reply) => {
-    const parsed = createBodySchema.safeParse(request.body);
+    const parsed = createBodySchemaComScope.safeParse(request.body);
     if (!parsed.success) {
       return reply.code(400).send({ error: parsed.error.issues[0]?.message ?? "Dados inválidos" });
     }
 
-    const equipeId = await getUserEquipeId(request.user!.id);
-    if (!equipeId) return reply.code(404).send({ error: "Você ainda não tem uma equipe." });
+    let equipeId: string | null = null;
+    if (parsed.data.scope === "equipe") {
+      equipeId = await getUserEquipeId(request.user!.id);
+      if (!equipeId) return reply.code(404).send({ error: SEM_EQUIPE_ERROR });
+    }
 
     const map = await prisma.mapAsset.findUnique({ where: { id: parsed.data.mapId } });
     if (!map) return reply.code(400).send({ error: "Mapa inválido." });
@@ -83,11 +108,15 @@ export async function spotsRoutes(app: FastifyInstance) {
 
   app.delete("/spots/:id", { preHandler: requireAuth }, async (request, reply) => {
     const { id } = request.params as { id: string };
-    const equipeId = await getUserEquipeId(request.user!.id);
-    if (!equipeId) return reply.code(404).send({ error: "Você ainda não tem uma equipe." });
-
-    const existing = await prisma.spot.findFirst({ where: { id, equipeId } });
+    const existing = await prisma.spot.findUnique({ where: { id } });
     if (!existing) return reply.code(404).send({ error: "Spot não encontrado." });
+
+    if (existing.equipeId) {
+      const equipeId = await getUserEquipeId(request.user!.id);
+      if (equipeId !== existing.equipeId) return reply.code(404).send({ error: "Spot não encontrado." });
+    } else if (existing.criadoPorId !== request.user!.id) {
+      return reply.code(404).send({ error: "Spot não encontrado." });
+    }
 
     await prisma.spot.delete({ where: { id } });
     return reply.code(204).send();

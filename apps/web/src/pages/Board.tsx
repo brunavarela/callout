@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useNavigate, useOutletContext, useParams } from 'react-router-dom';
 import { Plus, Trash2 } from 'lucide-react';
 import type { Lado, StratItem as StratItemDTO } from '@callout/shared';
-import { PLACEHOLDER_AGENTS } from '@callout/shared';
+import { PLACEHOLDER_AGENTS, CARGOS_GERENCIAM_ESTRATEGIA } from '@callout/shared';
 import { MapSchematic } from '../components/MapSchematic';
 import { boardArrows, boardCallouts } from '../data/mock';
 import type { OutletContext } from '../components/AppShell';
@@ -80,10 +80,12 @@ function itemsToShapes(items: StratItemDTO[]): Shape[] {
 // catálogo que Spots usa) antes de criar.
 function CreateStrategyModal({
   maps,
+  scope,
   onClose,
   onCreate,
 }: {
   maps: Array<{ id: string; nome: string }>;
+  scope: 'equipe' | 'individual';
   onClose: () => void;
   onCreate: (input: { mapName: string; side: Lado; title: string }) => Promise<void>;
 }) {
@@ -114,7 +116,8 @@ function CreateStrategyModal({
       style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50 }}
     >
       <div onClick={(e) => e.stopPropagation()} style={{ ...cardStyle, width: 420, maxWidth: '92vw', padding: 22 }}>
-        <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 17, marginBottom: 16 }}>Nova estratégia</div>
+        <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 17, marginBottom: 4 }}>Nova estratégia</div>
+        <div style={{ fontSize: 12, color: 'var(--text-faint)', marginBottom: 16 }}>{scope === 'equipe' ? 'Visível pra toda a equipe.' : 'Só sua, ninguém mais vê.'}</div>
 
         {maps.length === 0 ? (
           <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 16 }}>Nenhum mapa cadastrado ainda.</div>
@@ -173,12 +176,33 @@ export function Board() {
   const navigate = useNavigate();
   const cardStyle = useCardStyle();
   const { id } = useParams();
-  const { strategies, strategiesError, strategiesLoading, loadStrategies, saveStrategy, createStrategy, deleteStrategy, agents, loadAgents, maps, loadMaps } =
-    useOutletContext<OutletContext>();
+  const {
+    strategies,
+    strategiesError,
+    strategiesLoading,
+    strategiesScope,
+    loadStrategies,
+    saveStrategy,
+    createStrategy,
+    deleteStrategy,
+    agents,
+    loadAgents,
+    maps,
+    loadMaps,
+    equipe,
+  } = useOutletContext<OutletContext>();
+
+  // Estratégia de equipe exige ter equipe E permissão (IGL/treinador/admin
+  // -- ver CARGOS_GERENCIAM_ESTRATEGIA); estratégia individual não depende
+  // de nada disso (PRO ainda não existe, ver comentário em POST /strategies).
+  // Sem equipe, só a aba individual existe -- nem mostra o toggle.
+  const self = equipe?.members.find((m) => m.isSelf);
+  const canManageEquipe = !!self && (self.isAdmin || CARGOS_GERENCIAM_ESTRATEGIA.includes(self.cargo));
+  const [scope, setScope] = useState<'equipe' | 'individual'>(equipe ? 'equipe' : 'individual');
 
   useEffect(() => {
-    if (strategies === null && !strategiesLoading) loadStrategies();
-  }, [strategies, strategiesLoading, loadStrategies]);
+    if (strategiesScope !== scope && !strategiesLoading) loadStrategies(scope);
+  }, [scope, strategiesScope, strategiesLoading, loadStrategies]);
 
   useEffect(() => {
     if (agents === null) loadAgents();
@@ -365,7 +389,7 @@ export function Board() {
   }
 
   async function handleCreate(input: { mapName: string; side: Lado; title: string }) {
-    const created = await createStrategy(input);
+    const created = await createStrategy({ ...input, scope });
     navigate(`/board/${created.id}`);
   }
 
@@ -385,13 +409,28 @@ export function Board() {
     }
   }
 
+  // Toggle Equipe/Individual -- só existe pra quem tem equipe (sem equipe,
+  // só a aba individual faz sentido, não precisa de seletor pra escolher
+  // entre uma opção só).
+  const scopeToggle = equipe && (
+    <div style={{ display: 'flex', gap: 6, marginBottom: 16 }}>
+      <button className={scope === 'equipe' ? 'btn-primary' : 'btn-secondary'} style={{ padding: '8px 16px', fontSize: 12.5 }} onClick={() => setScope('equipe')}>
+        Equipe
+      </button>
+      <button className={scope === 'individual' ? 'btn-primary' : 'btn-secondary'} style={{ padding: '8px 16px', fontSize: 12.5 }} onClick={() => setScope('individual')}>
+        Individual
+      </button>
+    </div>
+  );
+
   if (strategiesError && !strategies) {
     const semEquipe = strategiesError === 'Você ainda não tem uma equipe.';
     return (
       <div style={{ padding: 26 }}>
+        {scopeToggle}
         <div style={{ ...cardStyle, padding: 22, display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'flex-start' }}>
           <div style={{ fontSize: 14, color: 'var(--text-3)' }}>{strategiesError}</div>
-          <button className="btn-secondary" onClick={semEquipe ? () => navigate('/equipe') : loadStrategies}>
+          <button className="btn-secondary" onClick={semEquipe ? () => navigate('/equipe') : () => loadStrategies(scope)}>
             {semEquipe ? 'Criar ou entrar numa equipe' : 'Tentar de novo'}
           </button>
         </div>
@@ -408,21 +447,33 @@ export function Board() {
   }
 
   if (!strategy) {
+    const podeCriar = scope === 'individual' || canManageEquipe;
     return (
       <div style={{ padding: 26 }}>
+        {scopeToggle}
         <div style={{ ...cardStyle, padding: 40, textAlign: 'center', color: 'var(--text-muted)', fontSize: 14, display: 'flex', flexDirection: 'column', gap: 14, alignItems: 'center' }}>
-          Nenhuma estratégia salva ainda.
-          <button className="btn-primary" onClick={() => setShowCreateModal(true)}>
-            Criar a primeira estratégia
-          </button>
+          {scope === 'equipe' ? 'Nenhuma estratégia da equipe salva ainda.' : 'Nenhuma estratégia individual sua salva ainda.'}
+          {podeCriar ? (
+            <button className="btn-primary" onClick={() => setShowCreateModal(true)}>
+              Criar a primeira estratégia
+            </button>
+          ) : (
+            <div style={{ fontSize: 12.5, color: 'var(--text-faint)', maxWidth: '38ch' }}>
+              Só IGL, treinador ou admin da equipe pode criar estratégia de equipe -- fala com alguém do time ou crie a sua na aba Individual.
+            </div>
+          )}
         </div>
-        {showCreateModal && <CreateStrategyModal maps={maps ?? []} onClose={() => setShowCreateModal(false)} onCreate={handleCreate} />}
+        {showCreateModal && <CreateStrategyModal maps={maps ?? []} scope={scope} onClose={() => setShowCreateModal(false)} onCreate={handleCreate} />}
       </div>
     );
   }
 
+  const podeCriar = scope === 'individual' || canManageEquipe;
+
   return (
-    <div className="grid-responsive-board" style={{ padding: 26, flex: 1, minHeight: 0 }}>
+    <div style={{ padding: 26, display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+      {scopeToggle}
+      <div className="grid-responsive-board" style={{ flex: 1, minHeight: 0 }}>
       <div style={{ borderRadius: 'var(--radius-lg)', position: 'relative', overflow: 'hidden', background: 'var(--surface-sunken)', border: '1px solid var(--surface-border)' }}>
         <div
           ref={containerRef}
@@ -589,31 +640,33 @@ export function Board() {
           </div>
         </div>
 
-        <button
-          onClick={() => setShowCreateModal(true)}
-          style={{
-            position: 'absolute',
-            right: 18,
-            top: 18,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 7,
-            background: 'var(--acc, #EF4958)',
-            color: 'var(--acc-text, #141415)',
-            border: 'none',
-            borderRadius: 12,
-            padding: '9px 16px',
-            fontSize: 12.5,
-            fontWeight: 600,
-            letterSpacing: '.01em',
-            fontFamily: 'Inter,sans-serif',
-            cursor: 'pointer',
-            boxShadow: '0 8px 18px rgba(0,0,0,.35)',
-          }}
-        >
-          <Plus size={15} strokeWidth={2.25} />
-          Nova estratégia
-        </button>
+        {podeCriar && (
+          <button
+            onClick={() => setShowCreateModal(true)}
+            style={{
+              position: 'absolute',
+              right: 18,
+              top: 18,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 7,
+              background: 'var(--acc, #EF4958)',
+              color: 'var(--acc-text, #141415)',
+              border: 'none',
+              borderRadius: 12,
+              padding: '9px 16px',
+              fontSize: 12.5,
+              fontWeight: 600,
+              letterSpacing: '.01em',
+              fontFamily: 'Inter,sans-serif',
+              cursor: 'pointer',
+              boxShadow: '0 8px 18px rgba(0,0,0,.35)',
+            }}
+          >
+            <Plus size={15} strokeWidth={2.25} />
+            Nova estratégia
+          </button>
+        )}
         <div style={{ position: 'absolute', left: 18, top: 18, display: 'flex', gap: 5, background: 'rgba(18,18,19,.92)', border: '1px solid var(--input-border)', borderRadius: 12, padding: 6 }}>
           {TOOLS.map((t) => {
             const active = tool === t.id;
@@ -707,7 +760,9 @@ export function Board() {
           }}
         />
         <div style={{ padding: '16px 20px 8px', display: 'flex', alignItems: 'center' }}>
-          <span style={{ fontSize: 10.5, letterSpacing: '.14em', color: 'var(--text-dim)' }}>ESTRATÉGIAS DO TIME · {strategies.length}</span>
+          <span style={{ fontSize: 10.5, letterSpacing: '.14em', color: 'var(--text-dim)' }}>
+            {scope === 'equipe' ? 'ESTRATÉGIAS DA EQUIPE' : 'MINHAS ESTRATÉGIAS'} · {strategies.length}
+          </span>
         </div>
         <div style={{ overflow: 'auto', padding: '0 12px' }}>
           {strategies.map((s) => {
@@ -729,16 +784,18 @@ export function Board() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <span style={{ fontSize: 13, color: active ? 'var(--acc, #EF4958)' : 'var(--text-2)' }}>{s.title}</span>
                   <span style={{ marginLeft: 'auto', fontSize: 10, color: 'var(--text-faint)' }}>{s.side}</span>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setConfirmDeleteId(s.id);
-                    }}
-                    title="Apagar estratégia"
-                    style={{ background: 'none', border: 'none', color: 'var(--text-faint)', cursor: 'pointer', padding: 2, display: 'flex' }}
-                  >
-                    <Trash2 size={13} strokeWidth={1.75} />
-                  </button>
+                  {podeCriar && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setConfirmDeleteId(s.id);
+                      }}
+                      title="Apagar estratégia"
+                      style={{ background: 'none', border: 'none', color: 'var(--text-faint)', cursor: 'pointer', padding: 2, display: 'flex' }}
+                    >
+                      <Trash2 size={13} strokeWidth={1.75} />
+                    </button>
+                  )}
                 </div>
                 <div style={{ fontSize: 10.5, color: 'var(--text-faint)', marginTop: 3 }}>
                   {s.mapName}
@@ -748,16 +805,22 @@ export function Board() {
             );
           })}
         </div>
-        <div style={{ marginTop: 'auto', padding: '16px 20px', borderTop: '1px solid var(--divider)', display: 'flex', gap: 10 }}>
-          <button className="btn-primary" style={{ flex: 1, padding: 11, justifyContent: 'center', fontSize: 13 }} onClick={handleSave} disabled={saving}>
-            {saving ? 'Salvando…' : 'Salvar'}
-          </button>
-          <button className="btn-secondary" style={{ padding: '11px 15px', color: 'var(--text-muted)' }} onClick={handleClear}>
-            Limpar
-          </button>
-        </div>
+        {podeCriar ? (
+          <div style={{ marginTop: 'auto', padding: '16px 20px', borderTop: '1px solid var(--divider)', display: 'flex', gap: 10 }}>
+            <button className="btn-primary" style={{ flex: 1, padding: 11, justifyContent: 'center', fontSize: 13 }} onClick={handleSave} disabled={saving}>
+              {saving ? 'Salvando…' : 'Salvar'}
+            </button>
+            <button className="btn-secondary" style={{ padding: '11px 15px', color: 'var(--text-muted)' }} onClick={handleClear}>
+              Limpar
+            </button>
+          </div>
+        ) : (
+          <div style={{ marginTop: 'auto', padding: '16px 20px', borderTop: '1px solid var(--divider)', fontSize: 11.5, color: 'var(--text-faint)' }}>
+            Só visualização -- IGL, treinador ou admin da equipe pode editar.
+          </div>
+        )}
       </div>
-      {showCreateModal && <CreateStrategyModal maps={maps ?? []} onClose={() => setShowCreateModal(false)} onCreate={handleCreate} />}
+      {showCreateModal && <CreateStrategyModal maps={maps ?? []} scope={scope} onClose={() => setShowCreateModal(false)} onCreate={handleCreate} />}
       {confirmDeleteId && (
         <ConfirmModal
           title="Apagar estratégia?"
@@ -771,6 +834,7 @@ export function Board() {
           }}
         />
       )}
+      </div>
     </div>
   );
 }

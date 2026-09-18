@@ -263,20 +263,35 @@ export function useAppData(user: SessionUser | null) {
   const [strategies, setStrategies] = useState<Strategy[] | null>(null);
   const [strategiesError, setStrategiesError] = useState<string | null>(null);
   const [strategiesLoading, setStrategiesLoading] = useState(false);
+  // Escopo já carregado em `strategies` (null = nada carregado ainda) --
+  // Board.tsx compara isso com o escopo que a aba ativa pede pra saber se
+  // precisa buscar de novo ou se o que já está em cache serve, evitando
+  // recarregar toda vez que a página remonta com a mesma aba selecionada.
+  const [strategiesScope, setStrategiesScope] = useState<'equipe' | 'individual' | null>(null);
 
   // Estratégias só carregam quando o Board é aberto (ninguém precisa delas
-  // na sidebar/dashboard), mas ficam em cache aqui, não na página.
-  const loadStrategies = useCallback(async () => {
+  // na sidebar/dashboard), mas ficam em cache aqui, não na página. `scope`
+  // decide se lista as da equipe ou só as individuais (ver toggle
+  // Equipe/Individual em Board.tsx) -- trocar de aba força um reload, não
+  // dá pra filtrar client-side porque cada aba é uma query diferente no back.
+  const loadStrategies = useCallback(async (scope: 'equipe' | 'individual') => {
     setStrategiesLoading(true);
     try {
-      setStrategies(await apiFetch<Strategy[]>('/strategies'));
+      setStrategies(await apiFetch<Strategy[]>(`/strategies?scope=${scope}`));
       setStrategiesError(null);
+      setStrategiesScope(scope);
     } catch (err) {
       // 404 "Você ainda não tem uma equipe." é um estado normal agora que
       // criar/entrar em equipe é opcional (ver resolveOnboardingStep) --
       // deixa a mensagem de verdade do back passar em vez do genérico "falha
       // ao carregar", que soaria como bug pra quem só não tem equipe ainda.
       setStrategiesError(err instanceof ApiError && err.status === 404 ? err.message : 'Falha ao carregar as estratégias.');
+      // Marca o escopo como "tentado" mesmo em erro -- sem isso, o efeito em
+      // Board.tsx (que compara strategiesScope com a aba ativa) ficaria
+      // chamando loadStrategies em loop a cada vez que strategiesLoading
+      // volta a false. Tentar de novo é uma ação explícita do botão de erro,
+      // não algo automático.
+      setStrategiesScope(scope);
     } finally {
       setStrategiesLoading(false);
     }
@@ -288,7 +303,7 @@ export function useAppData(user: SessionUser | null) {
     return updated;
   }, []);
 
-  const createStrategy = useCallback(async (input: { mapName: string; side: Lado; title: string }) => {
+  const createStrategy = useCallback(async (input: { scope: 'equipe' | 'individual'; mapName: string; side: Lado; title: string }) => {
     const created = await apiFetch<Strategy>('/strategies', { method: 'POST', body: JSON.stringify(input) });
     setStrategies((prev) => (prev ? [created, ...prev] : [created]));
     return created;
@@ -302,23 +317,28 @@ export function useAppData(user: SessionUser | null) {
   const [spots, setSpots] = useState<Spot[] | null>(null);
   const [spotsError, setSpotsError] = useState<string | null>(null);
   const [spotsLoading, setSpotsLoading] = useState(false);
+  // Mesmo esquema de strategiesScope -- ver comentário lá.
+  const [spotsScope, setSpotsScope] = useState<'equipe' | 'individual' | null>(null);
 
   // Igual estratégias: só carrega quando a tela de Spots é aberta, fica em
-  // cache aqui depois.
-  const loadSpots = useCallback(async () => {
+  // cache aqui depois. `scope` decide equipe (compartilhado com o time) ou
+  // individual (só os seus, sem equipe nenhuma envolvida).
+  const loadSpots = useCallback(async (scope: 'equipe' | 'individual') => {
     setSpotsLoading(true);
     try {
-      setSpots(await apiFetch<Spot[]>('/spots'));
+      setSpots(await apiFetch<Spot[]>(`/spots?scope=${scope}`));
       setSpotsError(null);
+      setSpotsScope(scope);
     } catch (err) {
       setSpotsError(err instanceof ApiError && err.status === 404 ? err.message : 'Falha ao carregar os spots.');
+      setSpotsScope(scope);
     } finally {
       setSpotsLoading(false);
     }
   }, []);
 
   const createSpot = useCallback(
-    async (input: { mapId: string; agentId: string; side: Lado; descricao: string; imagens: string[]; link?: string }) => {
+    async (input: { scope: 'equipe' | 'individual'; mapId: string; agentId: string; side: Lado; descricao: string; imagens: string[]; link?: string }) => {
       const created = await apiFetch<Spot>('/spots', { method: 'POST', body: JSON.stringify(input) });
       setSpots((prev) => (prev ? [created, ...prev] : [created]));
       return created;
@@ -517,6 +537,7 @@ export function useAppData(user: SessionUser | null) {
     strategies,
     strategiesError,
     strategiesLoading,
+    strategiesScope,
     loadStrategies,
     saveStrategy,
     createStrategy,
@@ -524,6 +545,7 @@ export function useAppData(user: SessionUser | null) {
     spots,
     spotsError,
     spotsLoading,
+    spotsScope,
     loadSpots,
     createSpot,
     deleteSpot,

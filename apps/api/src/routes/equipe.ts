@@ -22,7 +22,7 @@ const settingsBodySchema = z.object({
   mainAgentUuids: z.array(z.string()).max(MAX_MAIN_AGENTS),
 });
 
-const cargoBodySchema = z.object({ cargo: z.enum(["jogador", "treinador_principal", "treinador_assistente"]) });
+const cargoBodySchema = z.object({ cargo: z.enum(["jogador", "igl", "treinador_principal", "treinador_assistente"]) });
 const adminBodySchema = z.object({ isAdmin: z.boolean() });
 
 const createEquipeBodySchema = z.object({ nome: z.string().min(1).max(60) });

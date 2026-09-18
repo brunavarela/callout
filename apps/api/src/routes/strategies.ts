@@ -3,11 +3,19 @@ import { z } from "zod";
 import { requireAuth } from "../lib/session.js";
 import { prisma } from "../lib/prisma.js";
 import { ensureMapAsset, loadUsageStats, toStrategyDTO } from "../lib/strategy.js";
-import { getUserEquipeId } from "../lib/equipe.js";
+import { getUserEquipeId, canManageEquipeStrategies } from "../lib/equipe.js";
 
 const STRATEGY_INCLUDE = { items: true, map: true, criadoPor: true } as const;
 
+const SEM_EQUIPE_ERROR = "Você ainda não tem uma equipe.";
+const SEM_PERMISSAO_ERROR = "Só IGL, treinador ou admin da equipe pode gerenciar estratégia de equipe.";
+
 const createBodySchema = z.object({
+  // "equipe" exige cargo/admin (canManageEquipeStrategies) -- "individual"
+  // não depende de equipe nenhuma, só de quem criou. PRO ainda não existe
+  // (LAUNCH.md §5/§12) -- quando existir, o gate de estratégia individual
+  // entra bem aqui, antes do prisma.strategy.create.
+  scope: z.enum(["equipe", "individual"]),
   mapName: z.string().min(1),
   side: z.enum(["ATK", "DEF"]),
   title: z.string().min(1).max(80),
@@ -31,12 +39,29 @@ const updateBodySchema = z.object({
 });
 
 export async function strategiesRoutes(app: FastifyInstance) {
+  // scope=equipe lista as estratégias do time (exige ter equipe); scope=
+  // individual lista só as próprias, sem equipe nenhuma envolvida. Sem
+  // query (compat com chamadas antigas), cai pro time se a pessoa tiver
+  // uma, senão pras individuais -- mesma lógica que Board.tsx usa pra
+  // decidir a aba inicial do toggle Equipe/Individual.
   app.get("/strategies", { preHandler: requireAuth }, async (request, reply) => {
+    const { scope } = request.query as { scope?: string };
     const equipeId = await getUserEquipeId(request.user!.id);
-    if (!equipeId) return reply.code(404).send({ error: "Você ainda não tem uma equipe." });
+    const usarEquipe = scope === "individual" ? false : scope === "equipe" ? true : Boolean(equipeId);
+
+    if (usarEquipe) {
+      if (!equipeId) return reply.code(404).send({ error: SEM_EQUIPE_ERROR });
+      const strategies = await prisma.strategy.findMany({
+        where: { equipeId },
+        include: STRATEGY_INCLUDE,
+        orderBy: { updatedAt: "desc" },
+      });
+      const usageByStrategy = await loadUsageStats(strategies.map((s) => s.id));
+      return strategies.map((s) => toStrategyDTO(s, usageByStrategy.get(s.id)));
+    }
 
     const strategies = await prisma.strategy.findMany({
-      where: { equipeId },
+      where: { equipeId: null, criadoPorId: request.user!.id },
       include: STRATEGY_INCLUDE,
       orderBy: { updatedAt: "desc" },
     });
@@ -46,11 +71,19 @@ export async function strategiesRoutes(app: FastifyInstance) {
 
   app.get("/strategies/:id", { preHandler: requireAuth }, async (request, reply) => {
     const { id } = request.params as { id: string };
-    const equipeId = await getUserEquipeId(request.user!.id);
-    if (!equipeId) return reply.code(404).send({ error: "Você ainda não tem uma equipe." });
-
-    const strategy = await prisma.strategy.findFirst({ where: { id, equipeId }, include: STRATEGY_INCLUDE });
+    const strategy = await prisma.strategy.findUnique({ where: { id }, include: STRATEGY_INCLUDE });
     if (!strategy) return reply.code(404).send({ error: "Estratégia não encontrada." });
+
+    // Time: qualquer membro do MESMO time vê. Individual: só quem criou.
+    // Trata "não é sua" como 404 (não distinguir de "não existe") pros dois
+    // casos, mesmo padrão que já existia aqui.
+    if (strategy.equipeId) {
+      const equipeId = await getUserEquipeId(request.user!.id);
+      if (equipeId !== strategy.equipeId) return reply.code(404).send({ error: "Estratégia não encontrada." });
+    } else if (strategy.criadoPorId !== request.user!.id) {
+      return reply.code(404).send({ error: "Estratégia não encontrada." });
+    }
+
     const usage = (await loadUsageStats([strategy.id])).get(strategy.id);
     return toStrategyDTO(strategy, usage);
   });
@@ -61,8 +94,17 @@ export async function strategiesRoutes(app: FastifyInstance) {
       return reply.code(400).send({ error: parsed.error.issues[0]?.message ?? "Dados inválidos" });
     }
 
-    const equipeId = await getUserEquipeId(request.user!.id);
-    if (!equipeId) return reply.code(404).send({ error: "Você ainda não tem uma equipe." });
+    let equipeId: string | null = null;
+    if (parsed.data.scope === "equipe") {
+      equipeId = await getUserEquipeId(request.user!.id);
+      if (!equipeId) return reply.code(404).send({ error: SEM_EQUIPE_ERROR });
+      if (!(await canManageEquipeStrategies(request.user!.id, equipeId))) {
+        return reply.code(403).send({ error: SEM_PERMISSAO_ERROR });
+      }
+    }
+    // scope "individual": sem equipe nenhuma envolvida. PRO ainda não
+    // existe (LAUNCH.md §5/§12) -- é aqui que o gate entra quando existir;
+    // por ora, qualquer usuário autenticado pode criar as suas.
 
     const map = await ensureMapAsset(parsed.data.mapName);
 
@@ -88,11 +130,18 @@ export async function strategiesRoutes(app: FastifyInstance) {
       return reply.code(400).send({ error: parsed.error.issues[0]?.message ?? "Dados inválidos" });
     }
 
-    const equipeId = await getUserEquipeId(request.user!.id);
-    if (!equipeId) return reply.code(404).send({ error: "Você ainda não tem uma equipe." });
-
-    const existing = await prisma.strategy.findFirst({ where: { id, equipeId } });
+    const existing = await prisma.strategy.findUnique({ where: { id } });
     if (!existing) return reply.code(404).send({ error: "Estratégia não encontrada." });
+
+    if (existing.equipeId) {
+      const equipeId = await getUserEquipeId(request.user!.id);
+      if (equipeId !== existing.equipeId) return reply.code(404).send({ error: "Estratégia não encontrada." });
+      if (!(await canManageEquipeStrategies(request.user!.id, existing.equipeId))) {
+        return reply.code(403).send({ error: SEM_PERMISSAO_ERROR });
+      }
+    } else if (existing.criadoPorId !== request.user!.id) {
+      return reply.code(404).send({ error: "Estratégia não encontrada." });
+    }
 
     const { items, ...fields } = parsed.data;
 
@@ -131,11 +180,18 @@ export async function strategiesRoutes(app: FastifyInstance) {
   // limpa os dois, sem precisar de transação manual aqui.
   app.delete("/strategies/:id", { preHandler: requireAuth }, async (request, reply) => {
     const { id } = request.params as { id: string };
-    const equipeId = await getUserEquipeId(request.user!.id);
-    if (!equipeId) return reply.code(404).send({ error: "Você ainda não tem uma equipe." });
-
-    const existing = await prisma.strategy.findFirst({ where: { id, equipeId } });
+    const existing = await prisma.strategy.findUnique({ where: { id } });
     if (!existing) return reply.code(404).send({ error: "Estratégia não encontrada." });
+
+    if (existing.equipeId) {
+      const equipeId = await getUserEquipeId(request.user!.id);
+      if (equipeId !== existing.equipeId) return reply.code(404).send({ error: "Estratégia não encontrada." });
+      if (!(await canManageEquipeStrategies(request.user!.id, existing.equipeId))) {
+        return reply.code(403).send({ error: SEM_PERMISSAO_ERROR });
+      }
+    } else if (existing.criadoPorId !== request.user!.id) {
+      return reply.code(404).send({ error: "Estratégia não encontrada." });
+    }
 
     await prisma.strategy.delete({ where: { id } });
     return reply.code(204).send();

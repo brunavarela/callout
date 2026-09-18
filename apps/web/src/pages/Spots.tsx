@@ -109,11 +109,13 @@ function ImagePicker({ images, onChange }: { images: string[]; onChange: (next: 
 function CreateSpotModal({
   agents,
   maps,
+  scope,
   onClose,
   onCreate,
 }: {
   agents: AgentOption[];
   maps: MapOption[];
+  scope: 'equipe' | 'individual';
   onClose: () => void;
   onCreate: ReturnType<typeof useOutletContext<OutletContext>>['createSpot'];
 }) {
@@ -151,6 +153,7 @@ function CreateSpotModal({
     setError(null);
     try {
       await onCreate({
+        scope,
         mapId: form.mapId,
         agentId: form.agentId,
         side: form.side,
@@ -172,7 +175,8 @@ function CreateSpotModal({
       style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50 }}
     >
       <div onClick={(e) => e.stopPropagation()} style={{ ...cardStyle, width: 520, maxWidth: '92vw', maxHeight: '90vh', overflow: 'auto', padding: 22 }}>
-        <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 17, marginBottom: 16 }}>Novo spot</div>
+        <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 17, marginBottom: 4 }}>Novo spot</div>
+        <div style={{ fontSize: 12, color: 'var(--text-faint)', marginBottom: 16 }}>{scope === 'equipe' ? 'Visível pra toda a equipe.' : 'Só seu, ninguém mais vê.'}</div>
 
         {maps.length === 0 ? (
           <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 16 }}>Nenhum mapa cadastrado ainda.</div>
@@ -342,9 +346,14 @@ function ViewSpotModal({ spot, onClose, onRequestDelete }: { spot: SpotDTO; onCl
 
 export function Spots() {
   const navigate = useNavigate();
-  const { spots, spotsError, spotsLoading, loadSpots, createSpot, deleteSpot, agents: realAgents, loadAgents, maps: realMaps, loadMaps } =
+  const { spots, spotsError, spotsLoading, spotsScope, loadSpots, createSpot, deleteSpot, agents: realAgents, loadAgents, maps: realMaps, loadMaps, equipe } =
     useOutletContext<OutletContext>();
   const cardStyle = useCardStyle();
+  // Spot de equipe é compartilhado com todo mundo do time (qualquer membro
+  // cria/apaga, sem restrição de cargo -- diferente de Strategy). Individual
+  // não depende de equipe nenhuma (PRO ainda não existe, ver POST /spots).
+  // Sem equipe, só a aba individual existe.
+  const [scope, setScope] = useState<'equipe' | 'individual'>(equipe ? 'equipe' : 'individual');
   const [query, setQuery] = useState('');
   const [filterMap, setFilterMap] = useState('Todos');
   const [filterAgent, setFilterAgent] = useState('Todos');
@@ -371,8 +380,8 @@ export function Spots() {
   }
 
   useEffect(() => {
-    if (spots === null && !spotsLoading) loadSpots();
-  }, [spots, spotsLoading, loadSpots]);
+    if (spotsScope !== scope && !spotsLoading) loadSpots(scope);
+  }, [scope, spotsScope, spotsLoading, loadSpots]);
 
   useEffect(() => {
     if (realAgents === null) loadAgents();
@@ -415,7 +424,7 @@ export function Spots() {
     <div style={{ padding: 26, display: 'flex', flexDirection: 'column', gap: 18 }}>
       <PageHeaderCard
         title="Spots"
-        subtitle={<HeaderSubtitle>{spots?.length ?? 0} spots salvos pelo time</HeaderSubtitle>}
+        subtitle={<HeaderSubtitle>{spots?.length ?? 0} spots salvos {scope === 'equipe' ? 'pelo time' : 'por você'}</HeaderSubtitle>}
         actions={
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'nowrap', width: '100%' }}>
             <input
@@ -471,10 +480,21 @@ export function Spots() {
         resultCount={`${filtered.length} resultado${filtered.length === 1 ? '' : 's'}`}
       />
 
+      {equipe && (
+        <div style={{ display: 'flex', gap: 6 }}>
+          <button className={scope === 'equipe' ? 'btn-primary' : 'btn-secondary'} style={{ padding: '8px 16px', fontSize: 12.5 }} onClick={() => setScope('equipe')}>
+            Equipe
+          </button>
+          <button className={scope === 'individual' ? 'btn-primary' : 'btn-secondary'} style={{ padding: '8px 16px', fontSize: 12.5 }} onClick={() => setScope('individual')}>
+            Individual
+          </button>
+        </div>
+      )}
+
       {spotsError && !spots && (
         <div style={{ ...cardStyle, padding: 22, display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'flex-start' }}>
           <div style={{ fontSize: 14, color: 'var(--text-3)' }}>{spotsError}</div>
-          <button className="btn-secondary" onClick={spotsError === 'Você ainda não tem uma equipe.' ? () => navigate('/equipe') : loadSpots}>
+          <button className="btn-secondary" onClick={spotsError === 'Você ainda não tem uma equipe.' ? () => navigate('/equipe') : () => loadSpots(scope)}>
             {spotsError === 'Você ainda não tem uma equipe.' ? 'Criar ou entrar numa equipe' : 'Tentar de novo'}
           </button>
         </div>
@@ -484,7 +504,7 @@ export function Spots() {
 
       {spots && spots.length === 0 && (
         <div style={{ ...cardStyle, padding: 40, textAlign: 'center', color: 'var(--text-muted)', fontSize: 14, display: 'flex', flexDirection: 'column', gap: 14, alignItems: 'center' }}>
-          Nenhum spot salvo ainda.
+          {scope === 'equipe' ? 'Nenhum spot da equipe salvo ainda.' : 'Nenhum spot individual seu salvo ainda.'}
           <button className="btn-primary" onClick={() => setCreating(true)}>
             Criar o primeiro spot
           </button>
@@ -534,7 +554,7 @@ export function Spots() {
         </div>
       )}
 
-      {creating && <CreateSpotModal agents={agentOptions} maps={mapOptions} onClose={() => setCreating(false)} onCreate={createSpot} />}
+      {creating && <CreateSpotModal agents={agentOptions} maps={mapOptions} scope={scope} onClose={() => setCreating(false)} onCreate={createSpot} />}
       {viewing && <ViewSpotModal spot={viewing} onClose={() => setViewing(null)} onRequestDelete={() => setConfirmDelete(viewing)} />}
       {confirmDelete && (
         <ConfirmModal

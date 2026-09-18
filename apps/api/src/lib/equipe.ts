@@ -1,7 +1,7 @@
 import type { User, Equipe } from "@prisma/client";
 import { randomBytes } from "node:crypto";
 import { Prisma } from "@prisma/client";
-import type { EquipeOverview } from "@callout/shared";
+import { CARGOS_GERENCIAM_ESTRATEGIA, type EquipeOverview } from "@callout/shared";
 import { prisma } from "./prisma.js";
 import { getMmr } from "./henrikdev.js";
 import { loadAgentsByUuid } from "./assets.js";
@@ -198,5 +198,15 @@ export async function buildEquipeOverview(equipeId: string): Promise<EquipeOverv
 export async function isEquipeAdmin(userId: string, equipeId: string): Promise<boolean> {
   const membership = await prisma.membroEquipe.findUnique({ where: { equipeId_userId: { equipeId, userId } } });
   return membership?.isAdmin ?? false;
+}
+
+// Quem pode criar/editar/apagar estratégia DE EQUIPE (18/09/2026) — IGL,
+// treinador principal/assistente ou admin. Jogador comum só visualiza (ver
+// /strategies em routes/strategies.ts). Estratégia INDIVIDUAL não passa por
+// aqui — quem criou é sempre dono dela, sem depender de cargo/equipe.
+export async function canManageEquipeStrategies(userId: string, equipeId: string): Promise<boolean> {
+  const membership = await prisma.membroEquipe.findUnique({ where: { equipeId_userId: { equipeId, userId } } });
+  if (!membership) return false;
+  return membership.isAdmin || CARGOS_GERENCIAM_ESTRATEGIA.includes(membership.cargo as (typeof CARGOS_GERENCIAM_ESTRATEGIA)[number]);
 }
 

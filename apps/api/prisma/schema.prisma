@@ -279,9 +279,12 @@ model MembroEquipe {
   funcoes         String[] @default([]) // até 2 — controlador | duelista | iniciador | sentinela | flex
   nota            String?  // recado social do card ("Segura o mapa inteiro sozinho..."), editável pelo grupo
   mainAgentUuids  String[] @default([]) // até 3, uuid do AgentAsset — editável pelo grupo, igual funcoes/nota
-  // "jogador" | "treinador_principal" | "treinador_assistente" — validado
-  // via Zod na rota, não aqui (mesmo padrão de side/lado/tipo no resto do
-  // schema). Só jogador tem sentido ter Riot ID vinculado/estatística.
+  // "jogador" | "igl" | "treinador_principal" | "treinador_assistente" —
+  // validado via Zod na rota, não aqui (mesmo padrão de side/lado/tipo no
+  // resto do schema). Só jogador tem sentido ter Riot ID vinculado/
+  // estatística. igl/treinador_principal/treinador_assistente (+ isAdmin)
+  // podem criar/editar estratégia de equipe — ver canManageEquipeStrategias
+  // em lib/equipe.ts; "jogador" só visualiza.
   cargo   String  @default("jogador")
   // Dono da equipe (Equipe.donoId) é sempre admin, de forma permanente — não
   // é removível nem rebaixável (decisão de 01/09/2026, v1: sem transferência
@@ -299,8 +302,13 @@ model MembroEquipe {
 
 model Strategy {
   id          String   @id @default(cuid())
-  equipeId    String   @map("teamId")
-  equipe      Equipe   @relation(fields: [equipeId], references: [id], onDelete: Cascade)
+  // null = estratégia INDIVIDUAL (dona é só quem criou, criadoPorId) --
+  // desde 18/09/2026. Criar/editar/apagar estratégia de equipe exige cargo
+  // igl/treinador_principal/treinador_assistente ou isAdmin (ver
+  // canManageEquipeStrategias em lib/equipe.ts); estratégia individual só
+  // quem criou mexe, sem depender de equipe nenhuma.
+  equipeId    String?  @map("teamId")
+  equipe      Equipe?  @relation(fields: [equipeId], references: [id], onDelete: Cascade)
   mapId       String
   map         MapAsset @relation(fields: [mapId], references: [id])
   lado        String // ATK | DEF
@@ -358,8 +366,12 @@ model StratItem {
 // tamanho do grupo (<10 usuários) isso é suficiente por ora.
 model Spot {
   id          String   @id @default(cuid())
-  equipeId    String   @map("teamId")
-  equipe      Equipe   @relation(fields: [equipeId], references: [id], onDelete: Cascade)
+  // null = spot INDIVIDUAL (só quem criou vê/apaga) -- desde 18/09/2026,
+  // mesmo esquema de Strategy.equipeId. Spot de equipe continua
+  // compartilhado com todo mundo do time, sem restrição extra de cargo
+  // (diferente de Strategy, aqui qualquer membro pode criar/apagar).
+  equipeId    String?  @map("teamId")
+  equipe      Equipe?  @relation(fields: [equipeId], references: [id], onDelete: Cascade)
   mapId       String
   map         MapAsset @relation(fields: [mapId], references: [id])
   agentUuid   String
