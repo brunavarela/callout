@@ -7,11 +7,13 @@ export function Modal({
   onClose,
   children,
   width = 420,
+  padding = 24,
   closeOnBackdrop = true,
 }: {
   onClose: () => void;
   children: ReactNode;
   width?: number;
+  padding?: number;
   // false pros modais onde clicar fora sem querer (ex.: interagindo com um
   // select por dentro) fecharia por acidente -- aí só o X mesmo fecha.
   closeOnBackdrop?: boolean;
@@ -36,7 +38,7 @@ export function Modal({
           background: 'var(--surface)',
           border: '1px solid var(--surface-border)',
           borderRadius: 'var(--radius-lg)',
-          padding: 24,
+          padding,
           width,
           maxWidth: '100%',
           maxHeight: '85vh',

@@ -440,6 +440,44 @@ button {
   opacity: 1 !important;
 }
 
+/* Modal de Perfil (ProfileModal.tsx) — 4 colunas lado a lado (Perfil/Email/
+   RiotID/Senha) com divisória vertical entre elas; empilha em coluna única
+   com divisória horizontal em telas estreitas, já que o modal em si só
+   encolhe (maxWidth:100%) sem colapsar o grid sozinho. */
+.profile-modal-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  min-height: 408px;
+}
+.profile-modal-grid > .profile-col {
+  min-width: 0;
+  padding: 4px 32px;
+}
+.profile-modal-grid > .profile-col:first-child {
+  padding-left: 0;
+}
+.profile-modal-grid > .profile-col:last-child {
+  padding-right: 0;
+}
+.profile-modal-grid > .profile-col:not(:first-child) {
+  border-left: 1px solid var(--surface-border);
+}
+@media (max-width: 720px) {
+  .profile-modal-grid {
+    grid-template-columns: 1fr;
+  }
+  .profile-modal-grid > .profile-col {
+    padding: 18px 0 0;
+  }
+  .profile-modal-grid > .profile-col:first-child {
+    padding-top: 0;
+  }
+  .profile-modal-grid > .profile-col:not(:first-child) {
+    border-left: none;
+    border-top: 1px solid var(--surface-border);
+  }
+}
+
 /* ===================================================================
    Responsivo — o app inteiro é estilo inline (React style={}), então as
    classes abaixo só existem pra carregar as propriedades de layout que

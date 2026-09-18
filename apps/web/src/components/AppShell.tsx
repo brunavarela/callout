@@ -395,7 +395,7 @@ export function AppShell() {
               }}
             >
               {user.avatarUrl ? (
-                <img src={user.avatarUrl} alt="" style={{ width: 32, height: 32, borderRadius: 9, flex: 'none' }} />
+                <img src={user.avatarUrl} alt="" style={{ width: 32, height: 32, borderRadius: 9, flex: 'none', objectFit: 'cover' }} />
               ) : (
                 <div
                   style={{
