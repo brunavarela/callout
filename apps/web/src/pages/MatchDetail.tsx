@@ -3,8 +3,8 @@ import { useNavigate, useParams } from 'react-router-dom';
 import type { MatchDetail as MatchDetailDTO } from '@callout/shared';
 import { apiFetch } from '../lib/api';
 import { LoadingFill } from '../components/Spinner';
+import { useCardStyle } from '../components/statsPrimitives';
 
-const cardStyle: React.CSSProperties = { borderRadius: 'var(--radius-lg)', background: 'var(--surface)', border: '1px solid var(--surface-border)' };
 const scoreCols = '1fr 100px 62px 54px 54px 54px 62px';
 
 function fmtKda(v: number) {
@@ -14,6 +14,7 @@ function fmtKda(v: number) {
 export function MatchDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const cardStyle = useCardStyle();
   const [match, setMatch] = useState<MatchDetailDTO | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);

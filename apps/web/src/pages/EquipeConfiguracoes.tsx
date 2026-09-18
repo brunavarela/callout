@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { useNavigate, useOutletContext } from 'react-router-dom';
-import { ArrowLeft, Camera, Check, Copy, Eye, EyeOff, MoreVertical, Pencil, Shield, ShieldOff, Trash2 } from 'lucide-react';
+import { Camera, Check, Copy, Eye, EyeOff, MoreVertical, Pencil, Shield, ShieldOff, Trash2 } from 'lucide-react';
 import type { Cargo, MembroEquipeCard } from '@callout/shared';
 import { apiFetch, ApiError } from '../lib/api';
 import { useSession } from '../lib/session';
@@ -11,8 +11,8 @@ import { MembroConfiguracoesModal } from '../components/MembroConfiguracoesModal
 import { compressImageToDataUrl } from '../lib/imageCompress';
 import { CARGO_LABEL, CARGO_OPTIONS } from '../lib/cargo';
 import { MainAgentIcons } from '../components/MainAgentIcons';
-
-const cardStyle: React.CSSProperties = { borderRadius: 'var(--radius-lg)', background: 'var(--surface)', border: '1px solid var(--surface-border)' };
+import { PageHeaderCard } from '../components/PageHeaderCard';
+import { useCardStyle } from '../components/statsPrimitives';
 
 function initialsOf(name: string) {
   return name.slice(0, 2).toUpperCase();
@@ -190,6 +190,7 @@ const ROW_GAP = 28;
 
 export function EquipeConfiguracoes() {
   const navigate = useNavigate();
+  const cardStyle = useCardStyle();
   const { refresh } = useSession();
   const { equipe, equipeError, reloadEquipe, agents, loadAgents } = useOutletContext<OutletContext>();
 
@@ -345,16 +346,7 @@ export function EquipeConfiguracoes() {
 
   return (
     <div style={{ padding: 26, display: 'flex', flexDirection: 'column', gap: 20 }}>
-      <div>
-        <button
-          onClick={() => navigate('/equipe')}
-          style={{ display: 'flex', alignItems: 'center', gap: 7, background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 12.5, cursor: 'pointer', padding: 0, marginBottom: 10 }}
-        >
-          <ArrowLeft size={14} strokeWidth={1.75} />
-          Voltar pra equipe
-        </button>
-        <h1 style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 700, fontSize: 32, letterSpacing: '-.025em', margin: 0 }}>Configurações da equipe</h1>
-      </div>
+      <PageHeaderCard backTo="/equipe" backLabel="Voltar pra equipe" title="Configurações da equipe" />
 
       {/* Imagem, nome e descrição — só admin edita */}
       <div style={{ ...cardStyle, padding: 22, display: 'flex', gap: 18, alignItems: 'flex-start', flexWrap: 'wrap' }}>

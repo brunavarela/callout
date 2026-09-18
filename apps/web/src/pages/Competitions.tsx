@@ -3,9 +3,9 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { resolverLado, type CategoriaCompeticao, type Competicao, type Time } from '@callout/shared';
 import { apiFetch } from '../lib/api';
 import { LoadingFill } from '../components/Spinner';
+import { PageHeaderCard, HeaderSubtitle } from '../components/PageHeaderCard';
+import { useCardStyle } from '../components/statsPrimitives';
 import { statusEfetivo } from '../lib/competicoesUtil';
-
-const cardStyle: React.CSSProperties = { borderRadius: 'var(--radius-lg)', background: 'var(--surface)', border: '1px solid var(--surface-border)' };
 
 const FILTROS: Array<{ key: CategoriaCompeticao; label: string }> = [
   { key: 'inclusiva', label: 'Inclusivas' },
@@ -58,6 +58,7 @@ function vencedorCompeticao(competicao: Competicao): Time | null {
 }
 
 function CompetitionCard({ competicao, onClick }: { competicao: Competicao; onClick: () => void }) {
+  const cardStyle = useCardStyle();
   const badge = STATUS_BADGE[statusExibicaoCompeticao(competicao)];
   const vencedor = vencedorCompeticao(competicao);
 
@@ -168,6 +169,7 @@ function filtroDaUrl(valor: string | null): CategoriaCompeticao {
 
 export function Competitions() {
   const navigate = useNavigate();
+  const cardStyle = useCardStyle();
   const [searchParams, setSearchParams] = useSearchParams();
   const [filtro, setFiltroState] = useState<CategoriaCompeticao>(() => filtroDaUrl(searchParams.get('filtro')));
   const [dados, setDados] = useState<Competicao[] | null>(null);
@@ -208,15 +210,11 @@ export function Competitions() {
 
   return (
     <div style={{ padding: 26, display: 'flex', flexDirection: 'column', gap: 16 }}>
-      <div style={{ display: 'flex', alignItems: 'flex-end', gap: 20, flexWrap: 'wrap' }}>
-        <div>
-          <h1 style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 700, fontSize: 34, letterSpacing: '-.025em', margin: 0 }}>Competições</h1>
-          <div style={{ fontSize: 14, color: 'var(--text-muted)', marginTop: 6 }}>Escolhe uma competição pra ver chaveamento, resultados e próximos confrontos.</div>
-        </div>
-        <div style={{ marginLeft: 'auto' }}>
-          <FiltroCategorias filtro={filtro} setFiltro={setFiltro} />
-        </div>
-      </div>
+      <PageHeaderCard
+        title="Competições"
+        subtitle={<HeaderSubtitle>Escolhe uma competição pra ver chaveamento, resultados e próximos confrontos.</HeaderSubtitle>}
+        actions={<FiltroCategorias filtro={filtro} setFiltro={setFiltro} />}
+      />
 
       {erro ? (
         <div style={{ ...cardStyle, padding: 40, textAlign: 'center', color: 'var(--text-muted)', fontSize: 14 }}>{erro}</div>

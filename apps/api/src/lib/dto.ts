@@ -42,6 +42,7 @@ export function toSessionUser(user: User, equipe: { id: string; nome: string } |
       glow: user.themeGlow,
       mode: user.themeMode as ThemeMode,
       mapBackground: user.themeMapBackground as MapBackground | null,
+      glassCards: user.themeGlassCards,
     },
     isAdmin: user.isAdmin,
     proximoPasso: resolveOnboardingStep(user, equipe !== null),

@@ -81,7 +81,6 @@ export function AccountMenu({
           display: 'flex',
           flexDirection: 'column',
           gap: 2,
-          zIndex: 10,
           boxShadow: '0 12px 28px rgba(0,0,0,.5)',
         }}
       >

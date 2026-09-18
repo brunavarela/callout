@@ -5,7 +5,8 @@ import { LoadingFill } from '../components/Spinner';
 import { SeasonOverviewSection } from '../components/SeasonOverviewSection';
 import { MemberFilterSelect, MatchCountFilterSelect, SeasonMapFilterSelect, SeasonAgentFilterSelect, SeasonModoFilterSelect } from '../components/SeasonFilters';
 import { formatPlaytime } from '../lib/seasonFormat';
-import { cardStyle, plural } from '../components/statsPrimitives';
+import { useCardStyle, plural } from '../components/statsPrimitives';
+import { PageHeaderCard, StatsPill } from '../components/PageHeaderCard';
 import { useSession } from '../lib/session';
 
 function firstName(user: SessionUser | null): string {
@@ -40,40 +41,46 @@ export function Dashboard() {
   } = useOutletContext<OutletContext>();
   const { user } = useSession();
 
+  const cardStyle = useCardStyle();
   const selectedMember = selectedMemberId ? (equipe?.members.find((m) => m.userId === selectedMemberId) ?? null) : null;
   const isSelf = !selectedMemberId;
   const subject = selectedMember?.name ?? 'você';
 
   return (
     <div style={{ padding: 26, display: 'flex', flexDirection: 'column', gap: 16 }}>
-      <div style={{ display: 'flex', alignItems: 'flex-end', gap: 20, flexWrap: 'wrap' }}>
-        <div>
-          <h1 style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 700, fontSize: 34, letterSpacing: '-.025em', margin: 0 }}>
-            {isSelf ? `E aí, ${firstName(user)}` : `Espiando ${subject}`}
-          </h1>
-          {seasonOverview && (
-            <div style={{ fontSize: 14, color: 'var(--text-muted)', marginTop: 6 }}>
-              {plural(seasonOverview.matchesCount, 'partida')} · {formatPlaytime(seasonOverview.playtimeMs)} jogadas · {seasonOverview.wins}V–{seasonOverview.losses}D
-            </div>
-          )}
-        </div>
-        <div className="dashboard-header-actions">
-          <MemberFilterSelect equipe={equipe} selectedMemberId={selectedMemberId} setSelectedMemberId={setSelectedMemberId} />
-          {seasonOverview && (
-            <>
-              <SeasonAgentFilterSelect topAgents={seasonOverview.topAgents} agentFilter={seasonAgentFilter} setAgentFilter={setSeasonAgentFilter} />
-              <SeasonMapFilterSelect topMaps={seasonOverview.topMaps} mapFilter={seasonMapFilter} setMapFilter={setSeasonMapFilter} />
-              <SeasonModoFilterSelect availableModos={seasonOverview.availableModos} modoFilter={seasonModoFilter} setModoFilter={setSeasonModoFilter} />
-            </>
-          )}
-          <MatchCountFilterSelect matchCountFilter={matchCountFilter} setMatchCountFilter={setMatchCountFilter} />
-          <div className="dashboard-action-buttons">
-            <button className="btn-secondary" style={{ minHeight: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 17px' }} onClick={() => navigate('/board')}>
-              Abrir estratégia
-            </button>
-          </div>
-        </div>
-      </div>
+      <PageHeaderCard
+        title={isSelf ? `E aí, ${firstName(user)}` : `Espiando ${subject}`}
+        titleAdornment={
+          seasonOverview && (
+            <StatsPill>
+              <span style={{ color: 'var(--text-muted)' }}>{plural(seasonOverview.matchesCount, 'partida')}</span>
+              <span style={{ color: 'var(--text-muted)' }}>{formatPlaytime(seasonOverview.playtimeMs)} jogadas</span>
+              <span style={{ color: 'var(--text-2)', fontWeight: 600 }}>
+                {seasonOverview.wins}V–{seasonOverview.losses}D
+              </span>
+            </StatsPill>
+          )
+        }
+        actions={
+          <button className="btn-secondary" style={{ display: 'flex', alignItems: 'center', padding: '9px 14px', fontSize: 12.5 }} onClick={() => navigate('/board')}>
+            Abrir estratégia
+          </button>
+        }
+        filters={
+          <>
+            <MemberFilterSelect equipe={equipe} selectedMemberId={selectedMemberId} setSelectedMemberId={setSelectedMemberId} />
+            {seasonOverview && (
+              <>
+                <SeasonAgentFilterSelect topAgents={seasonOverview.topAgents} agentFilter={seasonAgentFilter} setAgentFilter={setSeasonAgentFilter} />
+                <SeasonMapFilterSelect topMaps={seasonOverview.topMaps} mapFilter={seasonMapFilter} setMapFilter={setSeasonMapFilter} />
+                <SeasonModoFilterSelect availableModos={seasonOverview.availableModos} modoFilter={seasonModoFilter} setModoFilter={setSeasonModoFilter} />
+              </>
+            )}
+            <MatchCountFilterSelect matchCountFilter={matchCountFilter} setMatchCountFilter={setMatchCountFilter} />
+          </>
+        }
+        resultCount={seasonMatchesPage && plural(seasonMatchesPage.total, 'resultado')}
+      />
 
       {seasonOverviewLoading ? (
         <LoadingFill />

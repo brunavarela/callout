@@ -3,10 +3,12 @@ import { Navigate, NavLink, Outlet, useLocation, useNavigate } from 'react-route
 import { LayoutDashboard, Swords, Users, PenTool, MapPin, Trophy, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useSession } from '../lib/session';
 import { useAppData, type AppData } from '../lib/appData';
+import { useTheme } from '../lib/theme';
 import { routeForStep } from '../lib/onboarding';
 import { AccountMenu } from './AccountMenu';
 import { Logo, LogoMark } from './Logo';
 import { Footer } from './Footer';
+import { CardStyleProvider, glassSurfaceStyle } from './statsPrimitives';
 
 const BASE_NAV_ITEMS = [
   { to: '/', label: 'Painel', icon: LayoutDashboard, match: (p: string) => p === '/' },
@@ -36,6 +38,7 @@ interface SearchGroup {
 
 function SearchBar({ appData }: { appData: AppData }) {
   const navigate = useNavigate();
+  const { theme } = useTheme();
   const { dashboard, strategies } = appData;
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
@@ -84,6 +87,7 @@ function SearchBar({ appData }: { appData: AppData }) {
           border: '1px solid var(--surface-border)',
           borderRadius: 'var(--radius-md)',
           padding: '10px 14px',
+          ...(theme.glassCards ? glassSurfaceStyle : {}),
         }}
       >
         <span style={{ width: 14, height: 14, borderRadius: '50%', border: '1.5px solid #5A5D61', display: 'block', flex: 'none' }} />
@@ -188,8 +192,9 @@ export function AppShell() {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, loading } = useSession();
+  const { theme } = useTheme();
   const appData = useAppData(user);
-  const { equipe } = appData;
+  const { equipe, equipeNaoTemNenhuma } = appData;
   const [settingsOpen, setSettingsOpen] = useState(false);
   const accountMenuRef = useRef<HTMLDivElement>(null);
 
@@ -234,7 +239,7 @@ export function AppShell() {
 
   return (
     <div className="app-shell-grid" style={{ '--sidebar-w': collapsed ? '76px' : '232px' } as React.CSSProperties}>
-      <aside className={`app-sidebar${collapsed ? ' app-sidebar-collapsed' : ''}`}>
+      <aside className={`app-sidebar${collapsed ? ' app-sidebar-collapsed' : ''}`} style={theme.glassCards ? glassSurfaceStyle : undefined}>
         {/* Clipada só nesse wrapper (não na aside inteira) — a aside precisa
             de overflow visível pra tooltip dos ícones (recolhida) escapar. */}
         <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none' }}>
@@ -254,7 +259,7 @@ export function AppShell() {
           <div className="sidebar-fade sidebar-fade--col" style={{ minWidth: 0, color: 'var(--text)' }}>
             <Logo height={28} />
             <div style={{ fontSize: 10, letterSpacing: '.12em', color: 'var(--text-muted)', marginTop: 5, whiteSpace: 'nowrap' }}>
-              {equipe ? `${equipe.name.toUpperCase()} · ${equipe.memberCount} MEMBRO${equipe.memberCount === 1 ? '' : 'S'}` : '…'}
+              {equipe ? `${equipe.name.toUpperCase()} · ${equipe.memberCount} MEMBRO${equipe.memberCount === 1 ? '' : 'S'}` : equipeNaoTemNenhuma ? 'SEM EQUIPE AINDA' : '…'}
             </div>
           </div>
           {/* Mesma marca do favicon.svg, sem fundo — só aparece com a
@@ -405,7 +410,9 @@ export function AppShell() {
           </div>
         </header>
 
-        <Outlet context={appData satisfies OutletContext} />
+        <CardStyleProvider glass={theme.glassCards}>
+          <Outlet context={appData satisfies OutletContext} />
+        </CardStyleProvider>
         <Footer />
       </main>
     </div>

@@ -1,5 +1,7 @@
 import { Link } from 'react-router-dom';
 import { LogoMark } from './Logo';
+import { useTheme } from '../lib/theme';
+import { glassSurfaceStyle } from './statsPrimitives';
 
 // Rodapé enxuto, em linha — aparece no fim de toda página (AppShell.tsx
 // pras telas logadas, LoginShell.tsx pras telas de login). Termos/
@@ -8,8 +10,9 @@ import { LogoMark } from './Logo';
 // mudança depois, mas as próprias páginas deixam isso avisado.
 export function Footer() {
   const year = new Date().getFullYear();
+  const { theme } = useTheme();
   return (
-    <footer style={{ borderTop: '1px solid var(--divider)', marginTop: 'auto', background: 'var(--surface)' }}>
+    <footer style={{ borderTop: '1px solid var(--divider)', marginTop: 'auto', background: 'var(--surface)', ...(theme.glassCards ? glassSurfaceStyle : {}) }}>
       <div style={{ padding: '14px 26px', display: 'flex', flexDirection: 'column', gap: 8 }}>
         <div style={{ fontSize: 11, color: 'var(--text-faint)', lineHeight: 1.6, maxWidth: '70ch' }}>
           Ferramenta independente. Sem vínculo com a Riot Games. Dados de partida vindos de API pública não-oficial.

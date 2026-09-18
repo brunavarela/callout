@@ -19,6 +19,7 @@ const themeBodySchema = z.object({
   glow: z.number().int().min(0).max(100),
   mode: z.enum(THEME_MODES),
   mapBackground: z.enum(MAP_BACKGROUNDS).nullable(),
+  glassCards: z.boolean(),
 });
 
 // Nome de exibição, foto de perfil e preferência de "mostrar RiotID como
@@ -66,6 +67,7 @@ export async function meRoutes(app: FastifyInstance) {
         themeGlow: parsed.data.glow,
         themeMode: parsed.data.mode,
         themeMapBackground: parsed.data.mapBackground,
+        themeGlassCards: parsed.data.glassCards,
       },
     });
 

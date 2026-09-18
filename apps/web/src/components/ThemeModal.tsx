@@ -3,6 +3,7 @@ import { Ban } from 'lucide-react';
 import { MAP_BACKGROUNDS, type MapBackground, type ThemePreferences } from '@callout/shared';
 import { THEME_PALETTE, useTheme } from '../lib/theme';
 import { Modal, ModalHeader } from './Modal';
+import { Switch } from './Switch';
 
 function Swatch({ color, active, onClick }: { color: string; active: boolean; onClick: () => void }) {
   return (
@@ -152,6 +153,16 @@ export function ThemeModal({ onClose }: { onClose: () => void }) {
           <div style={{ fontSize: 11, color: 'var(--text-faint)', marginTop: 8, lineHeight: 1.4 }}>
             Arte do mapa escolhido, escurecida, como fundo em todas as telas.
           </div>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+          <div>
+            <div style={{ fontSize: 13, fontWeight: 500 }}>Cards transparentes</div>
+            <div style={{ fontSize: 11, color: 'var(--text-faint)', marginTop: 2, lineHeight: 1.4 }}>
+              Efeito de vidro fosco nos cards, sidebar, busca e cabeçalho das páginas.
+            </div>
+          </div>
+          <Switch checked={local.glassCards} onChange={(checked) => apply({ ...local, glassCards: checked }, true)} />
         </div>
       </div>
     </Modal>

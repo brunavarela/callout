@@ -5,7 +5,7 @@ import type { MatchBadge, MatchDetail, SeasonMatchesPage, SeasonMatchSummary } f
 import { LoadingFill } from './Spinner';
 import { MatchDetailPanel } from './MatchDetailPanel';
 import { apiFetch } from '../lib/api';
-import { cardStyle, fmtNum, fmtDelta, plural } from './statsPrimitives';
+import { useCardStyle, fmtNum, fmtDelta, plural } from './statsPrimitives';
 import { PageControls, MODO_LABELS } from './SeasonFilters';
 
 const WIN = 'var(--pos, #18AAB7)';
@@ -334,6 +334,7 @@ export function SeasonMatchesList({
   height?: number;
 }) {
   const navigate = useNavigate();
+  const cardStyle = useCardStyle();
 
   if (loading) return <LoadingFill />;
   if (error) return <div style={{ ...cardStyle, padding: 24, textAlign: 'center', color: 'var(--text-muted)', fontSize: 13.5 }}>{error}</div>;

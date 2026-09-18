@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import type { RecentFormInsights, RrHistoryPoint, SeasonOverview } from '@callout/shared';
 import { SnakeSpinner } from './Spinner';
-import { cardStyle, WIN, LOSS, DRAW, fmtDelta, InfoDot } from './statsPrimitives';
+import { useCardStyle, WIN, LOSS, DRAW, fmtDelta, InfoDot } from './statsPrimitives';
 
 // Escada de ranques (sem contar Unranked/Radiant, que não seguem o padrão
 // "nome N") — usada só pra descobrir o próximo ranque a partir do atual.
@@ -172,6 +172,7 @@ export function RrHistoryCard({
   currentRank: SeasonOverview['currentRank'];
   height?: number;
 }) {
+  const cardStyle = useCardStyle();
   const rrBalance = rrHistory.reduce((s, p) => s + p.delta, 0);
 
   const bullets: React.ReactNode[] = [];

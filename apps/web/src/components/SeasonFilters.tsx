@@ -2,7 +2,9 @@ import type { EquipeOverview, MatchCountFilter } from '@callout/shared';
 import { Select } from './Select';
 import { formatSeasonShort } from '../lib/seasonFormat';
 
-const FILTER_STYLE: React.CSSProperties = { width: 'auto', height: 40, padding: '0 14px', borderRadius: 9, fontSize: 12.5, fontWeight: 600 };
+// Só a largura -- o resto (sem caixa, sublinha no hover) vem da classe
+// "filter-select" (ver .select-trigger.filter-select no index.css).
+const FILTER_STYLE: React.CSSProperties = { width: 'auto' };
 
 // Filtro "ver painel de outro membro" — só entram membros da equipe com
 // Riot ID vinculado (m.hasRiotLinked), já que sem isso não tem partida
@@ -27,6 +29,7 @@ export function MemberFilterSelect({
       options={[{ value: 'self', label: 'Você' }, ...options.map((m) => ({ value: m.userId, label: m.name }))]}
       title="Ver painel de outro membro do time"
       style={FILTER_STYLE}
+      className="filter-select"
     />
   );
 }
@@ -51,6 +54,7 @@ export function SeasonFilterSelect({
       options={availableSeasons.map((s) => ({ value: s.seasonId, label: formatSeasonShort(s.seasonShort) }))}
       title="Escolher o ato"
       style={FILTER_STYLE}
+      className="filter-select"
     />
   );
 }
@@ -79,6 +83,7 @@ export function MatchCountFilterSelect({
       options={(['all', 20, 7] as const).map((n) => ({ value: String(n), label: MATCH_COUNT_LABELS[n] }))}
       title="Quantas partidas considerar"
       style={FILTER_STYLE}
+      className="filter-select"
     />
   );
 }
@@ -104,6 +109,7 @@ export function SeasonMapFilterSelect({
       options={[{ value: 'all', label: 'Todos os mapas' }, ...options.map((m) => ({ value: m.mapId, label: m.map }))]}
       title="Filtrar por mapa"
       style={FILTER_STYLE}
+      className="filter-select"
     />
   );
 }
@@ -128,6 +134,7 @@ export function SeasonAgentFilterSelect({
       options={[{ value: 'all', label: 'Todos os agentes' }, ...topAgents.map((a) => ({ value: a.agent, label: a.agent }))]}
       title="Filtrar por agente"
       style={FILTER_STYLE}
+      className="filter-select"
     />
   );
 }
@@ -169,6 +176,7 @@ export function SeasonModoFilterSelect({
       options={[{ value: 'all', label: 'Todos os modos' }, ...availableModos.map((m) => ({ value: m, label: MODO_LABELS[m] ?? m }))]}
       title="Filtrar por modo de jogo"
       style={FILTER_STYLE}
+      className="filter-select"
     />
   );
 }

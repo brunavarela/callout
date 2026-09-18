@@ -17,6 +17,7 @@ const DEFAULT_THEME: ThemePreferences = {
   glow: 70,
   mode: 'dark',
   mapBackground: null,
+  glassCards: false,
 };
 
 // Véu por cima da arte do mapa -- escuro no tema escuro, esbranquiçado no

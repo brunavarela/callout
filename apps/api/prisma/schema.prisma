@@ -78,6 +78,9 @@ model User {
   // themeMode). Opacidade do overlay escuro por cima da arte é fixa no
   // front, não é preferência salva aqui.
   themeMapBackground String?
+  // "Cards transparentes" (Configurações > Tema) -- efeito de vidro fosco
+  // nos cards/sidebar/busca/headerpage em vez do fundo sólido padrão.
+  themeGlassCards Boolean @default(false)
 
   // Admin da PLATAFORMA (não da equipe — ver MembroEquipe.isAdmin pra
   // isso). Só quem tem isso true vê o switch de Administrador e pode

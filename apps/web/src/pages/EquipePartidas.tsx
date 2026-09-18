@@ -1,13 +1,14 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useOutletContext, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, BarChart3 } from 'lucide-react';
+import { BarChart3 } from 'lucide-react';
 import type { SeasonMatchesPage, SeasonOverview } from '@callout/shared';
 import { MIN_TEAM_MATCH_PLAYERS } from '@callout/shared';
 import type { OutletContext } from '../components/AppShell';
 import { LoadingFill } from '../components/Spinner';
 import { SeasonMatchesList } from '../components/SeasonMatchesList';
 import { SeasonMapFilterSelect } from '../components/SeasonFilters';
-import { cardStyle } from '../components/statsPrimitives';
+import { useCardStyle, plural } from '../components/statsPrimitives';
+import { PageHeaderCard, HeaderSubtitle } from '../components/PageHeaderCard';
 import { apiFetch } from '../lib/api';
 
 // Histórico completo de partidas da equipe (5+ membros juntos na mesma
@@ -17,6 +18,7 @@ import { apiFetch } from '../lib/api';
 // partida já abre expandida no lugar em vez de precisar clicar de novo.
 export function EquipePartidas() {
   const navigate = useNavigate();
+  const cardStyle = useCardStyle();
   useOutletContext<OutletContext>();
   const [searchParams] = useSearchParams();
   const expandMatchId = searchParams.get('expand');
@@ -63,28 +65,20 @@ export function EquipePartidas() {
 
   return (
     <div style={{ padding: 26, display: 'flex', flexDirection: 'column', gap: 16 }}>
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
-        <div>
-          <button
-            onClick={() => navigate('/equipe')}
-            style={{ display: 'flex', alignItems: 'center', gap: 7, background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 12.5, cursor: 'pointer', padding: 0, marginBottom: 10 }}
-          >
-            <ArrowLeft size={14} strokeWidth={1.75} />
-            Voltar pra equipe
+      <PageHeaderCard
+        backTo="/equipe"
+        backLabel="Voltar pra equipe"
+        title="Partidas da equipe"
+        subtitle={<HeaderSubtitle>Partidas com pelo menos {MIN_TEAM_MATCH_PLAYERS} membros da equipe juntos — clique numa pra ver os detalhes</HeaderSubtitle>}
+        actions={
+          <button className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 14px', fontSize: 12.5 }} onClick={() => navigate('/equipe/painel')}>
+            <BarChart3 size={14} strokeWidth={1.75} />
+            Painel
           </button>
-          <h1 style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 700, fontSize: 32, letterSpacing: '-.025em', margin: 0 }}>Partidas da equipe</h1>
-          <div style={{ fontSize: 14, color: 'var(--text-muted)', marginTop: 6 }}>
-            Partidas com pelo menos {MIN_TEAM_MATCH_PLAYERS} membros da equipe juntos — clique numa pra ver os detalhes
-          </div>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          {overview && <SeasonMapFilterSelect topMaps={overview.topMaps} mapFilter={mapFilter} setMapFilter={setMapFilter} />}
-          <button className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: 9 }} onClick={() => navigate('/equipe/painel')}>
-            <BarChart3 size={15} strokeWidth={1.75} />
-            Painel da equipe
-          </button>
-        </div>
-      </div>
+        }
+        filters={overview && <SeasonMapFilterSelect topMaps={overview.topMaps} mapFilter={mapFilter} setMapFilter={setMapFilter} />}
+        resultCount={matchesPage && plural(matchesPage.total, 'resultado')}
+      />
 
       {matchesLoading && !matchesPage ? (
         <LoadingFill />

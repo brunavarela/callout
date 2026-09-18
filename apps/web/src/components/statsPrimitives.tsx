@@ -3,12 +3,56 @@
 // formatos de card recorrentes (barra de winrate / ranking numerado).
 // Extraído de Dashboard.tsx (era tudo privado lá) sem mudar comportamento.
 
+import { createContext, useContext, type ReactNode } from 'react';
+
 // minWidth:0 evita que um card vire item de flex/grid "grudado" na largura
 // mínima do conteúdo mais largo lá dentro (ex.: a lista de partidas, que
 // tem um scroll interno pra conteúdo largo) -- sem isso, o card inteiro (e
 // a coluna dele) cresce pra caber o conteúdo em vez de travar na largura
 // disponível e deixar só o scroll interno (.scroll-x-mobile) resolver.
 export const cardStyle: React.CSSProperties = { borderRadius: 'var(--radius-lg)', background: 'var(--surface)', border: '1px solid var(--surface-border)', minWidth: 0 };
+
+// "Cards transparentes" (Configurações > Tema, ThemePreferences.glassCards)
+// -- vidro fosco em vez do fundo sólido de sempre. Sidebar/busca/headerpage
+// usam a mesma receita mas 0,5x mais opacos que os cards (pedido explícito:
+// esses três precisam continuar mais legíveis por ficarem sempre visíveis,
+// por cima de qualquer conteúdo rolando por trás) -- por isso a opacidade é
+// parametrizada em vez de fixa dentro do objeto de estilo.
+export const GLASS_CARD_OPACITY = 30; // %
+export const GLASS_SURFACE_OPACITY = GLASS_CARD_OPACITY * 1.5; // sidebar, busca, headerpage
+
+const GLASS_BORDER = '1px solid color-mix(in srgb, var(--text) 12%, transparent)';
+
+// Só fundo+blur -- pra sidebar/busca, que já têm sua própria borda (ou,
+// como a sidebar, só borda de um lado) e não devem ganhar uma borda nos 4
+// lados por cima da que já existe.
+export function glassBackground(opacityPercent: number): React.CSSProperties {
+  return {
+    background: `color-mix(in srgb, var(--surface) ${opacityPercent}%, transparent)`,
+    backdropFilter: 'blur(18px) saturate(140%)',
+    WebkitBackdropFilter: 'blur(18px) saturate(140%)',
+  };
+}
+
+export const glassCardStyle: React.CSSProperties = { ...cardStyle, ...glassBackground(GLASS_CARD_OPACITY), border: GLASS_BORDER };
+// PageHeaderCard -- mesma receita do card, só que na opacidade "de superfície".
+export const glassHeaderStyle: React.CSSProperties = { ...glassBackground(GLASS_SURFACE_OPACITY), border: GLASS_BORDER };
+// Sidebar/busca -- fundo+blur na opacidade de superfície, sem mexer na borda.
+export const glassSurfaceStyle: React.CSSProperties = glassBackground(GLASS_SURFACE_OPACITY);
+
+// Os cards de SeasonOverviewSection/SeasonMatchesList/RrHistoryCard chamam
+// useCardStyle() em vez de usar `cardStyle` direto -- assim uma página pode
+// pedir o visual de vidro (envolvendo tudo com <CardStyleProvider glass>)
+// sem precisar passar uma prop por cada componente aninhado.
+const CardStyleContext = createContext<React.CSSProperties>(cardStyle);
+
+export function CardStyleProvider({ glass, children }: { glass?: boolean; children: ReactNode }) {
+  return <CardStyleContext.Provider value={glass ? glassCardStyle : cardStyle}>{children}</CardStyleContext.Provider>;
+}
+
+export function useCardStyle(): React.CSSProperties {
+  return useContext(CardStyleContext);
+}
 
 export const WIN = 'var(--pos, #18AAB7)';
 export const LOSS = 'var(--neg, #EF4958)';
@@ -79,6 +123,7 @@ export function RateBlock({
   // isso, o card cresce com o conteúdo (comportamento de sempre).
   maxHeight?: number;
 }) {
+  const cardStyle = useCardStyle();
   return (
     <div style={{ ...cardStyle, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 11, ...(maxHeight ? { height: maxHeight } : {}) }}>
       <div>
@@ -136,6 +181,7 @@ export interface RankingRow {
 // MatchRow.tsx/EquipePartidas.tsx). Cobre ACS/MVP/assistências/first
 // blood/clutches/agentes do painel da equipe — uma implementação só.
 export function RankingBlock({ title, sub, rows, style }: { title: string; sub: string; rows: RankingRow[]; style?: React.CSSProperties }) {
+  const cardStyle = useCardStyle();
   return (
     <div style={{ ...cardStyle, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 11, ...style }}>
       <div>

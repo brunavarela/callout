@@ -1,18 +1,20 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useOutletContext } from 'react-router-dom';
-import { ArrowLeft, History, Swords } from 'lucide-react';
+import { History, Swords, Trophy } from 'lucide-react';
 import type { MatchCountFilter, RecentFormInsights, RrHistoryPoint, RrHistoryResponse, SeasonMatchesPage, SeasonOverview } from '@callout/shared';
 import type { OutletContext } from '../components/AppShell';
 import { LoadingFill } from '../components/Spinner';
 import { SeasonOverviewSection } from '../components/SeasonOverviewSection';
 import { MatchCountFilterSelect, SeasonMapFilterSelect, SeasonAgentFilterSelect, SeasonModoFilterSelect } from '../components/SeasonFilters';
 import { Select } from '../components/Select';
-import { cardStyle, plural } from '../components/statsPrimitives';
+import { useCardStyle, plural, WIN } from '../components/statsPrimitives';
+import { PageHeaderCard, StatsPill } from '../components/PageHeaderCard';
 import { formatPlaytime } from '../lib/seasonFormat';
 import { apiFetch } from '../lib/api';
 import { SimularEquipeModal } from '../components/SimularEquipeModal';
+import { EquipeRankingModal } from '../components/EquipeRankingModal';
 
-const FILTER_STYLE: React.CSSProperties = { width: 'auto', height: 40, padding: '0 14px', borderRadius: 9, fontSize: 12.5, fontWeight: 600 };
+const FILTER_STYLE: React.CSSProperties = { width: 'auto' };
 
 // Mesmo filtro de membro do painel individual (MemberFilterSelect em
 // SeasonFilters.tsx), mas o padrão aqui é "Todos" (média da equipe
@@ -38,6 +40,7 @@ function TeamMemberFilterSelect({
       options={[{ value: 'all', label: 'Todos' }, ...options.map((m) => ({ value: m.userId, label: m.isSelf ? 'Você' : m.name }))]}
       title="Ver a equipe inteira ou um membro específico"
       style={FILTER_STYLE}
+      className="filter-select"
     />
   );
 }
@@ -62,10 +65,12 @@ function TeamMemberFilterSelect({
 // -- só não tá sendo chamado por essa página agora.
 export function EquipePainel() {
   const navigate = useNavigate();
+  const cardStyle = useCardStyle();
   const { equipe } = useOutletContext<OutletContext>();
 
   const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
   const [simularOpen, setSimularOpen] = useState(false);
+  const [rankingOpen, setRankingOpen] = useState(false);
   const [matchCountFilter, setMatchCountFilter] = useState<MatchCountFilter>(20);
   const [mapFilter, setMapFilter] = useState<string | null>(null);
   const [agentFilter, setAgentFilter] = useState<string | null>(null);
@@ -173,49 +178,55 @@ export function EquipePainel() {
 
   return (
     <div style={{ padding: 26, display: 'flex', flexDirection: 'column', gap: 16 }}>
-      <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 20, flexWrap: 'wrap' }}>
-        <div>
-          <button
-            onClick={() => navigate('/equipe')}
-            style={{ display: 'flex', alignItems: 'center', gap: 7, background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 12.5, cursor: 'pointer', padding: 0, marginBottom: 10 }}
-          >
-            <ArrowLeft size={14} strokeWidth={1.75} />
-            Voltar pra equipe
-          </button>
-          <h1 style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 700, fontSize: 34, letterSpacing: '-.025em', margin: 0 }}>
-            Painel da equipe{selectedMember ? ` (${selectedMember.name})` : ''}
-          </h1>
-          <div style={{ fontSize: 14, color: 'var(--text-muted)', marginTop: 6 }}>
-            {overview
-              ? selectedMember
-                ? `${plural(overview.matchesCount, 'partida')} · ${formatPlaytime(overview.playtimeMs)} jogadas · ${overview.wins}V–${overview.losses}D`
-                : `${plural(overview.matchesCount, 'partida')} juntos · ${overview.wins}V–${overview.losses}D · ${overview.winratePercent}%`
-              : `${equipe ? equipe.name : ''} · partidas com pelo menos 5 membros da equipe juntos`}
-          </div>
-        </div>
-        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-          <button className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: 9 }} onClick={() => setSimularOpen(true)}>
-            <Swords size={15} strokeWidth={1.75} />
-            Simular equipe
-          </button>
-          <button className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: 9 }} onClick={() => navigate('/equipe/partidas')}>
-            <History size={15} strokeWidth={1.75} />
-            Histórico de partidas
-          </button>
-        </div>
-      </div>
-
-      <div className="dashboard-header-actions" style={{ marginLeft: 0, marginTop: -6, justifyContent: 'flex-end' }}>
-        <TeamMemberFilterSelect equipe={equipe} selectedMemberId={selectedMemberId} setSelectedMemberId={setSelectedMemberId} />
-        {overview && (
+      <PageHeaderCard
+        backTo="/equipe"
+        backLabel="Voltar pra equipe"
+        title={`Painel da equipe${selectedMember ? ` (${selectedMember.name})` : ''}`}
+        titleAdornment={
+          overview ? (
+            <StatsPill>
+              <span style={{ color: 'var(--text-muted)' }}>{plural(overview.matchesCount, 'partida')}</span>
+              {selectedMember && <span style={{ color: 'var(--text-muted)' }}>{formatPlaytime(overview.playtimeMs)} jogadas</span>}
+              <span style={{ color: 'var(--text-2)', fontWeight: 600 }}>
+                {overview.wins}V–{overview.losses}D
+              </span>
+              {!selectedMember && <span style={{ color: WIN, fontWeight: 600 }}>{overview.winratePercent}% WR</span>}
+            </StatsPill>
+          ) : (
+            equipe && <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{equipe.name}</span>
+          )
+        }
+        actions={
           <>
-            <SeasonAgentFilterSelect topAgents={overview.topAgents} agentFilter={agentFilter} setAgentFilter={setAgentFilter} />
-            <SeasonMapFilterSelect topMaps={overview.topMaps} mapFilter={mapFilter} setMapFilter={setMapFilter} />
-            <SeasonModoFilterSelect availableModos={overview.availableModos} modoFilter={modoFilter} setModoFilter={setModoFilter} />
+            <button className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 14px', fontSize: 12.5 }} onClick={() => setRankingOpen(true)}>
+              <Trophy size={14} strokeWidth={1.75} />
+              Ranking
+            </button>
+            <button className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 14px', fontSize: 12.5 }} onClick={() => navigate('/equipe/partidas')}>
+              <History size={14} strokeWidth={1.75} />
+              Histórico
+            </button>
+            <button className="btn-primary" style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 16px', fontSize: 12.5 }} onClick={() => setSimularOpen(true)}>
+              <Swords size={14} strokeWidth={1.75} />
+              Simular equipe
+            </button>
           </>
-        )}
-        <MatchCountFilterSelect matchCountFilter={matchCountFilter} setMatchCountFilter={setMatchCountFilter} />
-      </div>
+        }
+        filters={
+          <>
+            <TeamMemberFilterSelect equipe={equipe} selectedMemberId={selectedMemberId} setSelectedMemberId={setSelectedMemberId} />
+            {overview && (
+              <>
+                <SeasonAgentFilterSelect topAgents={overview.topAgents} agentFilter={agentFilter} setAgentFilter={setAgentFilter} />
+                <SeasonMapFilterSelect topMaps={overview.topMaps} mapFilter={mapFilter} setMapFilter={setMapFilter} />
+                <SeasonModoFilterSelect availableModos={overview.availableModos} modoFilter={modoFilter} setModoFilter={setModoFilter} />
+              </>
+            )}
+            <MatchCountFilterSelect matchCountFilter={matchCountFilter} setMatchCountFilter={setMatchCountFilter} />
+          </>
+        }
+        resultCount={matchesPage && plural(matchesPage.total, 'resultado')}
+      />
 
       {overviewLoading ? (
         <LoadingFill />
@@ -243,6 +254,7 @@ export function EquipePainel() {
       )}
 
       {simularOpen && <SimularEquipeModal equipe={equipe} topMaps={overview?.topMaps ?? []} onClose={() => setSimularOpen(false)} />}
+      {rankingOpen && <EquipeRankingModal onClose={() => setRankingOpen(false)} />}
     </div>
   );
 }

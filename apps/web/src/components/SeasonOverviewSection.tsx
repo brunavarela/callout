@@ -5,7 +5,7 @@ import { LoadingFill } from './Spinner';
 import { SeasonMatchesList } from './SeasonMatchesList';
 import { RrHistoryCard } from './RrHistoryCard';
 import { Modal, ModalHeader } from './Modal';
-import { cardStyle, fmtNum, fmtDelta, plural, LOW_SAMPLE, MIN_SAMPLE, GOLD, InfoDot } from './statsPrimitives';
+import { useCardStyle, fmtNum, fmtDelta, plural, LOW_SAMPLE, MIN_SAMPLE, GOLD, InfoDot } from './statsPrimitives';
 import { formatPlaytime } from '../lib/seasonFormat';
 
 const WIN = 'var(--pos, #18AAB7)';
@@ -61,6 +61,7 @@ const WEAPON_CATEGORY: Record<string, string> = {
 // de mapa/agente atual). Mesmo visual do card que já existia no dashboard
 // de 30 dias, só que alimentado por SeasonOverview.attackDefense.
 function AttackDefenseCard({ sides, height }: { sides: SeasonOverview['attackDefense']; height?: number }) {
+  const cardStyle = useCardStyle();
   return (
     <div className="season-fixed-card" style={{ ...cardStyle, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 12, flex: height ? '0 0 auto' : 1, ...(height ? { height, overflow: 'hidden' } : {}) }}>
       <div>
@@ -144,6 +145,7 @@ function BodySilhouette({
 // Precisão cabeça/corpo/perna — visualizada como silhueta em vez da barra
 // empilhada antiga, cada parte com sua cor e %.
 function AccuracyBar({ accuracy, height }: { accuracy: SeasonOverview['accuracy']; height?: number }) {
+  const cardStyle = useCardStyle();
   const segments = [
     { label: 'Cabeça', percent: accuracy.headPercent, hits: accuracy.headHits, color: 'var(--pos, #18AAB7)' },
     { label: 'Corpo', percent: accuracy.bodyPercent, hits: accuracy.bodyHits, color: 'var(--text-muted)' },
@@ -196,6 +198,7 @@ function ExpandableCard({
   children: (scrollable: boolean) => ReactNode;
 }) {
   const [showAll, setShowAll] = useState(false);
+  const cardStyle = useCardStyle();
   return (
     <>
       <div className="season-fixed-card" style={{ ...cardStyle, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 11, ...(maxHeight ? { height: maxHeight, overflow: 'hidden' } : {}) }}>
@@ -607,6 +610,7 @@ export function SeasonOverviewSection({
   // painel da equipe passa "/equipe/partidas".
   matchesBasePath?: string;
 }) {
+  const cardStyle = useCardStyle();
   if (loading) return <LoadingFill />;
   if (error) return <div style={{ ...cardStyle, padding: 24, textAlign: 'center', color: 'var(--text-muted)', fontSize: 13.5 }}>{error}</div>;
   if (!data) {

@@ -7,8 +7,8 @@ import { useSession } from '../lib/session';
 import { LoadingFill } from '../components/Spinner';
 import { Select } from '../components/Select';
 import { statusEfetivo, formatDataConfronto, calcularRodadas } from '../lib/competicoesUtil';
+import { useCardStyle } from '../components/statsPrimitives';
 
-const cardStyle: React.CSSProperties = { borderRadius: 'var(--radius-lg)', background: 'var(--surface)', border: '1px solid var(--surface-border)' };
 const WIN = 'var(--pos, #18AAB7)';
 
 const STATUS_LABEL: Record<Confronto['status'], string> = {
@@ -209,6 +209,7 @@ function MatchCard({
   editavel: boolean;
   onSalvar?: (confrontoId: string, patch: PatchConfronto) => Promise<void>;
 }) {
+  const cardStyle = useCardStyle();
   const [editando, setEditando] = useState(false);
   const a = resolverLado(confronto.ladoA, competicao.confrontos, competicao.times);
   const b = resolverLado(confronto.ladoB, competicao.confrontos, competicao.times);
@@ -336,6 +337,7 @@ function GrupoCard({
   editavel: boolean;
   onSalvar?: (confrontoId: string, patch: PatchConfronto) => Promise<void>;
 }) {
+  const cardStyle = useCardStyle();
   const ordenados = [...confrontos].sort((a, b) => a.id.localeCompare(b.id));
   const timesGrupo = timesDoGrupo(confrontos, competicao.times);
   const classificacao = classificacaoGrupo(timesGrupo, confrontos, competicao.confrontos, competicao.times);
@@ -431,6 +433,7 @@ function Chaveamento({
   editavel: boolean;
   onSalvar?: (confrontoId: string, patch: PatchConfronto) => Promise<void>;
 }) {
+  const cardStyle = useCardStyle();
   const rodadaDe = useMemo(() => calcularRodadas(competicao.confrontos), [competicao]);
   const superior = competicao.confrontos.filter((c) => c.chave === 'superior');
   const inferior = competicao.confrontos.filter((c) => c.chave === 'inferior');
@@ -458,6 +461,7 @@ function Chaveamento({
 }
 
 function ResumoCompeticao({ competicao }: { competicao: Competicao }) {
+  const cardStyle = useCardStyle();
   const proximo = competicao.confrontos
     .filter((c) => c.status !== 'encerrada')
     .sort((a, b) => a.data.localeCompare(b.data))[0];
@@ -510,6 +514,7 @@ function ResumoCompeticao({ competicao }: { competicao: Competicao }) {
 export function CompetitionDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const cardStyle = useCardStyle();
   const { adminMode } = useSession();
   const [dados, setDados] = useState<Competicao[] | null>(null);
   const [erro, setErro] = useState<string | null>(null);
