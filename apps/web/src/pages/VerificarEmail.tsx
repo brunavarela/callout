@@ -13,7 +13,11 @@ export function VerificarEmail() {
   const navigate = useNavigate();
   const location = useLocation();
   const { refresh } = useSession();
-  const state = location.state as { email?: string; codigoJaEnviado?: boolean } | null;
+  const state = location.state as { email?: string; codigoJaEnviado?: boolean; intuitos?: string[] } | null;
+  // Etapa "equipe" só existe pra quem marcou "administrar_equipe" no passo
+  // anterior (ver resolveOnboardingStep) -- sem isso, o cadastro acaba aqui
+  // mesmo, então não faz sentido prometer uma etapa 2 que não vai existir.
+  const totalEtapas = state?.intuitos?.includes('administrar_equipe') ? 2 : 1;
   const [email, setEmail] = useState(state?.email ?? '');
   const [codigo, setCodigo] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -70,7 +74,9 @@ export function VerificarEmail() {
 
   return (
     <LoginShell>
-      <div style={{ fontSize: 11, letterSpacing: '.14em', color: 'var(--acc, #EF4958)', marginBottom: 18 }}>ETAPA 1 DE 3</div>
+      <div style={{ fontSize: 11, letterSpacing: '.14em', color: 'var(--acc, #EF4958)', marginBottom: 18 }}>
+        {totalEtapas > 1 ? `ETAPA 1 DE ${totalEtapas}` : 'ÚLTIMA ETAPA'}
+      </div>
       <h1 className="login-heading" style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 700, lineHeight: 1.06, letterSpacing: '-.03em', margin: '0 0 16px' }}>
         Confirme
         <br />
@@ -143,6 +149,12 @@ export function VerificarEmail() {
         )}
 
         {error && <div style={{ fontSize: 13, color: 'var(--acc, #EF4958)' }}>{error}</div>}
+      </div>
+
+      <div style={{ marginTop: 16, fontSize: 13, color: 'var(--text-dim)' }}>
+        <a href="#" onClick={(e) => { e.preventDefault(); navigate('/cadastro'); }}>
+          ← Voltar pro cadastro
+        </a>
       </div>
     </LoginShell>
   );

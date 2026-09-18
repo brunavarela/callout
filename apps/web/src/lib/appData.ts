@@ -17,7 +17,7 @@ import type {
   SeasonMatchesPage,
   SeasonOverview,
 } from '@callout/shared';
-import { apiFetch } from './api';
+import { apiFetch, ApiError } from './api';
 
 // Querystring comum aos 3 endpoints de /dashboard*: filtro de modo + mapa +,
 // quando alguém troca o filtro "ver painel de outro membro", o userId do
@@ -43,6 +43,12 @@ export function useAppData(user: SessionUser | null) {
 
   const [equipe, setEquipe] = useState<EquipeOverview | null>(null);
   const [equipeError, setEquipeError] = useState<string | null>(null);
+  // true assim que o back confirma "essa pessoa não tem equipe nenhuma"
+  // (404 de verdade, não falha de rede) -- criar equipe agora é opcional
+  // (ver resolveOnboardingStep), então isso não é mais um estado de erro,
+  // é um estado válido que a tela de Equipe usa pra mostrar o formulário de
+  // criar/entrar em vez de uma mensagem de falha.
+  const [equipeNaoTemNenhuma, setEquipeNaoTemNenhuma] = useState(false);
 
   const [dashboard, setDashboard] = useState<DashboardSummary | null>(null);
   const [dashboardError, setDashboardError] = useState<string | null>(null);
@@ -93,8 +99,15 @@ export function useAppData(user: SessionUser | null) {
     try {
       setEquipe(await apiFetch<EquipeOverview>('/equipe'));
       setEquipeError(null);
-    } catch {
-      setEquipeError('Falha ao carregar a equipe.');
+      setEquipeNaoTemNenhuma(false);
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 404) {
+        setEquipe(null);
+        setEquipeError(null);
+        setEquipeNaoTemNenhuma(true);
+      } else {
+        setEquipeError('Falha ao carregar a equipe.');
+      }
     }
   }, []);
 
@@ -258,8 +271,12 @@ export function useAppData(user: SessionUser | null) {
     try {
       setStrategies(await apiFetch<Strategy[]>('/strategies'));
       setStrategiesError(null);
-    } catch {
-      setStrategiesError('Falha ao carregar as estratégias.');
+    } catch (err) {
+      // 404 "Você ainda não tem uma equipe." é um estado normal agora que
+      // criar/entrar em equipe é opcional (ver resolveOnboardingStep) --
+      // deixa a mensagem de verdade do back passar em vez do genérico "falha
+      // ao carregar", que soaria como bug pra quem só não tem equipe ainda.
+      setStrategiesError(err instanceof ApiError && err.status === 404 ? err.message : 'Falha ao carregar as estratégias.');
     } finally {
       setStrategiesLoading(false);
     }
@@ -293,8 +310,8 @@ export function useAppData(user: SessionUser | null) {
     try {
       setSpots(await apiFetch<Spot[]>('/spots'));
       setSpotsError(null);
-    } catch {
-      setSpotsError('Falha ao carregar os spots.');
+    } catch (err) {
+      setSpotsError(err instanceof ApiError && err.status === 404 ? err.message : 'Falha ao carregar os spots.');
     } finally {
       setSpotsLoading(false);
     }
@@ -475,6 +492,7 @@ export function useAppData(user: SessionUser | null) {
     setSeasonMatchesPageNumber,
     equipe,
     equipeError,
+    equipeNaoTemNenhuma,
     reloadEquipe: loadEquipe,
     updateEquipeMembroNota,
     equipePainel,

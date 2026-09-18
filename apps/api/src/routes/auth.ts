@@ -12,7 +12,6 @@ import {
   RIOT_ID_REGEX,
   REENVIO_COOLDOWN_MS,
   gerarCodigoEmail,
-  gerarCodigoTag,
   criarCodigo,
   ultimoCodigo,
   verificarCodigo,
@@ -116,7 +115,7 @@ export async function authRoutes(app: FastifyInstance) {
           riotName: account.name,
           riotTag: account.tag,
           riotRegion: account.region,
-          riotVerificado: false,
+          riotVerificado: true,
           intuitos,
         },
       });
@@ -132,7 +131,7 @@ export async function authRoutes(app: FastifyInstance) {
           riotTag: account.tag,
           riotRegion: account.region,
           intuitos,
-          riotVerificado: false,
+          riotVerificado: true,
         },
       });
     }
@@ -171,44 +170,6 @@ export async function authRoutes(app: FastifyInstance) {
 
     await enviarCodigoEmail(user.id, user.email!);
     return { ok: true };
-  });
-
-  app.post("/auth/riot/gerar-codigo", { preHandler: requireAuth }, async (request, reply) => {
-    const user = request.user!;
-    if (user.riotVerificado) return reply.code(400).send({ error: "Seu RiotID já está verificado." });
-    if (!user.riotName) return reply.code(400).send({ error: "Vincule um RiotID primeiro." });
-
-    const codigo = gerarCodigoTag();
-    await criarCodigo(user.id, "riot_tag", codigo);
-    return { codigo, riotName: user.riotName };
-  });
-
-  app.post("/auth/riot/confirmar", { preHandler: requireAuth }, async (request, reply) => {
-    const user = request.user!;
-    if (user.riotVerificado) return reply.code(400).send({ error: "Seu RiotID já está verificado." });
-    if (!user.riotName || !user.riotPuuid) return reply.code(400).send({ error: "Vincule um RiotID primeiro." });
-
-    const authCode = await ultimoCodigo(user.id, "riot_tag");
-    if (!authCode || authCode.expiresAt < new Date()) {
-      return reply.code(400).send({ error: "Código expirado. Gera um novo." });
-    }
-
-    try {
-      const account = await getAccountByRiotId(user.riotName, authCode.codigo);
-      if (account.puuid !== user.riotPuuid) {
-        return reply.code(400).send({ error: "Essa tag não bate com a sua conta. Confere e tenta de novo." });
-      }
-    } catch (err) {
-      if (err instanceof HenrikDevError && err.status === 404) {
-        return reply.code(404).send({ error: "Ainda não encontramos essa tag. Espera um instante depois de trocar e tenta de novo." });
-      }
-      request.log.error(err, "falha ao confirmar tag da Riot");
-      return reply.code(502).send({ error: "Falha ao falar com a HenrikDev. Tenta de novo em instantes." });
-    }
-
-    await prisma.authCode.delete({ where: { id: authCode.id } });
-    const updated = await prisma.user.update({ where: { id: user.id }, data: { riotVerificado: true } });
-    return toSessionUser(updated, await getUserEquipe(updated.id));
   });
 
   app.patch("/auth/intuito", { preHandler: requireAuth }, async (request, reply) => {

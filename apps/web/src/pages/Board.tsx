@@ -10,6 +10,7 @@ import { agentImageUrl } from '../lib/agentImages';
 import { ConfirmModal } from '../components/ConfirmModal';
 import { LoadingFill } from '../components/Spinner';
 import { Select } from '../components/Select';
+import { useCardStyle } from '../components/statsPrimitives';
 
 const TOOLS = [
   { id: 'agente', icon: 'AG', title: 'Agente' },
@@ -74,8 +75,6 @@ function itemsToShapes(items: StratItemDTO[]): Shape[] {
     .map((item) => ({ id: item.id, kind: item.kind, color: item.color, points: [item.points![0]!, item.points![1]!] }));
 }
 
-const cardStyle: React.CSSProperties = { borderRadius: 'var(--radius-lg)', background: 'var(--surface)', border: '1px solid var(--surface-border)' };
-
 // Antes toda estratégia nova nascia com mapName: 'Bind' fixo no código —
 // por isso só a Bind aparecia. Agora escolhe o mapa de verdade (mesmo
 // catálogo que Spots usa) antes de criar.
@@ -88,6 +87,7 @@ function CreateStrategyModal({
   onClose: () => void;
   onCreate: (input: { mapName: string; side: Lado; title: string }) => Promise<void>;
 }) {
+  const cardStyle = useCardStyle();
   const [mapName, setMapName] = useState(maps[0]?.nome ?? '');
   const [side, setSide] = useState<Lado>('ATK');
   const [title, setTitle] = useState('');
@@ -171,6 +171,7 @@ function CreateStrategyModal({
 
 export function Board() {
   const navigate = useNavigate();
+  const cardStyle = useCardStyle();
   const { id } = useParams();
   const { strategies, strategiesError, strategiesLoading, loadStrategies, saveStrategy, createStrategy, deleteStrategy, agents, loadAgents, maps, loadMaps } =
     useOutletContext<OutletContext>();
@@ -385,12 +386,13 @@ export function Board() {
   }
 
   if (strategiesError && !strategies) {
+    const semEquipe = strategiesError === 'Você ainda não tem uma equipe.';
     return (
       <div style={{ padding: 26 }}>
         <div style={{ ...cardStyle, padding: 22, display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'flex-start' }}>
           <div style={{ fontSize: 14, color: 'var(--text-3)' }}>{strategiesError}</div>
-          <button className="btn-secondary" onClick={loadStrategies}>
-            Tentar de novo
+          <button className="btn-secondary" onClick={semEquipe ? () => navigate('/equipe') : loadStrategies}>
+            {semEquipe ? 'Criar ou entrar numa equipe' : 'Tentar de novo'}
           </button>
         </div>
       </div>

@@ -4,9 +4,10 @@ import type { MembroEquipeCard } from '@callout/shared';
 import type { OutletContext } from '../components/AppShell';
 import { LoadingFill } from '../components/Spinner';
 import { MainAgentIcons } from '../components/MainAgentIcons';
+import { PageHeaderCard, HeaderSubtitle } from '../components/PageHeaderCard';
+import { EquipeSetupForm } from '../components/EquipeSetupForm';
+import { useCardStyle } from '../components/statsPrimitives';
 import { CARGO_LABEL } from '../lib/cargo';
-
-const cardStyle: React.CSSProperties = { borderRadius: 'var(--radius-lg)', background: 'var(--surface)', border: '1px solid var(--surface-border)' };
 
 function initialsOf(name: string) {
   return name.slice(0, 2).toUpperCase();
@@ -46,7 +47,8 @@ function MemberRow({ member }: { member: MembroEquipeCard }) {
 
 export function Equipe() {
   const navigate = useNavigate();
-  const { equipe, equipeError, reloadEquipe } = useOutletContext<OutletContext>();
+  const cardStyle = useCardStyle();
+  const { equipe, equipeError, equipeNaoTemNenhuma, reloadEquipe } = useOutletContext<OutletContext>();
 
   if (equipeError && !equipe) {
     return (
@@ -56,6 +58,23 @@ export function Equipe() {
           <button className="btn-secondary" onClick={reloadEquipe}>
             Tentar de novo
           </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Criar/entrar numa equipe agora é opcional (não faz mais parte do
+  // cadastro obrigatório) -- quem chega em /equipe sem ter uma ainda vê o
+  // mesmo formulário de criar/entrar do onboarding, não um erro.
+  if (equipeNaoTemNenhuma) {
+    return (
+      <div style={{ padding: 26, display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <div style={{ ...cardStyle, padding: 26, maxWidth: 420 }}>
+          <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 700, fontSize: 22, marginBottom: 8 }}>Você ainda não tem uma equipe</div>
+          <div style={{ fontSize: 13.5, color: 'var(--text-muted)', marginBottom: 20, lineHeight: 1.5 }}>
+            Crie uma equipe nova ou entre numa que já existe com o código de convite.
+          </div>
+          <EquipeSetupForm onDone={reloadEquipe} />
         </div>
       </div>
     );
@@ -73,43 +92,47 @@ export function Equipe() {
 
   return (
     <div style={{ padding: 26, display: 'flex', flexDirection: 'column', gap: 20 }}>
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 20, flexWrap: 'wrap' }}>
-        <div
-          style={{ width: 56, height: 56, borderRadius: 16, overflow: 'hidden', background: 'var(--avatar-bg)', flex: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 700, color: 'var(--text-muted)' }}
-        >
-          {equipe.imagemUrl ? <img src={equipe.imagemUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : initialsOf(equipe.name)}
-        </div>
-
-        <div style={{ flex: 1, minWidth: 220 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <h1 style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 700, fontSize: 32, letterSpacing: '-.025em', margin: 0 }}>{equipe.name}</h1>
-            {isAdmin && (
-              <button
-                onClick={() => navigate('/equipe/configuracoes')}
-                title="Configurações da equipe"
-                style={{ background: 'none', border: 'none', color: 'var(--text-faint)', cursor: 'pointer', padding: 4, display: 'flex' }}
-              >
-                <Settings size={18} strokeWidth={1.75} />
-              </button>
-            )}
+      <PageHeaderCard
+        leading={
+          <div
+            style={{ width: 44, height: 44, borderRadius: 12, overflow: 'hidden', background: 'var(--avatar-bg)', flex: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, fontWeight: 700, color: 'var(--text-muted)' }}
+          >
+            {equipe.imagemUrl ? <img src={equipe.imagemUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : initialsOf(equipe.name)}
           </div>
-          <div style={{ fontSize: 14, color: 'var(--text-muted)', marginTop: 4, lineHeight: 1.5 }}>{equipe.descricao || 'Sem descrição ainda.'}</div>
-          <div style={{ fontSize: 13, color: 'var(--text-dim)', marginTop: 8 }}>
-            {equipe.memberCount} membros · {equipe.matchesTogether30d} partidas juntos nos últimos 30 dias · {equipe.groupWinratePercent}% de winrate em grupo
-          </div>
-        </div>
-
-        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 44 }}>
-          <button className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: 9 }} onClick={() => navigate('/equipe/painel')}>
-            <BarChart3 size={15} strokeWidth={1.75} />
-            Painel da equipe
-          </button>
-          <button className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: 9 }} onClick={() => navigate('/equipe/partidas')}>
-            <History size={15} strokeWidth={1.75} />
-            Histórico de partidas
-          </button>
-        </div>
-      </div>
+        }
+        title={equipe.name}
+        titleAdornment={
+          isAdmin && (
+            <button
+              onClick={() => navigate('/equipe/configuracoes')}
+              title="Configurações da equipe"
+              style={{ background: 'none', border: 'none', color: 'var(--text-faint)', cursor: 'pointer', padding: 4, display: 'flex' }}
+            >
+              <Settings size={16} strokeWidth={1.75} />
+            </button>
+          )
+        }
+        subtitle={
+          <HeaderSubtitle>
+            <div>{equipe.descricao || 'Sem descrição ainda.'}</div>
+            <div style={{ marginTop: 4 }}>
+              {equipe.memberCount} membros · {equipe.matchesTogether30d} partidas juntos nos últimos 30 dias · {equipe.groupWinratePercent}% de winrate em grupo
+            </div>
+          </HeaderSubtitle>
+        }
+        actions={
+          <>
+            <button className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 14px', fontSize: 12.5 }} onClick={() => navigate('/equipe/painel')}>
+              <BarChart3 size={14} strokeWidth={1.75} />
+              Painel
+            </button>
+            <button className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 14px', fontSize: 12.5 }} onClick={() => navigate('/equipe/partidas')}>
+              <History size={14} strokeWidth={1.75} />
+              Histórico
+            </button>
+          </>
+        }
+      />
 
       <div style={{ ...cardStyle, padding: '18px 20px' }}>
         {equipe.members.length === 0 ? (

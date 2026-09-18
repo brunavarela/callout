@@ -32,13 +32,16 @@ export interface User {
 // --- Cadastro (email+senha, desde 03/09/2026) ---
 
 // "Pra qual intuito você vai usar o Callout?" — pergunta de múltipla escolha
-// no cadastro, dado de produto pro roadmap do PRO (não trava nada no app).
+// no cadastro, dado de produto pro roadmap do PRO. `administrar_equipe`
+// também decide se a etapa "equipe" aparece no funil de cadastro (ver
+// resolveOnboardingStep) — só quem marca essa opção passa por ela; os
+// outros intuitos são só dado de produto, não travam nada.
 export const INTUITOS = ["stats_individuais", "administrar_equipe", "criar_spots", "criar_estrategias"] as const;
 export type Intuito = (typeof INTUITOS)[number];
 
 export const INTUITO_LABELS: Record<Intuito, string> = {
   stats_individuais: "Stats individuais",
-  administrar_equipe: "Administrar uma equipe",
+  administrar_equipe: "Criar equipe/participar de equipe",
   criar_spots: "Criar e salvar spots",
   criar_estrategias: "Criar estratégias individuais/equipe",
 };
@@ -47,7 +50,7 @@ export const INTUITO_LABELS: Record<Intuito, string> = {
 // SessionUser.proximoPasso pra front saber sempre pra onde mandar a pessoa.
 // `intuitos` é coletado junto com o resto do formulário de cadastro (não é
 // mais uma etapa separada), então não entra aqui.
-export type OnboardingStep = "verificar-email" | "verificar-riot" | "equipe" | "completo";
+export type OnboardingStep = "verificar-email" | "equipe" | "completo";
 
 export interface MapAsset {
   id: string;
@@ -110,6 +113,11 @@ export interface ThemePreferences {
   // do overlay escuro por cima da arte é fixa (não é preferência da pessoa,
   // ver MapWallpaper em lib/theme.tsx) — só a escolha do mapa é salva aqui.
   mapBackground: MapBackground | null;
+  // "Cards transparentes" (Configurações > Tema) -- efeito de vidro fosco
+  // nos cards, sidebar, barra de busca e headerpage em vez do fundo sólido
+  // padrão. Sidebar/busca/headerpage ficam 0,5x mais opacos que os cards
+  // (ver GLASS_CARD_OPACITY/GLASS_SURFACE_OPACITY no front).
+  glassCards: boolean;
 }
 
 // --- Sessão ---

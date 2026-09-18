@@ -4,7 +4,6 @@ import { Login } from './pages/Login';
 import { Cadastro } from './pages/Cadastro';
 import { EsqueciSenha } from './pages/EsqueciSenha';
 import { VerificarEmail } from './pages/VerificarEmail';
-import { VerificarRiotId } from './pages/VerificarRiotId';
 import { LoginEquipe } from './pages/LoginEquipe';
 import { Dashboard } from './pages/Dashboard';
 import { Matches } from './pages/Matches';
@@ -27,7 +26,6 @@ function App() {
       <Route path="/cadastro" element={<Cadastro />} />
       <Route path="/esqueci-senha" element={<EsqueciSenha />} />
       <Route path="/cadastro/verificar-email" element={<VerificarEmail />} />
-      <Route path="/cadastro/verificar-riot" element={<VerificarRiotId />} />
       <Route path="/login/equipe" element={<LoginEquipe />} />
       <Route path="/termos" element={<Termos />} />
       <Route path="/privacidade" element={<Privacidade />} />

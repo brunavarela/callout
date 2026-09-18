@@ -67,7 +67,7 @@ export function Cadastro() {
         method: 'POST',
         body: JSON.stringify({ nome, dataNascimento, email, senha, confirmarSenha, riotId, intuitos }),
       });
-      navigate('/cadastro/verificar-email', { state: { email, codigoJaEnviado: true } });
+      navigate('/cadastro/verificar-email', { state: { email, codigoJaEnviado: true, intuitos } });
     } catch (err) {
       // Email/RiotID já cadastrado, conta Riot não encontrada etc. — tudo
       // que o back rejeita nessa chamada é sobre os campos do passo 2

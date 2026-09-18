@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useOutletContext } from 'react-router-dom';
+import { useNavigate, useOutletContext } from 'react-router-dom';
 import { Trash2 } from 'lucide-react';
 import { PLACEHOLDER_AGENTS, type AgentAsset, type Lado, type Spot as SpotDTO } from '@callout/shared';
 import type { OutletContext } from '../components/AppShell';
@@ -7,8 +7,9 @@ import { LoadingFill } from '../components/Spinner';
 import { ConfirmModal } from '../components/ConfirmModal';
 import { Select } from '../components/Select';
 import { compressImageToDataUrl } from '../lib/imageCompress';
+import { PageHeaderCard, HeaderSubtitle } from '../components/PageHeaderCard';
+import { useCardStyle } from '../components/statsPrimitives';
 
-const cardStyle: React.CSSProperties = { borderRadius: 'var(--radius-lg)', background: 'var(--surface)', border: '1px solid var(--surface-border)' };
 const ERROR_COLOR = 'var(--acc, #EF4958)';
 
 type AgentOption = { id: string; name: string; color: string };
@@ -116,6 +117,7 @@ function CreateSpotModal({
   onClose: () => void;
   onCreate: ReturnType<typeof useOutletContext<OutletContext>>['createSpot'];
 }) {
+  const cardStyle = useCardStyle();
   const [form, setForm] = useState(() => emptyForm(maps[0]?.id ?? '', agents[0]?.id ?? ''));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -269,6 +271,7 @@ function CreateSpotModal({
 // Ver um spot salvo: descrição inteira, imagens maiores (clicáveis pra
 // abrir em lightbox) e o link, se tiver.
 function ViewSpotModal({ spot, onClose, onRequestDelete }: { spot: SpotDTO; onClose: () => void; onRequestDelete: () => void }) {
+  const cardStyle = useCardStyle();
   const [lightbox, setLightbox] = useState<string | null>(null);
 
   return (
@@ -338,8 +341,10 @@ function ViewSpotModal({ spot, onClose, onRequestDelete }: { spot: SpotDTO; onCl
 }
 
 export function Spots() {
+  const navigate = useNavigate();
   const { spots, spotsError, spotsLoading, loadSpots, createSpot, deleteSpot, agents: realAgents, loadAgents, maps: realMaps, loadMaps } =
     useOutletContext<OutletContext>();
+  const cardStyle = useCardStyle();
   const [query, setQuery] = useState('');
   const [filterMap, setFilterMap] = useState('Todos');
   const [filterAgent, setFilterAgent] = useState('Todos');
@@ -402,68 +407,75 @@ export function Spots() {
     });
   }, [spots, query, filterMap, filterAgent, filterSide]);
 
-  // .input-field cuida de fundo/borda/cor — só o tamanho compacto do filtro
-  // (menor que o padrão do modal) fica por conta do inline.
-  const selectStyle: React.CSSProperties = { width: 'auto', padding: '9px 12px', fontSize: 12.5 };
+  // Mesmo visual discreto (sem caixa) dos outros filtros de headerpage --
+  // ver .select-trigger.filter-select no index.css.
+  const selectStyle: React.CSSProperties = { width: 'auto' };
 
   return (
     <div style={{ padding: 26, display: 'flex', flexDirection: 'column', gap: 18 }}>
-      <div style={{ display: 'flex', alignItems: 'flex-end', gap: 22, flexWrap: 'wrap' }}>
-        <div>
-          <h1 style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 700, fontSize: 32, letterSpacing: '-.025em', margin: 0 }}>Spots</h1>
-          <div style={{ fontSize: 14, color: 'var(--text-muted)', marginTop: 6 }}>{spots?.length ?? 0} spots salvos pelo time</div>
-        </div>
-        <input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Buscar na descrição, mapa ou agente…"
-          style={{
-            marginLeft: 'auto',
-            width: 'min(300px, 100%)',
-            padding: '12px 15px',
-            background: 'var(--control-bg)',
-            border: '1px solid var(--surface-border)',
-            borderRadius: 'var(--radius-md)',
-            color: 'var(--text)',
-            fontSize: 13.5,
-            outline: 'none',
-          }}
-        />
-        <button className="btn-primary" style={{ padding: '11px 16px', fontSize: 13 }} onClick={() => setCreating(true)}>
-          + Novo spot
-        </button>
-      </div>
-
-      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-        <Select
-          value={filterMap}
-          onChange={setFilterMap}
-          options={mapFilterOptions.map((m) => ({ value: m, label: m === 'Todos' ? 'Todos os mapas' : m }))}
-          style={selectStyle}
-        />
-        <Select
-          value={filterAgent}
-          onChange={setFilterAgent}
-          options={agentFilterOptions.map((a) => ({ value: a, label: a === 'Todos' ? 'Todos os agentes' : a }))}
-          style={selectStyle}
-        />
-        <Select
-          value={filterSide}
-          onChange={(v) => setFilterSide(v as 'Todos' | Lado)}
-          options={[
-            { value: 'Todos', label: 'Ataque e defesa' },
-            { value: 'ATK', label: 'Só ataque' },
-            { value: 'DEF', label: 'Só defesa' },
-          ]}
-          style={selectStyle}
-        />
-      </div>
+      <PageHeaderCard
+        title="Spots"
+        subtitle={<HeaderSubtitle>{spots?.length ?? 0} spots salvos pelo time</HeaderSubtitle>}
+        actions={
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'nowrap', width: '100%' }}>
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Buscar na descrição, mapa ou agente…"
+              style={{
+                flex: '1 1 160px',
+                minWidth: 0,
+                padding: '9px 13px',
+                background: 'var(--control-bg)',
+                border: '1px solid var(--surface-border)',
+                borderRadius: 'var(--radius-md)',
+                color: 'var(--text)',
+                fontSize: 12.5,
+                outline: 'none',
+              }}
+            />
+            <button className="btn-primary" style={{ padding: '9px 16px', fontSize: 12.5, flex: 'none' }} onClick={() => setCreating(true)}>
+              + Novo spot
+            </button>
+          </div>
+        }
+        filters={
+          <>
+            <Select
+              value={filterMap}
+              onChange={setFilterMap}
+              options={mapFilterOptions.map((m) => ({ value: m, label: m === 'Todos' ? 'Todos os mapas' : m }))}
+              style={selectStyle}
+              className="filter-select"
+            />
+            <Select
+              value={filterAgent}
+              onChange={setFilterAgent}
+              options={agentFilterOptions.map((a) => ({ value: a, label: a === 'Todos' ? 'Todos os agentes' : a }))}
+              style={selectStyle}
+              className="filter-select"
+            />
+            <Select
+              value={filterSide}
+              onChange={(v) => setFilterSide(v as 'Todos' | Lado)}
+              options={[
+                { value: 'Todos', label: 'Ataque e defesa' },
+                { value: 'ATK', label: 'Só ataque' },
+                { value: 'DEF', label: 'Só defesa' },
+              ]}
+              style={selectStyle}
+              className="filter-select"
+            />
+          </>
+        }
+        resultCount={`${filtered.length} resultado${filtered.length === 1 ? '' : 's'}`}
+      />
 
       {spotsError && !spots && (
         <div style={{ ...cardStyle, padding: 22, display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'flex-start' }}>
           <div style={{ fontSize: 14, color: 'var(--text-3)' }}>{spotsError}</div>
-          <button className="btn-secondary" onClick={loadSpots}>
-            Tentar de novo
+          <button className="btn-secondary" onClick={spotsError === 'Você ainda não tem uma equipe.' ? () => navigate('/equipe') : loadSpots}>
+            {spotsError === 'Você ainda não tem uma equipe.' ? 'Criar ou entrar numa equipe' : 'Tentar de novo'}
           </button>
         </div>
       )}
