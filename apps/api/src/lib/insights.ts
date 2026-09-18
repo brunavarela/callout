@@ -152,7 +152,7 @@ export async function buildRrAndInsights(
         delta: r.rr!,
         map: match.metadata.map.name,
         agent: r.agentName,
-        result: matchResult(r.won, r.rr),
+        result: matchResult(r.won, r.rr, r.rankTierId),
       };
     });
 

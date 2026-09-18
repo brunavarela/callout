@@ -94,6 +94,7 @@ export async function buildEquipePainel(equipeId: string, mapIdFilter?: string):
         kills: true,
         assists: true,
         rr: true,
+        rankTierId: true,
         match: { select: { modo: true } },
       },
     })
@@ -203,7 +204,7 @@ export async function buildEquipePainel(equipeId: string, mapIdFilter?: string):
     // (vem `false`, igual derrota); RR vem gravado desde o sync (ver
     // comentário em MatchPlayer.rr no schema).
     const rrDelta = list[0]!.rr;
-    const comboResult = matchResult(won, rrDelta);
+    const comboResult = matchResult(won, rrDelta, list[0]!.rankTierId);
     if (comboResult === "V") {
       cEntry.wins++;
       if (wentToOvertime) cEntry.overtimeWins++;

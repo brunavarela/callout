@@ -653,7 +653,7 @@ function toSeasonMatchSummaries(
 
     return {
       id: r.matchId,
-      result: matchResult(r.won, rrByMatch.get(r.matchId)),
+      result: matchResult(r.won, rrByMatch.get(r.matchId), r.rankTierId),
       map: r.match.map?.nome ?? mapNameFrom(rawJsonByMatchId.get(r.matchId)),
       agent: r.agentName,
       modo: r.match.modo,

@@ -5,7 +5,18 @@
 // isso, e perder RR nunca é empate).
 const DRAW_MAX_RR_GAIN = 5;
 
-export function matchResult(won: boolean, rrDelta: number | null | undefined): "V" | "D" | "E" {
+// tier.id 0 = "Unranked" (ver competitivetiers em @callout/shared) — é o
+// valor que a HenrikDev devolve pro elo enquanto ele ainda não foi
+// calculado, ou seja, durante as partidas de colocação (início de
+// episódio/ato, ou conta nova). Nesse período o RR "ganho" na partida pode
+// vir 0 (o elo nem existe pra ter RR pra mexer), o que bateria na faixa de
+// empate acima sem ser um empate de verdade -- então nesse caso ignora o RR
+// e confia direto no `won` (resultado real da partida, que a colocação não
+// muda).
+const UNRANKED_TIER_ID = 0;
+
+export function matchResult(won: boolean, rrDelta: number | null | undefined, rankTierId?: number | null): "V" | "D" | "E" {
+  if (rankTierId === UNRANKED_TIER_ID) return won ? "V" : "D";
   if (rrDelta !== null && rrDelta !== undefined && rrDelta >= 0 && rrDelta <= DRAW_MAX_RR_GAIN) return "E";
   return won ? "V" : "D";
 }

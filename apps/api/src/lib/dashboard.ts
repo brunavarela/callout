@@ -257,10 +257,15 @@ export async function buildDashboardSummary(
   // partida na tabela, mesmo quando o histórico funcionava sozinho.
   let rank: DashboardSummary["rank"] = { current: "—", rr: 0, rrDelta7d: 0, iconUrl: null };
   let rrByMatch = new Map<string, number>();
+  // tier.id da mesma entrada do mmr-history — 0 = ainda sem elo (colocação),
+  // ver matchResult em match-result.ts. Precisa saber isso pra não confundir
+  // "RR 0 porque tá em colocação" com "RR 0 porque empatou".
+  let rankTierByMatch = new Map<string, number>();
   try {
     const sevenDaysAgo = new Date(now.getTime() - 7 * 86_400_000);
     const history = await getMmrHistory(region, puuid);
     rrByMatch = new Map(history.map((h) => [h.match_id, h.last_change]));
+    rankTierByMatch = new Map(history.map((h) => [h.match_id, h.tier.id]));
     rank.rrDelta7d = history.filter((h) => new Date(h.date) >= sevenDaysAgo).reduce((sum, h) => sum + h.last_change, 0);
   } catch {
     // sem histórico — mantém 0 e rrByMatch vazio (recentMatches.rr vira null)
@@ -277,7 +282,7 @@ export async function buildDashboardSummary(
   const last14Results = filteredRows
     .slice(0, 14)
     .reverse()
-    .map((r) => matchResult(r.won, rrByMatch.get(r.match.id)));
+    .map((r) => matchResult(r.won, rrByMatch.get(r.match.id), rankTierByMatch.get(r.match.id)));
 
   // MVP = maior ACS do seu próprio time na partida (não dos 10 jogadores —
   // isso deixaria de fora quem foi o melhor do time mas perdeu de alguém do
@@ -303,7 +308,7 @@ export async function buildDashboardSummary(
     const shotsTotal = r.headshots + r.bodyshots + r.legshots;
     return {
       id: r.match.id,
-      result: matchResult(r.won, rrByMatch.get(r.match.id)),
+      result: matchResult(r.won, rrByMatch.get(r.match.id), rankTierByMatch.get(r.match.id)),
       map: mapNameFrom(rawJson),
       agent: r.agentName,
       score: `${score.own}—${score.opponent}`,
