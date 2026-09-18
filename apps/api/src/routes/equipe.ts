@@ -280,7 +280,8 @@ export async function equipeRoutes(app: FastifyInstance) {
     const equipeId = await getUserEquipeId(request.user!.id);
     if (!equipeId) return reply.code(404).send({ error: "Você ainda não tem uma equipe." });
 
-    const summary = await buildEquipePainel(equipeId);
+    const { mapId } = request.query as { mapId?: string };
+    const summary = await buildEquipePainel(equipeId, mapId || undefined);
     if (!summary) return reply.code(404).send({ error: "Nenhuma equipe encontrada." });
     return summary;
   });

@@ -60,7 +60,7 @@ function computeStreaks(resultsOldToNew: boolean[]): { current: EquipePainelSumm
 // buildEquipeMatches não checa isso porque não precisa (só lista partidas);
 // aqui precisa, senão as variações de formação não fariam sentido se o
 // grupo tivesse caído dividido nos dois lados por acaso.
-export async function buildEquipePainel(equipeId: string): Promise<EquipePainelSummary | null> {
+export async function buildEquipePainel(equipeId: string, mapIdFilter?: string): Promise<EquipePainelSummary | null> {
   const equipe = await prisma.equipe.findUnique({ where: { id: equipeId }, include: { membros: { include: { user: true } } } });
   if (!equipe) return null;
 
@@ -133,7 +133,9 @@ export async function buildEquipePainel(equipeId: string): Promise<EquipePainelS
   const qualifying = cappedQualifyingLists
     .map((list) => ({ match: matchById.get(list[0]!.matchId), list }))
     .filter((x): x is { match: (typeof matches)[number]; list: typeof rows } => x.match !== undefined)
+    .filter((x) => !mapIdFilter || x.match.mapId === mapIdFilter)
     .sort((a, b) => a.match.startedAt.getTime() - b.match.startedAt.getTime());
+  if (qualifying.length === 0) return EMPTY_SUMMARY;
 
   const now = new Date();
   const wins = qualifying.filter(({ list }) => list[0]!.won).length;

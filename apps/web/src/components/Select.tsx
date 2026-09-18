@@ -17,6 +17,7 @@ export function Select({
   style,
   title,
   align = 'left',
+  panelClassName,
 }: {
   value: string;
   onChange: (value: string) => void;
@@ -25,6 +26,12 @@ export function Select({
   style?: React.CSSProperties;
   title?: string;
   align?: 'left' | 'right';
+  // Classe extra pro painel de opções -- ver ".fit-trigger" no index.css,
+  // pra selects com opções de texto longo (nomes de formação de equipe):
+  // painel do tamanho do gatilho, quebra de linha e linhas zebradas em vez
+  // do painel "encolhido pro conteúdo" (comportamento padrão, bom pra
+  // opções curtas).
+  panelClassName?: string;
 }) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -67,7 +74,7 @@ export function Select({
         <ChevronDown size={14} strokeWidth={2} className="select-chevron" />
       </button>
       {open && (
-        <div className={`select-panel${align === 'right' ? ' align-right' : ''}`} role="listbox">
+        <div className={`select-panel${align === 'right' ? ' align-right' : ''}${panelClassName ? ` ${panelClassName}` : ''}`} role="listbox">
           {options.map((o) => (
             <button
               key={o.value}
