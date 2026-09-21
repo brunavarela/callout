@@ -214,9 +214,14 @@ async function buildTopAgents(rows: Row[]): Promise<TopAgentStat[]> {
   const agentColors = await loadAgentColorsByName();
   return [...byAgent.entries()]
     .map(([agent, s]) => {
+      // Só 1 partida naquele mapa normalmente não é amostra suficiente pra
+      // chamar de "melhor mapa" -- mas se essa partida única foi vitória,
+      // 100% é 100%, mostra mesmo assim (pedido de 21/09/2026). Só continua
+      // ignorando o caso de 1 partida perdida (sem "melhor mapa" nenhum pra
+      // mostrar aí).
       let bestMap: TopAgentStat["bestMap"] = null;
       for (const [map, m] of s.maps) {
-        if (m.total < 2) continue;
+        if (m.total < 2 && m.wins === 0) continue;
         const wr = Math.round((m.wins / m.total) * 100);
         if (!bestMap || wr > bestMap.winratePercent) bestMap = { map, winratePercent: wr };
       }

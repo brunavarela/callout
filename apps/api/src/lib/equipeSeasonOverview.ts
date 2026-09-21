@@ -181,9 +181,12 @@ async function buildEquipeTopAgents(rows: Row[]): Promise<TopAgentStat[]> {
   const agentColors = await loadAgentColorsByName();
   return [...byAgent.entries()]
     .map(([agent, s]) => {
+      // Mesma regra de seasonOverview.ts (individual): 1 partida só naquele
+      // mapa não é amostra suficiente, exceto quando foi vitória (100% é
+      // 100%) -- pedido de 21/09/2026.
       let bestMap: TopAgentStat["bestMap"] = null;
       for (const [map, m] of s.maps) {
-        if (m.total < 2) continue;
+        if (m.total < 2 && m.wins === 0) continue;
         const wr = Math.round((m.wins / m.total) * 100);
         if (!bestMap || wr > bestMap.winratePercent) bestMap = { map, winratePercent: wr };
       }
