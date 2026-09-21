@@ -684,8 +684,8 @@ export function SeasonOverviewSection({
             <AttackDefenseCard sides={data.attackDefense} height={SEASON_CARD_HEIGHT} />
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: SEASON_CARD_GAP, minWidth: 0 }}>
-            <AccuracyBar accuracy={data.accuracy} height={SEASON_CARD_HEIGHT} />
             <WeaponBlock weapons={data.topWeapons} maxHeight={SEASON_CARD_HEIGHT} />
+            <AccuracyBar accuracy={data.accuracy} height={SEASON_CARD_HEIGHT} />
             <RoleBlock roles={data.roles} maxHeight={SEASON_CARD_HEIGHT} />
           </div>
         </div>

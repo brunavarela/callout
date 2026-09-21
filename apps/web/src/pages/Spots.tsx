@@ -7,7 +7,7 @@ import { LoadingFill } from '../components/Spinner';
 import { ConfirmModal } from '../components/ConfirmModal';
 import { Select } from '../components/Select';
 import { compressImageToDataUrl } from '../lib/imageCompress';
-import { PageHeaderCard, HeaderSubtitle } from '../components/PageHeaderCard';
+import { PageHeaderCard, HeaderSubtitle, SegmentedTabs } from '../components/PageHeaderCard';
 import { useCardStyle } from '../components/statsPrimitives';
 
 const ERROR_COLOR = 'var(--acc, #EF4958)';
@@ -424,7 +424,23 @@ export function Spots() {
     <div style={{ padding: 26, display: 'flex', flexDirection: 'column', gap: 18 }}>
       <PageHeaderCard
         title="Spots"
-        subtitle={<HeaderSubtitle>{spots?.length ?? 0} spots salvos {scope === 'equipe' ? 'pelo time' : 'por você'}</HeaderSubtitle>}
+        subtitle={
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <HeaderSubtitle>
+              {spots?.length ?? 0} spots salvos {scope === 'equipe' ? 'pelo time' : 'por você'}
+            </HeaderSubtitle>
+            {equipe && (
+              <SegmentedTabs
+                value={scope}
+                onChange={setScope}
+                options={[
+                  { key: 'equipe', label: 'Equipe' },
+                  { key: 'individual', label: 'Individual' },
+                ]}
+              />
+            )}
+          </div>
+        }
         actions={
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'nowrap', width: '100%' }}>
             <input
@@ -448,22 +464,8 @@ export function Spots() {
             </button>
           </div>
         }
-        filters={
+        centerContent={
           <>
-            <Select
-              value={filterMap}
-              onChange={setFilterMap}
-              options={mapFilterOptions.map((m) => ({ value: m, label: m === 'Todos' ? 'Todos os mapas' : m }))}
-              style={selectStyle}
-              className="filter-select"
-            />
-            <Select
-              value={filterAgent}
-              onChange={setFilterAgent}
-              options={agentFilterOptions.map((a) => ({ value: a, label: a === 'Todos' ? 'Todos os agentes' : a }))}
-              style={selectStyle}
-              className="filter-select"
-            />
             <Select
               value={filterSide}
               onChange={(v) => setFilterSide(v as 'Todos' | Lado)}
@@ -475,21 +477,23 @@ export function Spots() {
               style={selectStyle}
               className="filter-select"
             />
+            <Select
+              value={filterAgent}
+              onChange={setFilterAgent}
+              options={agentFilterOptions.map((a) => ({ value: a, label: a === 'Todos' ? 'Todos os agentes' : a }))}
+              style={selectStyle}
+              className="filter-select"
+            />
+            <Select
+              value={filterMap}
+              onChange={setFilterMap}
+              options={mapFilterOptions.map((m) => ({ value: m, label: m === 'Todos' ? 'Todos os mapas' : m }))}
+              style={selectStyle}
+              className="filter-select"
+            />
           </>
         }
-        resultCount={`${filtered.length} resultado${filtered.length === 1 ? '' : 's'}`}
       />
-
-      {equipe && (
-        <div style={{ display: 'flex', gap: 6 }}>
-          <button className={scope === 'equipe' ? 'btn-primary' : 'btn-secondary'} style={{ padding: '8px 16px', fontSize: 12.5 }} onClick={() => setScope('equipe')}>
-            Equipe
-          </button>
-          <button className={scope === 'individual' ? 'btn-primary' : 'btn-secondary'} style={{ padding: '8px 16px', fontSize: 12.5 }} onClick={() => setScope('individual')}>
-            Individual
-          </button>
-        </div>
-      )}
 
       {spotsError && !spots && (
         <div style={{ ...cardStyle, padding: 22, display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'flex-start' }}>

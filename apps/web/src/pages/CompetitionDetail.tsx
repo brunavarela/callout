@@ -341,26 +341,17 @@ function GrupoCard({
   const ordenados = [...confrontos].sort((a, b) => a.id.localeCompare(b.id));
   const timesGrupo = timesDoGrupo(confrontos, competicao.times);
   const classificacao = classificacaoGrupo(timesGrupo, confrontos, competicao.confrontos, competicao.times);
-  // Recolher só existe (visualmente) no mobile/tablet pequeno -- ver
+  // Recolhido por padrão só existe (visualmente) no mobile/tablet -- ver
   // .grupo-toggle-btn e .grupo-matches no index.css. Em telas maiores o
-  // botão fica escondido e os confrontos sempre aparecem, mesmo que esse
-  // estado tenha ficado true de uma sessão em tela estreita.
-  const [colapsado, setColapsado] = useState(false);
+  // botão "Partidas" fica escondido e os confrontos sempre aparecem
+  // (fileira rolando de lado), mesmo que esse estado tenha ficado true
+  // numa sessão em tela estreita.
+  const [colapsado, setColapsado] = useState(true);
 
   return (
     <div className="grupo-row" style={{ ...cardStyle, padding: 18, display: 'flex', alignItems: 'center', gap: 20 }}>
       <div className="grupo-classificacao" style={{ display: 'flex', flexDirection: 'column', gap: 10, flex: 'none' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-          <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 700, fontSize: 14, letterSpacing: '.04em', color: 'var(--acc, #EF4958)' }}>GRUPO {nome}</div>
-          <button
-            className="grupo-toggle-btn"
-            onClick={() => setColapsado((v) => !v)}
-            title={colapsado ? 'Expandir grupo' : 'Recolher grupo'}
-            style={{ background: 'none', border: 'none', padding: 2, cursor: 'pointer', color: 'var(--text-faint)' }}
-          >
-            {colapsado ? <ChevronDown size={16} strokeWidth={2} /> : <ChevronUp size={16} strokeWidth={2} />}
-          </button>
-        </div>
+        <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 700, fontSize: 14, letterSpacing: '.04em', color: 'var(--acc, #EF4958)' }}>GRUPO {nome}</div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
           {classificacao.map((c, i) => (
@@ -373,14 +364,42 @@ function GrupoCard({
             </div>
           ))}
         </div>
+
+        {/* Só existe (visualmente) até 1100px, ver .grupo-toggle-btn no
+            index.css -- no desktop os confrontos já ficam sempre visíveis
+            do lado, esse botão não faz sentido. */}
+        <button
+          type="button"
+          className="grupo-toggle-btn"
+          onClick={() => setColapsado((v) => !v)}
+          style={{
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 6,
+            marginTop: 4,
+            padding: '9px 0',
+            background: 'var(--track)',
+            border: 'none',
+            borderRadius: 'var(--radius-md)',
+            color: 'var(--text-muted)',
+            fontSize: 12.5,
+            fontWeight: 600,
+            cursor: 'pointer',
+          }}
+        >
+          Partidas
+          {colapsado ? <ChevronDown size={15} strokeWidth={2} /> : <ChevronUp size={15} strokeWidth={2} />}
+        </button>
       </div>
 
       {/* minWidth:0 é o que deixa essa fileira encolher e rolar de lado
           (overflow-x:auto) em vez de forçar o card (e a página) inteira a
-          crescer -- mesma lição do resto do painel, ver cardStyle. */}
+          crescer -- mesma lição do resto do painel, ver cardStyle. No
+          mobile/tablet (.grupo-matches no CSS) vira 1 coluna centralizada
+          em vez de fileira rolando de lado, atrás do botão "Partidas". */}
       <div
         className={colapsado ? 'grupo-matches colapsado' : 'grupo-matches'}
-        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 18, flex: 1, minWidth: 0, overflowX: 'auto', paddingBottom: 4 }}
+        style={{ alignItems: 'center', justifyContent: 'center', gap: 18, flex: 1, minWidth: 0, overflowX: 'auto', paddingBottom: 4 }}
       >
         {ordenados.map((c) => (
           <MatchCard key={c.id} confronto={c} competicao={competicao} editavel={editavel} onSalvar={onSalvar} />

@@ -3,7 +3,7 @@ import type { OutletContext } from '../components/AppShell';
 import { LoadingFill } from '../components/Spinner';
 import { SeasonMatchesList } from '../components/SeasonMatchesList';
 import { RiotIdSearchFilter, SeasonMapFilterSelect, SeasonAgentFilterSelect, SeasonModoFilterSelect } from '../components/SeasonFilters';
-import { useCardStyle, plural } from '../components/statsPrimitives';
+import { useCardStyle } from '../components/statsPrimitives';
 import { PageHeaderCard, HeaderSubtitle } from '../components/PageHeaderCard';
 
 // Histórico completo de partidas do ato (mesma fonte de dados da Visão do
@@ -51,25 +51,24 @@ export function Matches() {
       <PageHeaderCard
         title="Partidas"
         subtitle={<HeaderSubtitle>{isSelf ? 'Suas partidas do ato' : `Partidas de ${subject}`} — clique numa pra ver os detalhes</HeaderSubtitle>}
-        filters={
-          <>
-            <RiotIdSearchFilter
-              activeLabel={isSelf ? null : subject}
-              searchLoading={searchLoading}
-              searchError={searchError}
-              onSearch={searchRiotId}
-              onClear={() => setSelectedMemberId(null)}
-            />
-            {seasonOverview && (
-              <>
-                <SeasonAgentFilterSelect topAgents={seasonOverview.topAgents} agentFilter={seasonAgentFilter} setAgentFilter={setSeasonAgentFilter} />
-                <SeasonMapFilterSelect topMaps={seasonOverview.topMaps} mapFilter={seasonMapFilter} setMapFilter={setSeasonMapFilter} />
-                <SeasonModoFilterSelect availableModos={seasonOverview.availableModos} modoFilter={seasonModoFilter} setModoFilter={setSeasonModoFilter} />
-              </>
-            )}
-          </>
+        centerContent={
+          seasonOverview && (
+            <>
+              <SeasonAgentFilterSelect topAgents={seasonOverview.topAgents} agentFilter={seasonAgentFilter} setAgentFilter={setSeasonAgentFilter} />
+              <SeasonMapFilterSelect topMaps={seasonOverview.topMaps} mapFilter={seasonMapFilter} setMapFilter={setSeasonMapFilter} />
+              <SeasonModoFilterSelect availableModos={seasonOverview.availableModos} modoFilter={seasonModoFilter} setModoFilter={setSeasonModoFilter} />
+            </>
+          )
         }
-        resultCount={seasonMatchesPage && plural(seasonMatchesPage.total, 'resultado')}
+        actions={
+          <RiotIdSearchFilter
+            activeLabel={isSelf ? null : subject}
+            searchLoading={searchLoading}
+            searchError={searchError}
+            onSearch={searchRiotId}
+            onClear={() => setSelectedMemberId(null)}
+          />
+        }
       />
 
       {seasonOverviewLoading ? (

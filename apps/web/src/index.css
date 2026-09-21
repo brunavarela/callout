@@ -428,6 +428,7 @@ button {
 .link-quiet {
   color: var(--acc, #ef4958);
   font-size: 12px;
+  text-decoration: underline;
 }
 
 .link-quiet:hover {
@@ -503,6 +504,70 @@ button {
 @media (max-width: 560px) {
   .grid-responsive-4 {
     grid-template-columns: 1fr;
+  }
+}
+
+/* Filtros centralizados do headerpage (PageHeaderCard `centerContent`,
+   21/09/2026) -- de verdade centralizado (position:absolute) só em telas
+   largas o bastante praquilo não brigar de espaço com título/ações. Em
+   telas estreitas some de vez (os mesmos filtros aparecem só dentro do
+   modal do botão "Filtros", ver .headerpage-filters-btn) -- a 1ª tentativa
+   (virar conteúdo normal empilhado) ainda ficava bagunçado no celular. */
+.headerpage-center {
+  display: none;
+}
+@media (min-width: 1101px) {
+  .headerpage-center {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+  }
+}
+
+/* Headerpage "modo mobile" (título/ações centralizados, filtro vira botão)
+   -- pedido de 21/09/2026 de estender esse comportamento pra tablet
+   também (breakpoint subiu de 768px pra 1100px, junto com o header
+   principal/nav logo abaixo -- "a partir de tablet, o filtro pode virar
+   aquele botão mesmo, e o header pode ficar igual o mobile"). Em telas
+   largas o layout de sempre (título à esquerda, ações à direita)
+   continua. */
+@media (max-width: 1100px) {
+  .headerpage-row {
+    justify-content: center;
+    text-align: center;
+  }
+  .headerpage-title-block,
+  .headerpage-title-block > div {
+    align-items: center;
+    justify-content: center;
+  }
+  .headerpage-actions {
+    margin-left: 0 !important;
+    justify-content: center;
+    width: 100%;
+  }
+}
+
+/* Botão "Filtros" -- só existe até 1100px, ao lado de `actions`
+   (ex.: "Encontre jogadores"); abre os mesmos filtros de centerContent
+   dentro de um modal (ver PageHeaderCard.tsx). Acima disso os filtros já
+   aparecem centralizados no próprio card (.headerpage-center acima), o
+   botão não faz sentido. */
+.headerpage-filters-btn {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 14px;
+  font-size: 12.5px;
+}
+@media (min-width: 1101px) {
+  .headerpage-filters-btn {
+    display: none;
   }
 }
 
@@ -794,12 +859,14 @@ button {
 /* Fase de grupos da tela de Competições — cada grupo é uma linha só
    (título + classificação fixos à esquerda, confrontos numa fileira
    horizontal rolável à direita), grupos empilhados um embaixo do outro
-   (ver FaseDeGrupos/GrupoCard). Em telas estreitas, empilha classificação
-   em cima dos confrontos em vez de espremer os dois lado a lado. */
+   (ver FaseDeGrupos/GrupoCard). Em telas estreitas (breakpoint subiu de
+   720px pra 1100px em 21/09/2026, junto com o resto do app), empilha
+   classificação em cima dos confrontos em vez de espremer os dois lado a
+   lado. */
 .grupo-row {
   flex-direction: row;
 }
-@media (max-width: 720px) {
+@media (max-width: 1100px) {
   .grupo-row {
     flex-direction: column;
   }
@@ -808,25 +875,35 @@ button {
 .grupo-classificacao {
   width: 220px;
 }
-@media (max-width: 720px) {
+@media (max-width: 1100px) {
   .grupo-classificacao {
     width: 100%;
   }
 }
 
-/* Botão de recolher/expandir grupo (chevron no card GRUPO X) -- só existe
-   no mobile/tablet pequeno, onde a fileira de confrontos rolando de lado
-   some duas vezes por grupo pequena vale mais a pena só ver a
-   classificação; no desktop os grupos ficam sempre abertos (botão nem
-   aparece). */
+/* Botão "Partidas" (expande/recolhe os confrontos do grupo) -- só existe
+   no mobile/tablet (<=1100px), onde os confrontos por padrão ficam
+   escondidos atrás dele (ver `colapsado` inicial em GrupoCard); no desktop
+   os grupos ficam sempre abertos, lado a lado, esse botão nem aparece.
+   Expandido, os confrontos viram 1 coluna centralizada (não mais fileira
+   rolando de lado) -- pedido de 21/09/2026, visto na tela de Competições. */
 .grupo-toggle-btn {
   display: none;
 }
-@media (max-width: 720px) {
+.grupo-matches {
+  display: flex;
+}
+@media (max-width: 1100px) {
   .grupo-toggle-btn {
     display: flex;
     align-items: center;
     justify-content: center;
+  }
+  .grupo-matches {
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    overflow-x: visible !important;
   }
   .grupo-matches.colapsado {
     display: none;
@@ -855,7 +932,7 @@ button {
 .scroll-x-mobile {
   overflow-x: visible;
 }
-@media (max-width: 640px) {
+@media (max-width: 1100px) {
   .scroll-x-mobile {
     overflow-x: auto;
   }
@@ -883,7 +960,7 @@ button {
      um. */
   z-index: 1;
 }
-@media (max-width: 900px) {
+@media (max-width: 1100px) {
   .app-shell-flat {
     height: 100dvh;
   }
@@ -950,16 +1027,32 @@ button {
   position: relative;
   transition: background 0.15s ease, gap 0.2s ease, padding 0.2s ease;
 }
-@media (max-width: 900px) {
+@media (max-width: 1100px) {
   .app-topbar-nav {
     display: none;
   }
   .app-topbar {
     flex-wrap: wrap;
     gap: 10px;
+    /* Os 46px/36px do desktop existem só pra alinhar com o padding do
+       conteúdo da página (ver comentário acima) -- em telas estreitas isso
+       sozinho já comia boa parte da largura disponível, espremendo tudo
+       (achado em 21/09/2026). */
+    padding: 12px 16px;
   }
   .app-topbar-actions {
     flex: 1;
+    min-width: 0;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+  }
+}
+@media (max-width: 480px) {
+  /* "Máx: X" do chip de elo é o primeiro a sumir -- informação secundária,
+     e o chip inteiro já disputa espaço com logo+conta numa tela bem
+     estreita. */
+  .app-topbar .rank-peak {
+    display: none;
   }
 }
 
@@ -968,7 +1061,7 @@ button {
 .app-bottom-nav {
   display: none;
 }
-@media (max-width: 900px) {
+@media (max-width: 1100px) {
   .app-bottom-nav {
     display: flex;
     align-items: center;
@@ -1013,9 +1106,20 @@ button {
   border-top-left-radius: 0 !important;
   border-top-right-radius: 0 !important;
 }
-@media (max-width: 900px) {
+@media (max-width: 1100px) {
   .app-main {
     padding-bottom: 64px;
+  }
+  /* No mobile/tablet o "colado" (regra acima) ficava apertado demais --
+     desktop continua sem respiro (teste aprovado), mas aqui volta um
+     espaço de verdade entre o header principal e o headerpage da página
+     (pedido de 21/09/2026, visto na tela de Competições). */
+  .app-main > div:first-child {
+    padding-top: 18px !important;
+  }
+  .app-main > div:first-child > :first-child {
+    border-top-left-radius: var(--radius-lg) !important;
+    border-top-right-radius: var(--radius-lg) !important;
   }
 }
 
@@ -1033,20 +1137,8 @@ button {
 .header-profile-panel {
   position: fixed;
   width: 300px;
+  max-width: calc(100vw - 24px);
   z-index: 1000;
-}
-@media (max-width: 900px) {
-  /* !important pra vencer o top/right inline (panelPos, calculado a partir
-     do botão) -- no mobile a posição é sempre fixa perto do rodapé,
-     ignorando de propósito onde o botão realmente está. */
-  .header-profile-panel {
-    position: fixed;
-    top: auto !important;
-    left: 12px !important;
-    right: 12px !important;
-    bottom: 76px !important;
-    width: auto !important;
-  }
 }
 @media (max-width: 420px) {
   .header-profile-text {
@@ -1110,5 +1202,12 @@ button {
 @media (max-width: 480px) {
   .login-heading {
     font-size: 32px;
+  }
+}
+
+@media (max-width: 1280px) {
+  .footer-disclaimer {
+    text-align: center;
+    margin: 0 auto;
   }
 }

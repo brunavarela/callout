@@ -7,7 +7,7 @@ import type { OutletContext } from '../components/AppShell';
 import { LoadingFill } from '../components/Spinner';
 import { SeasonMatchesList } from '../components/SeasonMatchesList';
 import { SeasonMapFilterSelect } from '../components/SeasonFilters';
-import { useCardStyle, plural } from '../components/statsPrimitives';
+import { useCardStyle } from '../components/statsPrimitives';
 import { PageHeaderCard, HeaderSubtitle } from '../components/PageHeaderCard';
 import { apiFetch } from '../lib/api';
 
@@ -76,8 +76,7 @@ export function EquipePartidas() {
             Painel
           </button>
         }
-        filters={overview && <SeasonMapFilterSelect topMaps={overview.topMaps} mapFilter={mapFilter} setMapFilter={setMapFilter} />}
-        resultCount={matchesPage && plural(matchesPage.total, 'resultado')}
+        centerContent={overview && <SeasonMapFilterSelect topMaps={overview.topMaps} mapFilter={mapFilter} setMapFilter={setMapFilter} />}
       />
 
       {matchesLoading && !matchesPage ? (

@@ -16,39 +16,38 @@ export function Footer() {
   return (
     <footer style={{ borderTop: '1px solid var(--divider)', marginTop: 'auto', background: 'var(--surface)', ...(theme.glassCards ? glassSurfaceStyle : {}) }}>
       <div style={{ padding: '14px 26px', display: 'flex', flexDirection: 'column', gap: 8 }}>
-        <div style={{ fontSize: 11, color: 'var(--text-faint)', lineHeight: 1.6, maxWidth: '70ch' }}>
+        <div className="footer-disclaimer" style={{ fontSize: 11, color: 'var(--text-faint)', lineHeight: 1.6, maxWidth: '70ch' }}>
           Ferramenta independente. Sem vínculo com a Riot Games. Dados de partida vindos de API pública não-oficial.
         </div>
         <div
           style={{
             display: 'flex',
+            flexDirection: 'column',
             alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: 16,
-            flexWrap: 'wrap',
+            gap: 8,
             fontSize: 12,
             color: 'var(--text-faint)',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--text-faint)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 14, flexWrap: 'wrap' }}>
+            <Link to="/sobre" className="link-quiet" style={{ color: 'var(--text)' }}>
+              Sobre
+            </Link>
+            <Link to="/ajuda" className="link-quiet" style={{ color: 'var(--text)' }}>
+              Precisa de ajuda?
+            </Link>
+            <Link to="/termos" className="link-quiet" style={{ color: 'var(--text)' }}>
+              Termos de Uso
+            </Link>
+            <Link to="/privacidade" className="link-quiet" style={{ color: 'var(--text)' }}>
+              Política de Privacidade
+            </Link>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, color: 'var(--text-faint)' }}>
             <LogoMark size={14} weight={0} />
             <span>
               © {year} callout. Todos os direitos reservados.
             </span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
-            <Link to="/sobre" className="link-quiet" style={{ color: 'var(--text-faint)' }}>
-              Sobre
-            </Link>
-            <Link to="/ajuda" className="link-quiet" style={{ color: 'var(--text-faint)' }}>
-              Precisa de ajuda?
-            </Link>
-            <Link to="/termos" className="link-quiet" style={{ color: 'var(--text-faint)' }}>
-              Termos de Uso
-            </Link>
-            <Link to="/privacidade" className="link-quiet" style={{ color: 'var(--text-faint)' }}>
-              Política de Privacidade
-            </Link>
           </div>
         </div>
       </div>

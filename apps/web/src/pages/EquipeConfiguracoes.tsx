@@ -12,6 +12,7 @@ import { compressImageToDataUrl } from '../lib/imageCompress';
 import { CARGO_LABEL, CARGO_OPTIONS } from '../lib/cargo';
 import { MainAgentIcons } from '../components/MainAgentIcons';
 import { PageHeaderCard } from '../components/PageHeaderCard';
+import { Select } from '../components/Select';
 import { useCardStyle } from '../components/statsPrimitives';
 
 function initialsOf(name: string) {
@@ -474,20 +475,13 @@ export function EquipeConfiguracoes() {
                 <span style={{ color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.riotIdLabel ?? '—'}</span>
 
                 {editingCargoUserId === m.userId ? (
-                  <select
-                    autoFocus
-                    className="input-field"
-                    style={{ padding: '5px 8px', fontSize: 13 }}
+                  <Select
                     value={m.cargo}
-                    onChange={(e) => saveCargo(m.userId, e.target.value as Cargo)}
-                    onBlur={() => setEditingCargoUserId(null)}
-                  >
-                    {CARGO_OPTIONS.map((c) => (
-                      <option key={c} value={c}>
-                        {CARGO_LABEL[c]}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(v) => saveCargo(m.userId, v as Cargo)}
+                    options={CARGO_OPTIONS.map((c) => ({ value: c, label: CARGO_LABEL[c] }))}
+                    className="filter-select"
+                    style={{ fontSize: 13 }}
+                  />
                 ) : (
                   <div className={isAdmin ? 'hover-reveal' : undefined} style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
                     <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{CARGO_LABEL[m.cargo]}</span>

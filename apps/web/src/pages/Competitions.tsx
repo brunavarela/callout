@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { resolverLado, type CategoriaCompeticao, type Competicao, type Time } from '@callout/shared';
 import { apiFetch } from '../lib/api';
 import { LoadingFill } from '../components/Spinner';
-import { PageHeaderCard, HeaderSubtitle } from '../components/PageHeaderCard';
+import { PageHeaderCard, HeaderSubtitle, SegmentedTabs } from '../components/PageHeaderCard';
 import { useCardStyle } from '../components/statsPrimitives';
 import { statusEfetivo } from '../lib/competicoesUtil';
 
@@ -131,32 +131,7 @@ function CompetitionCard({ competicao, onClick }: { competicao: Competicao; onCl
 }
 
 function FiltroCategorias({ filtro, setFiltro }: { filtro: CategoriaCompeticao; setFiltro: (f: CategoriaCompeticao) => void }) {
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', height: 40, gap: 4, background: 'var(--input-bg)', border: '1px solid var(--surface-border)', borderRadius: 9, padding: '0 4px', flex: 'none' }}>
-      {FILTROS.map((f) => (
-        <button
-          key={f.key}
-          onClick={() => setFiltro(f.key)}
-          style={{
-            height: 32,
-            display: 'flex',
-            alignItems: 'center',
-            padding: '0 12px',
-            borderRadius: 6,
-            border: 'none',
-            cursor: 'pointer',
-            fontSize: 12,
-            fontWeight: 600,
-            whiteSpace: 'nowrap',
-            background: filtro === f.key ? 'var(--acc, #EF4958)' : 'transparent',
-            color: filtro === f.key ? 'var(--acc-text, #141415)' : 'var(--text-muted)',
-          }}
-        >
-          {f.label}
-        </button>
-      ))}
-    </div>
-  );
+  return <SegmentedTabs value={filtro} onChange={setFiltro} options={FILTROS} />;
 }
 
 // Só pra saber pra qual aba (filtro) voltar quando alguém sai do detalhe

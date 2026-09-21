@@ -66,7 +66,11 @@ function RankLevelChip({ appData }: { appData: AppData }) {
             <span style={{ fontSize: 12.5, fontWeight: 600 }}>
               {currentRank.tierLabel} · {currentRank.rr} RR
             </span>
-            {peakRank && <span style={{ fontSize: 10.5, color: 'var(--text-dim)' }}>Máx: {peakRank.tierLabel}</span>}
+            {peakRank && (
+              <span className="rank-peak" style={{ fontSize: 10.5, color: 'var(--text-dim)' }}>
+                Máx: {peakRank.tierLabel}
+              </span>
+            )}
           </div>
         </div>
       )}
