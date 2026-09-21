@@ -5,7 +5,7 @@ import { requireAuth } from "../lib/session.js";
 import { toSessionUser } from "../lib/dto.js";
 import { getUserEquipe } from "../lib/equipe.js";
 import { prisma } from "../lib/prisma.js";
-import { getAccountByRiotId, HenrikDevError } from "../lib/henrikdev.js";
+import { getAccountByRiotId, HenrikDevError, describeRiotIdLookupError } from "../lib/henrikdev.js";
 import { hashPassword, verifyPassword } from "../lib/password.js";
 import { sendCodigoEmail } from "../lib/email.js";
 import { RIOT_ID_REGEX, gerarCodigoEmail, gerarCodigoTag, criarCodigo, ultimoCodigo, verificarCodigo, senhaSchema } from "../lib/authCodes.js";
@@ -160,11 +160,9 @@ export async function meRoutes(app: FastifyInstance) {
     try {
       account = await getAccountByRiotId(riotName, riotTag);
     } catch (err) {
-      if (err instanceof HenrikDevError) {
-        return reply.code(err.status === 404 ? 404 : 502).send({ error: `Não achamos essa conta na Riot: ${err.message}` });
-      }
-      request.log.error(err, "falha ao consultar Riot ID na troca de perfil");
-      return reply.code(502).send({ error: "Falha ao falar com a HenrikDev. Tenta de novo em instantes." });
+      if (!(err instanceof HenrikDevError)) request.log.error(err, "falha ao consultar Riot ID na troca de perfil");
+      const { status, message } = describeRiotIdLookupError(err);
+      return reply.code(status).send({ error: message });
     }
 
     if (account.puuid === user.riotPuuid) return reply.code(400).send({ error: "Esse já é o seu RiotID atual." });

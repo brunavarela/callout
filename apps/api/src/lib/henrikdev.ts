@@ -41,6 +41,28 @@ async function henrikFetch(path: string): Promise<unknown> {
   return json;
 }
 
+// Mensagem de erro pra qualquer lugar que resolve conta por RiotID
+// (cadastro, troca de RiotID no perfil, busca livre no painel) -- antes cada
+// rota concatenava err.message (texto bruto da HenrikDev, em inglês) direto
+// na mensagem em português, ex.: "Não achamos essa conta na Riot: Error
+// while fetching needed match data..." (achado em 21/09/2026, conta sem
+// partida recente o suficiente pra HenrikDev enriquecer com account level).
+// Sempre 100% em português pro usuário, independente do texto interno do
+// erro.
+export function describeRiotIdLookupError(err: unknown): { status: number; message: string } {
+  if (err instanceof HenrikDevError) {
+    if (err.status === 404) {
+      return { status: 404, message: "Não achamos esse RiotID na Riot. Confere se digitou nome#tag certinho." };
+    }
+    return {
+      status: 502,
+      message:
+        "A Riot ainda não tem dado suficiente dessa conta pra confirmar — pode ser conta muito nova ou sem partida recente. Jogue uma partida (mesmo Deathmatch) e tenta de novo em alguns minutos.",
+    };
+  }
+  return { status: 502, message: "Falha ao falar com a HenrikDev. Tenta de novo em instantes." };
+}
+
 export async function getAccountByRiotId(name: string, tag: string): Promise<AccountV2Data> {
   const json = await henrikFetch(`/valorant/v2/account/${encodeURIComponent(name)}/${encodeURIComponent(tag)}`);
   return accountV2ResponseSchema.parse(json).data;

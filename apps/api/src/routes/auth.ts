@@ -2,7 +2,7 @@ import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { INTUITOS } from "@callout/shared";
 import { prisma } from "../lib/prisma.js";
-import { getAccountByRiotId, HenrikDevError } from "../lib/henrikdev.js";
+import { getAccountByRiotId, HenrikDevError, describeRiotIdLookupError } from "../lib/henrikdev.js";
 import { hashPassword, verifyPassword } from "../lib/password.js";
 import { sendCodigoEmail, sendCodigoRedefinicaoSenha } from "../lib/email.js";
 import { setSessionCookie, clearSessionCookie, requireAuth, getSessionUser } from "../lib/session.js";
@@ -82,11 +82,9 @@ export async function authRoutes(app: FastifyInstance) {
     try {
       account = await getAccountByRiotId(riotName, riotTag);
     } catch (err) {
-      if (err instanceof HenrikDevError) {
-        return reply.code(err.status === 404 ? 404 : 502).send({ error: `Não achamos essa conta na Riot: ${err.message}` });
-      }
-      request.log.error(err, "falha ao consultar Riot ID no cadastro");
-      return reply.code(502).send({ error: "Falha ao falar com a HenrikDev. Tenta de novo em instantes." });
+      if (!(err instanceof HenrikDevError)) request.log.error(err, "falha ao consultar Riot ID no cadastro");
+      const { status, message } = describeRiotIdLookupError(err);
+      return reply.code(status).send({ error: message });
     }
 
     const senhaHash = hashPassword(senha);

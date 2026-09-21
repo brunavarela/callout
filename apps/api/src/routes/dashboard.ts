@@ -8,7 +8,7 @@ import { buildSeasonOverview, buildSeasonMatchesPage } from "../lib/seasonOvervi
 import { resolveViewTarget } from "../lib/equipe.js";
 import { resolveOrCreateSearchTarget } from "../lib/publicSearch.js";
 import { RIOT_ID_REGEX } from "../lib/authCodes.js";
-import { HenrikDevError } from "../lib/henrikdev.js";
+import { HenrikDevError, describeRiotIdLookupError } from "../lib/henrikdev.js";
 
 // Resolve de quem é o painel que a rota deve montar. Dois modos, escolhidos
 // por quem chama (ver dashboardQuery em apps/web/src/lib/appData.ts):
@@ -69,11 +69,9 @@ export async function dashboardRoutes(app: FastifyInstance) {
       const target = await resolveOrCreateSearchTarget(riotName, riotTag);
       return { userId: target.id, riotName: target.riotName, riotTag: target.riotTag };
     } catch (err) {
-      if (err instanceof HenrikDevError) {
-        return reply.code(err.status === 404 ? 404 : 502).send({ error: `Não achamos essa conta na Riot: ${err.message}` });
-      }
-      request.log.error(err, "falha ao buscar RiotID no painel individual");
-      return reply.code(502).send({ error: "Falha ao falar com a HenrikDev. Tenta de novo em instantes." });
+      if (!(err instanceof HenrikDevError)) request.log.error(err, "falha ao buscar RiotID no painel individual");
+      const { status, message } = describeRiotIdLookupError(err);
+      return reply.code(status).send({ error: message });
     }
   });
 
