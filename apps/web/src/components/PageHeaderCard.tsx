@@ -20,6 +20,7 @@ export function PageHeaderCard({
   titleAdornment,
   subtitle,
   actions,
+  centerContent,
   filters,
   resultCount,
 }: {
@@ -30,6 +31,14 @@ export function PageHeaderCard({
   titleAdornment?: ReactNode;
   subtitle?: ReactNode;
   actions?: ReactNode;
+  // Filtros centralizados no eixo X/Y do card inteiro (não só do espaço
+  // sobrando depois do título) -- padrão novo de 21/09/2026, headerpage de
+  // uma linha só (Painel individual e da equipe). `actions` continua fixo
+  // no canto direito, sem competir de layout com isso (position:absolute
+  // sai do fluxo normal). Página nova usa isso; `filters`/`resultCount`
+  // abaixo continuam existindo só pras páginas que ainda não migraram pro
+  // padrão novo (2ª linha com borda em cima).
+  centerContent?: ReactNode;
   filters?: ReactNode;
   resultCount?: ReactNode;
 }) {
@@ -61,6 +70,12 @@ export function PageHeaderCard({
         </div>
         {actions && <div style={{ display: 'flex', gap: 8, marginLeft: 'auto', flexWrap: 'wrap' }}>{actions}</div>}
       </div>
+
+      {centerContent && (
+        <div style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+          {centerContent}
+        </div>
+      )}
 
       {hasFilterRow && (
         <div className="dashboard-header-actions" style={{ marginLeft: 0, marginTop: 14, paddingTop: 14, borderTop: '1px solid var(--divider)' }}>

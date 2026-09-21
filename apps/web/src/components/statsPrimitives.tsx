@@ -153,16 +153,6 @@ export function RateBlock({
           ))}
         </div>
       )}
-      <div style={{ borderTop: '1px solid var(--divider)', paddingTop: 9, display: 'flex', flexDirection: 'column', gap: 4, fontSize: 11, color: 'var(--text-faint)' }}>
-        <span style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-          <span style={{ width: 9, height: 5, borderRadius: 3, background: LOW_SAMPLE }} />
-          menos de {MIN_SAMPLE} partidas: amostra pequena
-        </span>
-        <span style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-          <span style={{ width: 9, height: 5, borderRadius: 3, background: UNDER_50 }} />
-          abaixo de 50%
-        </span>
-      </div>
     </div>
   );
 }

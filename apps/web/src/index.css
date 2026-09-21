@@ -441,41 +441,40 @@ button {
   opacity: 1 !important;
 }
 
-/* Modal de Perfil (ProfileModal.tsx) — 4 colunas lado a lado (Perfil/Email/
-   RiotID/Senha) com divisória vertical entre elas; empilha em coluna única
-   com divisória horizontal em telas estreitas, já que o modal em si só
-   encolhe (maxWidth:100%) sem colapsar o grid sozinho. */
+/* Modal de Perfil (ProfileModal.tsx) — 2 colunas (esquerda estreita fixa:
+   avatar/nome/preferência de exibição; direita flexível: email/RiotID/senha
+   empilhados) com divisória vertical entre elas -- layout novo de
+   21/09/2026 (era 4 colunas iguais). Empilha em coluna única com divisória
+   horizontal em telas estreitas, já que o modal em si só encolhe
+   (maxWidth:100%) sem colapsar o grid sozinho. */
 .profile-modal-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: 260px 1fr;
+  gap: 32px;
   min-height: 408px;
 }
-.profile-modal-grid > .profile-col {
+.profile-modal-grid > .profile-col-left {
   min-width: 0;
-  padding: 4px 32px;
+  display: flex;
+  flex-direction: column;
 }
-.profile-modal-grid > .profile-col:first-child {
-  padding-left: 0;
-}
-.profile-modal-grid > .profile-col:last-child {
-  padding-right: 0;
-}
-.profile-modal-grid > .profile-col:not(:first-child) {
+.profile-modal-grid > .profile-col-right {
+  min-width: 0;
+  padding-left: 32px;
   border-left: 1px solid var(--surface-border);
+  display: flex;
+  flex-direction: column;
 }
 @media (max-width: 720px) {
   .profile-modal-grid {
     grid-template-columns: 1fr;
+    gap: 0;
   }
-  .profile-modal-grid > .profile-col {
-    padding: 18px 0 0;
-  }
-  .profile-modal-grid > .profile-col:first-child {
-    padding-top: 0;
-  }
-  .profile-modal-grid > .profile-col:not(:first-child) {
+  .profile-modal-grid > .profile-col-right {
+    padding: 20px 0 0;
     border-left: none;
     border-top: 1px solid var(--surface-border);
+    margin-top: 20px;
   }
 }
 
@@ -624,6 +623,11 @@ button {
   text-align: left;
   white-space: normal;
   letter-spacing: normal;
+  /* Sem isso herda text-transform:uppercase do label que costuma envolver o
+     InfoDot (ex.: os labels dos KPIs, tipo "DDΔ/RD") -- o texto de ajuda em
+     si deve ficar normal, só o rótulo do lado é que é caixa alta (pedido de
+     21/09/2026). */
+  text-transform: none;
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
@@ -702,19 +706,20 @@ button {
    Agentes da Visão do ato) — 5 colunas fixas espremem demais quando o card
    vira largura cheia de mobile (season-cards-grid já stacka em 1 coluna a
    720px). */
+/* Antes era um grid de 5 colunas numa 2ª linha por baixo do nome do agente
+   -- agora K/D..Melhor mapa dividem a MESMA linha com ícone/nome/winrate
+   (pedido de 21/09/2026, ranking de agentes virou 1 linha só por agente),
+   por isso trocou pra flex (preenche o espaço que sobra na linha, sem
+   quebrar). */
 .agent-stat-grid {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  gap: 14px;
 }
-@media (max-width: 900px) {
-  .agent-stat-grid {
-    grid-template-columns: repeat(3, 1fr);
-  }
-}
-@media (max-width: 480px) {
-  .agent-stat-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
+.agent-stat-grid > * {
+  flex: 1;
+  min-width: 0;
 }
 
 /* Linha de arma (card "Armas mais usadas") — nome à esquerda, boneco +

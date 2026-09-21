@@ -6,7 +6,6 @@ import { SeasonMatchesList } from './SeasonMatchesList';
 import { RrHistoryCard } from './RrHistoryCard';
 import { Modal, ModalHeader } from './Modal';
 import { useCardStyle, fmtNum, fmtDelta, plural, LOW_SAMPLE, MIN_SAMPLE, GOLD, InfoDot } from './statsPrimitives';
-import { formatPlaytime } from '../lib/seasonFormat';
 
 const WIN = 'var(--pos, #18AAB7)';
 const LOSS = 'var(--neg, #EF4958)';
@@ -244,19 +243,6 @@ function RoleBlock({ roles, maxHeight }: { roles: SeasonOverview['roles']; maxHe
       title="Funções"
       sub="Winrate por função no período"
       maxHeight={maxHeight}
-      footer={
-        <div style={{ borderTop: '1px solid var(--divider)', paddingTop: 9, display: 'flex', flexWrap: 'wrap', gap: 14, fontSize: 11, color: 'var(--text-faint)' }}>
-          <span style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-            <span style={{ width: 9, height: 5, borderRadius: 3, background: LOW_SAMPLE, flex: 'none' }} />
-            menos de {MIN_SAMPLE} partidas: amostra pequena
-          </span>
-          <span style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-            <span style={{ width: 9, height: 5, borderRadius: 3, background: UNDER_50, flex: 'none' }} />
-            abaixo de 50%
-          </span>
-          <span>KDA: abates / mortes / assistências</span>
-        </div>
-      }
     >
       {(scrollable) =>
         roles.length === 0 ? (
@@ -315,12 +301,6 @@ function WeaponBlock({ weapons, maxHeight }: { weapons: SeasonOverview['topWeapo
       title="Armas mais usadas"
       sub="Abates e distribuição de acertos por arma no período"
       maxHeight={maxHeight}
-      footer={
-        <div style={{ borderTop: '1px solid var(--divider)', paddingTop: 9, display: 'flex', flexWrap: 'wrap', gap: 14, fontSize: 11, color: 'var(--text-faint)' }}>
-          <span>Barra: abates relativos à arma mais usada</span>
-          <span>Boneco: intensidade por região de acerto</span>
-        </div>
-      }
     >
       {(scrollable) =>
         weapons.length === 0 ? (
@@ -411,18 +391,6 @@ function MapBlock({ maps, maxHeight }: { maps: SeasonOverview['topMaps']; maxHei
           {totalWins}V–{totalMatches - totalWins}D · {plural(totalMatches, 'partida')}
         </span>
       }
-      footer={
-        <div style={{ borderTop: '1px solid var(--divider)', paddingTop: 9, display: 'flex', flexWrap: 'wrap', gap: 14, fontSize: 11, color: 'var(--text-faint)' }}>
-          <span style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-            <span style={{ width: 9, height: 5, borderRadius: 3, background: LOW_SAMPLE, flex: 'none' }} />
-            menos de {MIN_SAMPLE} partidas: amostra pequena
-          </span>
-          <span style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-            <span style={{ width: 9, height: 5, borderRadius: 3, background: UNDER_50, flex: 'none' }} />
-            abaixo de 50%
-          </span>
-        </div>
-      }
     >
       {(scrollable) =>
         maps.length === 0 ? (
@@ -474,16 +442,18 @@ function MapBlock({ maps, maxHeight }: { maps: SeasonOverview['topMaps']; maxHei
   );
 }
 
-// Agentes — mesmo padrão do Mapa (ranking, barra de WR), com um mini-grid
-// K/D · ADR · ACS · DDΔ · melhor mapa abaixo de cada linha. Aceita
-// `maxHeight` porque, na posição "de baixo" (ao lado de Armas/Funções),
-// não deve crescer mais que os outros dois — rola por dentro.
+// Agentes — uma linha só por agente (pedido de 21/09/2026: sem numeração
+// nem barra de WR pra ganhar espaço, sem horas jogadas, K/D..Melhor mapa
+// juntos na mesma linha do nome/ícone -- antes eram 2 linhas por agente,
+// com ranking numerado e barra). Aceita `maxHeight` porque, na posição "de
+// baixo" (ao lado de Armas/Funções), não deve crescer mais que os outros
+// dois — rola por dentro.
 function AgentBlock({ agents, agentIcons, maxHeight }: { agents: SeasonOverview['topAgents']; agentIcons: Record<string, string>; maxHeight?: number }) {
   const totalMatches = agents.reduce((s, a) => s + a.matches, 0);
 
   return (
     <ExpandableCard
-      title="Agentes"
+      title="Ranking Agentes"
       sub="Winrate e desempenho por agente no período"
       maxHeight={maxHeight}
       headerExtra={
@@ -491,61 +461,37 @@ function AgentBlock({ agents, agentIcons, maxHeight }: { agents: SeasonOverview[
           {plural(agents.length, 'agente')} · {plural(totalMatches, 'partida')}
         </span>
       }
-      footer={
-        <div style={{ borderTop: '1px solid var(--divider)', paddingTop: 9, display: 'flex', flexWrap: 'wrap', gap: 14, fontSize: 11, color: 'var(--text-faint)' }}>
-          <span style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-            <span style={{ width: 9, height: 5, borderRadius: 3, background: LOW_SAMPLE, flex: 'none' }} />
-            menos de {MIN_SAMPLE} partidas: amostra pequena
-          </span>
-          <span style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-            <span style={{ width: 9, height: 5, borderRadius: 3, background: UNDER_50, flex: 'none' }} />
-            abaixo de 50%
-          </span>
-        </div>
-      }
     >
       {(scrollable) =>
         agents.length === 0 ? (
           <div style={{ fontSize: 12.5, color: 'var(--text-faint)' }}>Sem dados ainda.</div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, ...(scrollable ? { flex: 1, minHeight: 0, overflowY: 'auto' } : {}) }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, ...(scrollable ? { flex: 1, minHeight: 0, overflowY: 'auto' } : {}) }}>
             {agents.map((a, i) => {
               const isFirst = i === 0;
               const lowSample = a.matches < MIN_SAMPLE;
               const color = isFirst ? GOLD : lowSample ? LOW_SAMPLE : a.winratePercent >= 50 ? WIN : UNDER_50;
               return (
-                <div key={a.agent} style={{ padding: '10px 18px', margin: '0 -18px', borderRadius: 8, background: i % 2 === 1 ? 'var(--track)' : 'transparent' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <span
-                      style={{
-                        width: 22,
-                        height: 22,
-                        flex: 'none',
-                        borderRadius: 6,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: 10.5,
-                        fontWeight: 700,
-                        color: isFirst ? GOLD : 'var(--text-faint)',
-                        background: isFirst ? `color-mix(in srgb, ${GOLD} 18%, transparent)` : 'var(--track)',
-                      }}
-                    >
-                      {i + 1}
-                    </span>
-                    {agentIcons[a.agent] && <img src={agentIcons[a.agent]} alt="" style={{ width: 22, height: 22, borderRadius: 5, objectFit: 'contain', background: 'var(--track)', flex: 'none' }} />}
-                    <div style={{ minWidth: 110, flex: 'none' }}>
-                      <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 700, fontSize: 13.5, color: isFirst ? GOLD : 'var(--text)' }}>{a.agent}</div>
-                      <div style={{ fontSize: 10.5, color: 'var(--text-faint)' }}>
-                        {plural(a.matches, 'partida')} · {formatPlaytime(a.playtimeMs)}
-                      </div>
+                <div
+                  key={a.agent}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 10,
+                    padding: '8px 18px',
+                    margin: '0 -18px',
+                    borderRadius: 8,
+                    background: i % 2 === 1 ? 'var(--track)' : 'transparent',
+                  }}
+                >
+                  {agentIcons[a.agent] && <img src={agentIcons[a.agent]} alt="" style={{ width: 22, height: 22, borderRadius: 5, objectFit: 'contain', background: 'var(--track)', flex: 'none' }} />}
+                  <div style={{ minWidth: 82, flex: 'none' }}>
+                    <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 700, fontSize: 13.5, color: isFirst ? GOLD : 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {a.agent}
                     </div>
-                    <div style={{ flex: 1, minWidth: 0, height: 6, borderRadius: 3, background: 'var(--track)' }}>
-                      <div style={{ height: '100%', width: `${a.winratePercent}%`, borderRadius: 3, background: color }} />
-                    </div>
-                    <span style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 700, fontSize: 14, color, width: 36, textAlign: 'right', flex: 'none' }}>{a.winratePercent}%</span>
+                    <div style={{ fontSize: 10.5, color: 'var(--text-faint)' }}>{plural(a.matches, 'partida')}</div>
                   </div>
-                  <div className="agent-stat-grid" style={{ gap: 8, marginTop: 9 }}>
+                  <div className="agent-stat-grid">
                     {[
                       { label: 'K/D', value: fmtNum(a.kd, 1) },
                       { label: 'ADR', value: fmtNum(a.adr, 1) },
@@ -563,6 +509,7 @@ function AgentBlock({ agents, agentIcons, maxHeight }: { agents: SeasonOverview[
                       </div>
                     ))}
                   </div>
+                  <span style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 700, fontSize: 14, color, width: 36, textAlign: 'right', flex: 'none' }}>{a.winratePercent}%</span>
                 </div>
               );
             })}
@@ -732,8 +679,8 @@ export function SeasonOverviewSection({
 
         <div className="season-cards-grid">
           <div style={{ display: 'flex', flexDirection: 'column', gap: SEASON_CARD_GAP, minWidth: 0 }}>
-            <MapBlock maps={data.topMaps} maxHeight={SEASON_CARD_HEIGHT} />
             <AgentBlock agents={data.topAgents} agentIcons={data.agentIcons} maxHeight={SEASON_CARD_HEIGHT} />
+            <MapBlock maps={data.topMaps} maxHeight={SEASON_CARD_HEIGHT} />
             <AttackDefenseCard sides={data.attackDefense} height={SEASON_CARD_HEIGHT} />
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: SEASON_CARD_GAP, minWidth: 0 }}>

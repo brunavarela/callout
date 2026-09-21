@@ -196,6 +196,19 @@ export function EquipePainel() {
             equipe && <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{equipe.name}</span>
           )
         }
+        centerContent={
+          <>
+            <TeamMemberFilterSelect equipe={equipe} selectedMemberId={selectedMemberId} setSelectedMemberId={setSelectedMemberId} />
+            {overview && (
+              <>
+                <SeasonAgentFilterSelect topAgents={overview.topAgents} agentFilter={agentFilter} setAgentFilter={setAgentFilter} />
+                <SeasonMapFilterSelect topMaps={overview.topMaps} mapFilter={mapFilter} setMapFilter={setMapFilter} />
+                <SeasonModoFilterSelect availableModos={overview.availableModos} modoFilter={modoFilter} setModoFilter={setModoFilter} />
+              </>
+            )}
+            <MatchCountFilterSelect matchCountFilter={matchCountFilter} setMatchCountFilter={setMatchCountFilter} />
+          </>
+        }
         actions={
           <>
             <button className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 14px', fontSize: 12.5 }} onClick={() => setRankingOpen(true)}>
@@ -212,20 +225,6 @@ export function EquipePainel() {
             </button>
           </>
         }
-        filters={
-          <>
-            <TeamMemberFilterSelect equipe={equipe} selectedMemberId={selectedMemberId} setSelectedMemberId={setSelectedMemberId} />
-            {overview && (
-              <>
-                <SeasonAgentFilterSelect topAgents={overview.topAgents} agentFilter={agentFilter} setAgentFilter={setAgentFilter} />
-                <SeasonMapFilterSelect topMaps={overview.topMaps} mapFilter={mapFilter} setMapFilter={setMapFilter} />
-                <SeasonModoFilterSelect availableModos={overview.availableModos} modoFilter={modoFilter} setModoFilter={setModoFilter} />
-              </>
-            )}
-            <MatchCountFilterSelect matchCountFilter={matchCountFilter} setMatchCountFilter={setMatchCountFilter} />
-          </>
-        }
-        resultCount={matchesPage && plural(matchesPage.total, 'resultado')}
       />
 
       {overviewLoading ? (
