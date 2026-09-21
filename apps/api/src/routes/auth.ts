@@ -52,6 +52,7 @@ const intuitoBodySchema = z.object({
 const loginBodySchema = z.object({
   identificador: z.string().trim().min(1),
   senha: z.string().min(1),
+  lembrar: z.boolean().optional().default(true),
 });
 
 const redefinirSenhaBodySchema = z
@@ -189,7 +190,7 @@ export async function authRoutes(app: FastifyInstance) {
     const parsed = loginBodySchema.safeParse(request.body);
     if (!parsed.success) return reply.code(400).send({ error: "Preenche email/RiotID e senha." });
 
-    const { identificador, senha } = parsed.data;
+    const { identificador, senha, lembrar } = parsed.data;
     const user = identificador.includes("#")
       ? await (() => {
           const [riotName, riotTag] = identificador.split("#");
@@ -210,7 +211,7 @@ export async function authRoutes(app: FastifyInstance) {
       return reply.code(403).send({ error: "Confirma seu email antes de entrar.", email: user.email });
     }
 
-    setSessionCookie(reply, user.id);
+    setSessionCookie(reply, user.id, { lembrar });
     return toSessionUser(user, await getUserEquipe(user.id));
   });
 

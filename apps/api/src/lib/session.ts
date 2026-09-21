@@ -13,14 +13,19 @@ export const SESSION_COOKIE = "callout_session";
 // prisma) que o build e o start:prod precisam.
 const isProd = env.WEB_ORIGIN.startsWith("https://");
 
-export function setSessionCookie(reply: FastifyReply, userId: string) {
+// lembrar=false (checkbox "Lembrar-me" desmarcado no login) vira cookie de
+// sessão -- sem maxAge, o navegador apaga ao fechar. lembrar=true (padrão,
+// usado também fora do login: verificação de email, redefinição de senha)
+// mantém os 30 dias de antes.
+export function setSessionCookie(reply: FastifyReply, userId: string, opts: { lembrar?: boolean } = {}) {
+  const { lembrar = true } = opts;
   reply.setCookie(SESSION_COOKIE, userId, {
     path: "/",
     httpOnly: true,
     sameSite: isProd ? "none" : "lax",
     secure: isProd,
     signed: true,
-    maxAge: 60 * 60 * 24 * 30, // 30 dias
+    ...(lembrar ? { maxAge: 60 * 60 * 24 * 30 } : {}), // 30 dias, ou sessão se não lembrar
   });
 }
 

@@ -14,6 +14,7 @@ export function Login() {
   const { refresh } = useSession();
   const [identificador, setIdentificador] = useState('');
   const [senha, setSenha] = useState('');
+  const [lembrar, setLembrar] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -24,7 +25,7 @@ export function Login() {
     try {
       const data = await apiFetch<SessionUser>('/auth/login', {
         method: 'POST',
-        body: JSON.stringify({ identificador, senha }),
+        body: JSON.stringify({ identificador, senha, lembrar }),
       });
       await refresh();
       navigate(routeForStep(data.proximoPasso));
@@ -62,6 +63,38 @@ export function Login() {
             autoComplete="username"
           />
           <PasswordField value={senha} onChange={setSenha} placeholder="Senha" disabled={submitting} autoComplete="current-password" />
+
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 13 }}>
+            <button
+              type="button"
+              onClick={() => setLembrar((v) => !v)}
+              disabled={submitting}
+              style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: 'var(--text-muted)' }}
+            >
+              <span
+                style={{
+                  width: 16,
+                  height: 16,
+                  flex: 'none',
+                  borderRadius: 4,
+                  border: `1.5px solid ${lembrar ? 'var(--acc, #EF4958)' : 'var(--text-faint)'}`,
+                  background: lembrar ? 'var(--acc, #EF4958)' : 'transparent',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#fff',
+                  fontSize: 11,
+                }}
+              >
+                {lembrar ? '✓' : ''}
+              </span>
+              Lembrar-me
+            </button>
+            <Link to="/esqueci-senha" style={{ color: 'var(--text-dim)' }}>
+              Esqueceu a senha?
+            </Link>
+          </div>
+
           {error && <div style={{ fontSize: 13, color: 'var(--acc, #EF4958)' }}>{error}</div>}
           <button className="btn-primary" style={{ width: '100%', justifyContent: submitting ? 'center' : 'space-between' }} disabled={submitting} type="submit">
             {submitting ? (
@@ -73,9 +106,6 @@ export function Login() {
               </>
             )}
           </button>
-          <div style={{ fontSize: 13, color: 'var(--text-dim)' }}>
-            <Link to="/esqueci-senha">Esqueceu a senha?</Link>
-          </div>
         </form>
       </AuthStepFrame>
     </>
