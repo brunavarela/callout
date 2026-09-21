@@ -57,11 +57,31 @@ export function Modal({
   );
 }
 
-export function ModalHeader({ title, onClose }: { title: string; onClose: () => void }) {
+export function ModalHeader({ title, subtitle, onClose }: { title: string; subtitle?: string; onClose: () => void }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', marginBottom: 18 }}>
-      <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 17 }}>{title}</div>
-      <button onClick={onClose} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: 'var(--text-dim)', fontSize: 15, cursor: 'pointer' }}>
+    <div style={{ display: 'flex', alignItems: subtitle ? 'flex-start' : 'center', marginBottom: 18, gap: 12 }}>
+      <div>
+        <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 17 }}>{title}</div>
+        {subtitle && <div style={{ fontSize: 12.5, color: 'var(--text-muted)', marginTop: 4 }}>{subtitle}</div>}
+      </div>
+      <button
+        onClick={onClose}
+        style={{
+          marginLeft: 'auto',
+          flex: 'none',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          width: 30,
+          height: 30,
+          borderRadius: 8,
+          background: 'none',
+          border: '1px solid var(--surface-border)',
+          color: 'var(--text-dim)',
+          fontSize: 13,
+          cursor: 'pointer',
+        }}
+      >
         ✕
       </button>
     </div>
