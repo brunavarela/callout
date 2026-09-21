@@ -71,7 +71,15 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const location = useLocation();
   const paginaPublica = ROTAS_SEM_FUNDO_DE_MAPA.some((rota) => location.pathname.startsWith(rota));
 
+  // Cor de tema é personalização de quem já está logada -- login/cadastro
+  // (e as outras rotas públicas da lista acima) sempre usam a cor padrão,
+  // mesmo que a sessão ainda esteja válida em segundo plano (ex.: voltou
+  // pro /login manualmente sem deslogar) ou logo depois de mudar a cor e
+  // navegar pra lá. Pedido de 21/09/2026.
+  const themeParaCores = paginaPublica ? DEFAULT_THEME : theme;
+
   const cssVars = useMemo<CSSProperties>(() => {
+    const theme = themeParaCores;
     const glow = theme.glow / 100;
     const vars: Record<string, string> = {
       '--acc': theme.accentColor,
@@ -90,7 +98,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       '--kpi-border': rgba(theme.accentColor, 0.22),
     };
     return vars as CSSProperties;
-  }, [theme]);
+  }, [themeParaCores]);
 
   // Atributo em <html> (não só nesse wrapper) — a paleta clara/escura mora
   // em regras `:root[data-theme=...]` no CSS global, então precisa estar no
