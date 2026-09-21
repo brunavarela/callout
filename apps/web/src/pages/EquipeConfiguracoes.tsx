@@ -202,6 +202,11 @@ export function EquipeConfiguracoes() {
   const [confirmRemove, setConfirmRemove] = useState<MembroEquipeCard | null>(null);
   const [confirmToggleAdmin, setConfirmToggleAdmin] = useState<MembroEquipeCard | null>(null);
   const [confirmDeleteEquipe, setConfirmDeleteEquipe] = useState(false);
+  // Sair da equipe é 2 passos (pedido de 21/09/2026): aviso simples primeiro
+  // ("tem certeza?"), só depois o modal com confirmação por digitação do
+  // nome da equipe -- mesmo padrão de excluir membro/excluir equipe.
+  const [leaveWarning, setLeaveWarning] = useState(false);
+  const [confirmLeave, setConfirmLeave] = useState(false);
   const [busy, setBusy] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
 
@@ -270,6 +275,19 @@ export function EquipeConfiguracoes() {
     } catch (err) {
       setActionError(err instanceof ApiError ? err.message : 'Falha ao remover. Tenta de novo.');
     } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleLeaveEquipe() {
+    setBusy(true);
+    setActionError(null);
+    try {
+      await apiFetch('/equipe/sair', { method: 'POST' });
+      await refresh();
+      navigate('/login/equipe');
+    } catch (err) {
+      setActionError(err instanceof ApiError ? err.message : 'Falha ao sair. Tenta de novo.');
       setBusy(false);
     }
   }
@@ -520,6 +538,24 @@ export function EquipeConfiguracoes() {
         </div>
       </div>
 
+      {/* Sair da equipe — qualquer membro, exceto o dono (ele só pode
+          excluir a equipe inteira, ver zona de perigo abaixo). */}
+      {self && !self.isOwner && (
+        <div style={{ ...cardStyle, padding: 22, border: '1px solid color-mix(in srgb, var(--acc, #EF4958) 35%, var(--surface-border))' }}>
+          <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 15 }}>Sair da equipe</div>
+          <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 6, lineHeight: 1.5 }}>
+            Você deixa de ver as estratégias e spots dessa equipe. Estratégias/spots que você criou continuam existindo pra ela.
+          </div>
+          <button
+            className="btn-secondary"
+            style={{ marginTop: 14, color: 'var(--acc, #EF4958)', display: 'flex', alignItems: 'center', gap: 8 }}
+            onClick={() => setLeaveWarning(true)}
+          >
+            Sair da equipe
+          </button>
+        </div>
+      )}
+
       {/* Zona de perigo — só admin */}
       {isAdmin && (
         <div style={{ ...cardStyle, padding: 22, border: '1px solid color-mix(in srgb, var(--acc, #EF4958) 35%, var(--surface-border))' }}>
@@ -578,6 +614,7 @@ export function EquipeConfiguracoes() {
             setConfirmRemove(null);
             setActionError(null);
           }}
+          typeToConfirm={equipe?.name}
         />
       )}
 
@@ -593,6 +630,38 @@ export function EquipeConfiguracoes() {
             setConfirmDeleteEquipe(false);
             setActionError(null);
           }}
+          typeToConfirm={equipe?.name}
+        />
+      )}
+
+      {/* Passo 1 do "sair da equipe": aviso simples, sem digitação ainda. */}
+      {leaveWarning && (
+        <ConfirmModal
+          title="Sair da equipe?"
+          message={`Você está participando da equipe ${equipe?.name} atualmente. Pra sair, confirme na próxima tela.`}
+          confirmLabel="Sim, quero sair"
+          onConfirm={() => {
+            setLeaveWarning(false);
+            setConfirmLeave(true);
+          }}
+          onCancel={() => setLeaveWarning(false)}
+        />
+      )}
+
+      {/* Passo 2: confirmação por digitação do nome da equipe. */}
+      {confirmLeave && (
+        <ConfirmModal
+          title="Confirma que quer sair?"
+          message="Essa ação não pode ser desfeita por você — só voltando com um novo convite."
+          confirmLabel="Sair da equipe"
+          busy={busy}
+          error={actionError}
+          onConfirm={handleLeaveEquipe}
+          onCancel={() => {
+            setConfirmLeave(false);
+            setActionError(null);
+          }}
+          typeToConfirm={equipe?.name}
         />
       )}
     </div>

@@ -114,6 +114,26 @@ export async function equipeRoutes(app: FastifyInstance) {
     return { ok: true };
   });
 
+  // Sair da própria equipe — qualquer membro, exceto o dono (que precisa
+  // excluir a equipe em vez de sair, ver Equipe.donoId). Diferente de
+  // DELETE /equipe/membros/:userId (só admin remove OUTRO membro), essa
+  // rota é self-service: não exige ser admin, só confere que quem está
+  // saindo é quem está logado. Confirmação por digitação do nome da equipe
+  // é responsabilidade do front (ConfirmModal `typeToConfirm`), mesmo padrão
+  // usado em excluir membro/excluir equipe.
+  app.post("/equipe/sair", { preHandler: requireAuth }, async (request, reply) => {
+    const equipeId = await getUserEquipeId(request.user!.id);
+    if (!equipeId) return reply.code(404).send({ error: "Você ainda não tem uma equipe." });
+
+    const equipe = await prisma.equipe.findUnique({ where: { id: equipeId } });
+    if (equipe?.donoId === request.user!.id) {
+      return reply.code(400).send({ error: "Você é dona dessa equipe — exclua a equipe em vez de sair dela." });
+    }
+
+    await prisma.membroEquipe.delete({ where: { equipeId_userId: { equipeId, userId: request.user!.id } } });
+    return reply.code(204).send();
+  });
+
   // Exclui a equipe inteira — só admin. Membros/estratégias/spots têm
   // onDelete: Cascade no schema, não precisa limpar nada manualmente.
   app.delete("/equipe", { preHandler: requireAuth }, async (request, reply) => {

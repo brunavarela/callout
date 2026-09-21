@@ -163,15 +163,37 @@ uma vez.
 
 ## 4. Produto — grátis vs PRO
 
-- **Grátis, pra sempre**: dashboard individual (KPIs, histórico, evolução
-  de rank, winrate por mapa/agente).
-- **PRO (R$ 19,90/mês, referência)**: Time, Estratégia (Board), Spots.
+> **Definido em 21/09/2026** — regra de negócio final das camadas, por
+> período indeterminado pós-lançamento público. **Só especificação por
+> enquanto** — nenhum paywall técnico existe ainda (ver §5 item 5, ainda não
+> feito); menu mostra tudo liberado até esse item ser implementado.
+
+| Situação do usuário | Acesso grátis | Fica com flag PRO |
+|---|---|---|
+| **1. Sem equipe, não pagante** | Painel, Partidas, Competições | Equipe (menu inteiro — mas ver nota abaixo), Estratégia, Spots |
+| **2. Sem equipe própria, mas membro de uma equipe de outra pessoa** | tudo da regra 1 **+** Equipe, Estratégia da equipe, Spots da equipe | Estratégia **individual**, Spots **individuais** (a aba "Individual" dentro dessas telas, ver PROGRESS.md sobre `scope: 'equipe' \| 'individual'`) |
+| **3. Sem equipe, pagante** | tudo — inclusive criar a própria equipe | — |
+| **4. Com equipe própria (dono) e pagante** *(inferido, não veio explícito — confirmar)* | tudo, igual regra 3 | — |
+
+**Nota importante sobre "Equipe" na regra 1**: o menu Equipe **não fica
+100% bloqueado** — a tela de "criar equipe ou entrar com código de convite"
+continua sempre acessível pra qualquer um. Só o botão **criar equipe** fica
+atrás do paywall pra quem não tem equipe e não paga (é o que leva à regra 2:
+a pessoa entra de graça na equipe de outra pessoa via código, sem nunca
+precisar pagar por isso). Confirmado em 21/09/2026 — ver histórico da
+conversa se essa decisão precisar ser revisitada.
+
+**Comportamento do clique num item com flag PRO** (regra 1/2, especificação
+pra implementar depois, ver §5 item 5): abre um modal fixo na tela
+explicando o preço e o que o plano PRO libera. Não navega pra tela de
+verdade.
+
 - ✅ **Resolvido (02/09/2026):** Heatmap e Comentários **não fazem parte do
   lançamento** — já tinham sido removidos do produto antes (histórico,
-  ver PROGRESS.md), decisão reconfirmada agora. Não entram nem no grátis
-  nem no PRO por ora; questão de escopo PRO fica só entre Equipe/
-  Estratégia/Spots.
-- **Em aberto** (ver §11): preço final (R$19,90) ou placeholder?
+  ver PROGRESS.md), decisão reconfirmada agora. Não entram em nenhuma
+  camada por ora.
+- **Em aberto** (ver §11): preço final (R$19,90) ou placeholder?; confirmar
+  a regra 4 acima.
 
 ---
 

@@ -147,6 +147,18 @@ Não mexe no allowlist de servidor Discord (`findGuildMembership` em
 `auth.ts`) — login continua fechado ao grupo atual. Abrir cadastro
 público é outra frente do LAUNCH.md.
 
+**Sair da equipe (2026-09-21):** só existia remoção de OUTRO membro (admin,
+`DELETE /equipe/membros/:userId`) — não tinha jeito de a própria pessoa
+sair. `POST /equipe/sair` novo (`apps/api/src/routes/equipe.ts`),
+self-service, qualquer membro exceto o dono (que precisa excluir a equipe
+em vez de sair — mesma regra de "dono nunca sai/é removido" que já existia
+pra remoção). Fluxo de confirmação em 2 passos na UI
+(`EquipeConfiguracoes.tsx`): aviso simples primeiro, depois um modal que só
+libera o botão depois de digitar o nome da equipe certinho
+(`ConfirmModal` ganhou a prop `typeToConfirm`, reusada também nos modais já
+existentes de excluir membro/excluir equipe — pedido explícito de segurança
+extra pra ação destrutiva de equipe).
+
 ### Fase 3 — Board de estratégia — ✅ completa
 - `GET/POST /strategies`, `GET/PATCH /strategies/:id` —
   `apps/api/src/routes/strategies.ts` + `apps/api/src/lib/strategy.ts`
