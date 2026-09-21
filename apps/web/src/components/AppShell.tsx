@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Navigate, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { Navigate, NavLink, Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { LayoutDashboard, Swords, Users, PenTool, MapPin, Trophy, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useSession } from '../lib/session';
 import { useAppData, type AppData } from '../lib/appData';
@@ -7,7 +7,6 @@ import { useTheme } from '../lib/theme';
 import { routeForStep } from '../lib/onboarding';
 import { AccountMenu } from './AccountMenu';
 import { Logo, LogoMark } from './Logo';
-import { Footer } from './Footer';
 import { CardStyleProvider, glassSurfaceStyle } from './statsPrimitives';
 import { EntradaOverlay } from './EntradaOverlay';
 import { lerEntrando, limparEntrando } from '../lib/entrada';
@@ -343,31 +342,34 @@ export function AppShell() {
           })}
         </nav>
 
-        <div className="app-sidebar-promo sidebar-fade sidebar-fade--row" style={{ position: 'relative', marginTop: 'auto' }}>
-          <div style={{ padding: 14 }}>
-            <div
-              style={{
-                borderRadius: 14,
-                padding: 18,
-                background: 'linear-gradient(160deg, var(--acc22, rgba(239,73,88,.22)) 0%, rgba(21,21,23,.4) 70%)',
-                border: '1px solid var(--acc25, rgba(239,73,88,.25))',
-              }}
-            >
-              <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 15 }}>
-                Já revisou o painel
-                <br />
-                da equipe?
+        <div style={{ position: 'relative', marginTop: 'auto', borderTop: '1px solid var(--divider)' }}>
+          {/* Recolhida, o rodapé inteiro (sidebar-fade--row abaixo) encolhe
+              pra 0 -- sem isso a sidebar terminava "cortada", sem nada no
+              rodapé. Esse "© 2026" ocupa o lugar só nesse estado (oposto do
+              fade normal, por isso não usa sidebar-fade). */}
+          {collapsed && (
+            <div style={{ padding: '14px 0', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, fontSize: 10, color: 'var(--text-faint)' }}>
+              <span>© {new Date().getFullYear()}</span>
+              <LogoMark size={13} weight={0} />
+            </div>
+          )}
+          <div className="app-sidebar-promo sidebar-fade sidebar-fade--row">
+            <div style={{ padding: '14px 18px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 7, color: 'var(--text-faint)' }}>
+                <LogoMark size={13} weight={0} />
+                <span style={{ fontSize: 10.5 }}>© {new Date().getFullYear()} callout</span>
               </div>
-              <div style={{ fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.5, marginTop: 6 }}>
-                Dá uma olhada nas estatísticas da equipe e o impacto que você causa.
+              <div style={{ fontSize: 10.5, color: 'var(--text-faint)', lineHeight: 1.5 }}>
+                Ferramenta independente. Sem vínculo com a Riot Games. Dados de partida vindos de API pública não-oficial.
               </div>
-              <button
-                className="btn-primary"
-                style={{ width: '100%', marginTop: 14, padding: 9, fontSize: 13, justifyContent: 'center' }}
-                onClick={() => navigate('/equipe/painel')}
-              >
-                Painel da equipe
-              </button>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <Link to="/termos" style={{ fontSize: 11, color: 'var(--text-faint)', textDecoration: 'underline' }}>
+                  Termos de Uso
+                </Link>
+                <Link to="/privacidade" style={{ fontSize: 11, color: 'var(--text-faint)', textDecoration: 'underline' }}>
+                  Política de Privacidade
+                </Link>
+              </div>
             </div>
           </div>
         </div>
@@ -444,7 +446,6 @@ export function AppShell() {
         <CardStyleProvider glass={theme.glassCards}>
           <Outlet context={appData satisfies OutletContext} />
         </CardStyleProvider>
-        <Footer />
       </main>
     </div>
   );
