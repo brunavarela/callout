@@ -4,9 +4,11 @@ import { Logo } from './Logo';
 import { Footer } from './Footer';
 
 // Layout compartilhado por /termos e /privacidade — acessível sem login
-// (por isso não usa AppShell, que exige equipe/Riot vinculados). Aviso de
-// rascunho fica sempre visível no topo até alguém tirar essa faixa depois
-// da revisão jurídica formal (ver LAUNCH.md §3.4/§12).
+// (por isso não usa AppShell, que exige equipe/Riot vinculados). A faixa de
+// "rascunho, sem validade jurídica" saiu em 21/09/2026 -- contradizia o
+// próprio fluxo de cadastro (a pessoa aceita esses Termos pra criar conta) e
+// travava a submissão ao Riot Developer Portal. Revisão formal por advogado
+// continua pendente antes da Fase D (cobrança) -- ver LAUNCH.md §3.4.
 export function LegalPageShell({ title, updatedAtLabel, children }: { title: string; updatedAtLabel: string; children: ReactNode }) {
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: 'var(--bg)', color: 'var(--text)' }}>
@@ -15,23 +17,6 @@ export function LegalPageShell({ title, updatedAtLabel, children }: { title: str
           <Link to="/" style={{ display: 'inline-flex', marginBottom: 28 }}>
             <Logo height={24} />
           </Link>
-
-          <div
-            style={{
-              borderRadius: 'var(--radius-md)',
-              border: '1px solid color-mix(in srgb, var(--acc, #EF4958) 35%, var(--surface-border))',
-              background: 'color-mix(in srgb, var(--acc, #EF4958) 8%, transparent)',
-              padding: '12px 16px',
-              fontSize: 12.5,
-              lineHeight: 1.5,
-              color: 'var(--text-muted)',
-              marginBottom: 28,
-            }}
-          >
-            <strong style={{ color: 'var(--text)' }}>Rascunho, ainda não revisado por um advogado.</strong> Este texto
-            organiza o que os Termos de Uso e a Política de Privacidade de verdade vão precisar cobrir — não é a
-            versão final nem tem validade jurídica ainda.
-          </div>
 
           <h1 style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 700, fontSize: 30, letterSpacing: '-.02em', margin: '0 0 6px' }}>
             {title}

@@ -1,3 +1,5 @@
+import { useState } from 'react';
+import { Search, X } from 'lucide-react';
 import type { EquipeOverview, MatchCountFilter } from '@callout/shared';
 import { Select } from './Select';
 import { formatSeasonShort } from '../lib/seasonFormat';
@@ -31,6 +33,74 @@ export function MemberFilterSelect({
       style={FILTER_STYLE}
       className="filter-select"
     />
+  );
+}
+
+// Busca livre por RiotID no painel individual — substitui o antigo filtro
+// "ver painel de outro membro da equipe" (esse continua existindo, mas só
+// dentro da tela de Equipe/EquipePainel.tsx). Decisão de produto de
+// 21/09/2026: o painel individual passa a deixar ver o painel de QUALQUER
+// jogador, não só quem é da sua equipe — ver LAUNCH.md/memória do projeto.
+export function RiotIdSearchFilter({
+  activeLabel,
+  searchLoading,
+  searchError,
+  onSearch,
+  onClear,
+}: {
+  // Nome de quem está sendo visto no momento (membro da equipe escolhido em
+  // Matches.tsx ou jogador pesquisado por RiotID aqui) — null = ninguém
+  // selecionado, mostra o campo de busca em vez do botão de voltar.
+  activeLabel: string | null;
+  searchLoading: boolean;
+  searchError: string | null;
+  onSearch: (riotId: string) => void;
+  onClear: () => void;
+}) {
+  const [value, setValue] = useState('');
+
+  if (activeLabel) {
+    return (
+      <button
+        className="filter-select"
+        style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: 'var(--acc, #ef4958)', padding: '4px 0' }}
+        onClick={onClear}
+        title="Voltar pro seu próprio painel"
+      >
+        <X size={13} strokeWidth={2} />
+        {activeLabel}
+      </button>
+    );
+  }
+
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        const trimmed = value.trim();
+        if (trimmed) onSearch(trimmed);
+      }}
+      style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+      title="Pesquisar o painel de qualquer jogador pelo RiotID"
+    >
+      <Search size={13} strokeWidth={2} color="var(--text-faint)" />
+      <input
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        placeholder="Pesquisar RiotID (nome#tag)"
+        disabled={searchLoading}
+        style={{
+          background: 'none',
+          border: 'none',
+          outline: 'none',
+          fontSize: 13,
+          fontWeight: 600,
+          color: 'var(--text-2)',
+          width: 180,
+        }}
+      />
+      {searchError && <span style={{ fontSize: 11.5, color: 'var(--danger, #ef4958)' }}>{searchError}</span>}
+    </form>
   );
 }
 

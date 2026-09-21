@@ -3,7 +3,7 @@ import type { SessionUser } from '@callout/shared';
 import type { OutletContext } from '../components/AppShell';
 import { LoadingFill } from '../components/Spinner';
 import { SeasonOverviewSection } from '../components/SeasonOverviewSection';
-import { MemberFilterSelect, MatchCountFilterSelect, SeasonMapFilterSelect, SeasonAgentFilterSelect, SeasonModoFilterSelect } from '../components/SeasonFilters';
+import { RiotIdSearchFilter, MatchCountFilterSelect, SeasonMapFilterSelect, SeasonAgentFilterSelect, SeasonModoFilterSelect } from '../components/SeasonFilters';
 import { formatPlaytime } from '../lib/seasonFormat';
 import { useCardStyle, plural } from '../components/statsPrimitives';
 import { PageHeaderCard, StatsPill } from '../components/PageHeaderCard';
@@ -38,13 +38,21 @@ export function Dashboard() {
     equipe,
     selectedMemberId,
     setSelectedMemberId,
+    searchedTarget,
+    searchError,
+    searchLoading,
+    searchRiotId,
   } = useOutletContext<OutletContext>();
   const { user } = useSession();
 
   const cardStyle = useCardStyle();
+  // Alvo pesquisado pode ser membro da equipe (aparece em equipe.members,
+  // com nome de exibição próprio) ou qualquer outro jogador pesquisado por
+  // RiotID (searchedTarget, ver RiotIdSearchFilter) — nesse caso o nome vem
+  // do próprio RiotID pesquisado.
   const selectedMember = selectedMemberId ? (equipe?.members.find((m) => m.userId === selectedMemberId) ?? null) : null;
   const isSelf = !selectedMemberId;
-  const subject = selectedMember?.name ?? 'você';
+  const subject = selectedMember?.name ?? (searchedTarget ? `${searchedTarget.riotName}#${searchedTarget.riotTag}` : 'você');
 
   return (
     <div style={{ padding: 26, display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -68,7 +76,13 @@ export function Dashboard() {
         }
         filters={
           <>
-            <MemberFilterSelect equipe={equipe} selectedMemberId={selectedMemberId} setSelectedMemberId={setSelectedMemberId} />
+            <RiotIdSearchFilter
+              activeLabel={isSelf ? null : subject}
+              searchLoading={searchLoading}
+              searchError={searchError}
+              onSearch={searchRiotId}
+              onClear={() => setSelectedMemberId(null)}
+            />
             {seasonOverview && (
               <>
                 <SeasonAgentFilterSelect topAgents={seasonOverview.topAgents} agentFilter={seasonAgentFilter} setAgentFilter={setSeasonAgentFilter} />

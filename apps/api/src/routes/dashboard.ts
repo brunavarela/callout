@@ -6,20 +6,33 @@ import { buildDashboardSummary } from "../lib/dashboard.js";
 import { buildRrAndInsights, buildSidesBreakdown } from "../lib/insights.js";
 import { buildSeasonOverview, buildSeasonMatchesPage } from "../lib/seasonOverview.js";
 import { resolveDashboardTarget } from "../lib/equipe.js";
+import { resolveOrCreateSearchTarget } from "../lib/publicSearch.js";
+import { prisma } from "../lib/prisma.js";
+import { RIOT_ID_REGEX } from "../lib/authCodes.js";
+import { HenrikDevError } from "../lib/henrikdev.js";
 
-// Resolve o membro do time cujo painel a rota deve montar — o próprio
-// usuário autenticado, por padrão, ou outro membro do time quando o filtro
-// "ver painel de outro membro" manda um `userId`. Já responde 404/409 e
-// devolve `null` quando a rota deve parar por aí.
+// Resolve de quem é o painel que a rota deve montar. Dois modos, escolhidos
+// por quem chama (ver dashboardQuery em apps/web/src/lib/appData.ts):
+// - `free=1` (painel individual, filtro de busca livre por RiotID — decisão
+//   de produto de 21/09/2026): qualquer `userId` existente vale, sem
+//   restrição de equipe — pode ser um usuário de verdade ou uma linha
+//   "fantasma" criada por /dashboard/buscar pra alguém que nunca teve conta.
+// - padrão (painel da equipe, EquipePainel.tsx): mantém a regra de sempre,
+//   só membro da MESMA equipe pode ser alvo (resolveDashboardTarget).
 async function resolveTarget(request: { user?: User; query: unknown }, reply: FastifyReply): Promise<User | null> {
-  const { userId: targetUserId } = request.query as { userId?: string };
-  const target = await resolveDashboardTarget(request.user!, targetUserId);
+  const { userId: targetUserId, free } = request.query as { userId?: string; free?: string };
+  const target =
+    free === "1"
+      ? targetUserId
+        ? await prisma.user.findUnique({ where: { id: targetUserId } })
+        : request.user!
+      : await resolveDashboardTarget(request.user!, targetUserId);
   if (!target) {
-    reply.code(404).send({ error: "Membro não encontrado no time." });
+    reply.code(404).send({ error: "Usuário não encontrado." });
     return null;
   }
   if (!target.riotPuuid || !target.riotRegion) {
-    const message = target.id === request.user!.id ? "Vincule seu Riot ID antes de ver o dashboard." : "Esse membro ainda não vinculou o Riot ID.";
+    const message = target.id === request.user!.id ? "Vincule seu Riot ID antes de ver o dashboard." : "Esse jogador ainda não tem Riot ID vinculado.";
     reply.code(409).send({ error: message });
     return null;
   }
@@ -46,6 +59,30 @@ function parseMapIdFilter(raw: unknown): string | undefined {
 }
 
 export async function dashboardRoutes(app: FastifyInstance) {
+  // Busca livre por RiotID no painel individual — resolve (ou cria, se for
+  // a primeira vez que alguém pesquisa esse jogador) o usuário-alvo e
+  // devolve o `userId` pra web reusar nas outras rotas de /dashboard* com
+  // `free=1`. Só quem tem sessão pode pesquisar; o alvo pesquisado NÃO
+  // precisa ter conta/equipe em comum — ver resolveOrCreateSearchTarget.
+  app.get("/dashboard/buscar", { preHandler: requireAuth }, async (request, reply) => {
+    const { riotId } = request.query as { riotId?: string };
+    if (!riotId || !RIOT_ID_REGEX.test(riotId)) {
+      return reply.code(400).send({ error: "Formato inválido. Use nome#tag." });
+    }
+    const [riotName, riotTag] = riotId.split("#") as [string, string];
+
+    try {
+      const target = await resolveOrCreateSearchTarget(riotName, riotTag);
+      return { userId: target.id, riotName: target.riotName, riotTag: target.riotTag };
+    } catch (err) {
+      if (err instanceof HenrikDevError) {
+        return reply.code(err.status === 404 ? 404 : 502).send({ error: `Não achamos essa conta na Riot: ${err.message}` });
+      }
+      request.log.error(err, "falha ao buscar RiotID no painel individual");
+      return reply.code(502).send({ error: "Falha ao falar com a HenrikDev. Tenta de novo em instantes." });
+    }
+  });
+
   app.get("/dashboard", { preHandler: requireAuth }, async (request, reply) => {
     const target = await resolveTarget(request, reply);
     if (!target) return;

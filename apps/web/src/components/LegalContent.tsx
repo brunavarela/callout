@@ -27,8 +27,9 @@ export function TermosContent() {
         <p>
           O cadastro é feito com nome, data de nascimento, RiotID, email e senha. Login é feito por email+senha ou
           RiotID+senha — o callout nunca usa nem guarda sua senha da Riot ou de qualquer outro serviço, só a sua
-          senha própria (armazenada de forma criptografada). Cada conta pertence a uma única equipe por vez — você
-          entra criando uma equipe nova ou usando um código de convite de uma equipe existente.
+          senha própria (armazenada de forma criptografada). Fazer parte de uma equipe é opcional: você pode
+          terminar o cadastro sem equipe nenhuma e, quando quiser, criar uma nova ou entrar numa existente usando um
+          código de convite. Cada conta participa de no máximo uma equipe por vez.
         </p>
         <p>Você é responsável por manter sua senha em sigilo — qualquer atividade feita a partir da sua conta é considerada sua.</p>
       </LegalSection>
@@ -36,22 +37,30 @@ export function TermosContent() {
       <LegalSection title="4. Vínculo com sua conta Riot">
         <p>
           <strong>O callout nunca pede seu usuário e senha da Riot.</strong> O RiotID (formato nome#tag) é informado
-          no cadastro, e a posse dele é confirmada pedindo que você troque temporariamente a tag da sua conta Riot
-          pro código que a gente gerar — só quem tem acesso à conta consegue fazer essa troca. A partir daí buscamos
-          e exibimos seu histórico de partidas.
+          por você no cadastro e usado pra buscar e exibir seu histórico de partidas. Hoje não temos acesso à API
+          oficial da Riot pra confirmar de forma automática que você é dona daquela conta — o RiotID informado é uma
+          declaração sua, e cadastrar o RiotID de outra pessoa sem autorização viola estes Termos (§5). Assim que
+          tivermos acesso à autenticação oficial da Riot (RSO), essa confirmação passa a ser automática.
         </p>
         <p>
           Esse dado vem de uma API pública não-oficial (HenrikDev), sem afiliação com a Riot Games. Ela pode
           apresentar instabilidade, atraso na sincronização ou parar de funcionar sem aviso prévio — não garantimos
           disponibilidade nem exatidão total desse dado.
         </p>
-        <p>Ao concluir o cadastro, você concorda que seus dados de partida fiquem visíveis pros demais membros da sua equipe dentro da ferramenta.</p>
+        <p>
+          O histórico de partidas não é um dado exclusivo da sua equipe: qualquer usuário logado no callout pode
+          pesquisar o painel de qualquer RiotID, de dentro ou de fora da sua equipe — inclusive de quem nunca criou
+          conta na ferramenta. Isso reflete o que já é visível dentro do próprio jogo (os outros jogadores de cada
+          partida já veem seu nome, agente e desempenho). O que continua restrito a quem é membro da sua equipe são
+          as estratégias, spots e recados criados dentro dela (§6).
+        </p>
       </LegalSection>
 
       <LegalSection title="5. Uso aceitável">
         <p>Ao usar o callout, você concorda em não:</p>
         <ul style={{ margin: 0, paddingLeft: 20, display: 'flex', flexDirection: 'column', gap: 6 }}>
           <li>Usar a ferramenta pra obter vantagem em tempo real durante uma partida em andamento;</li>
+          <li>Cadastrar um RiotID que não seja seu, sem autorização de quem é dono da conta;</li>
           <li>Tentar acessar dados de outra equipe além da sua, ou burlar os controles de acesso da plataforma;</li>
           <li>Enviar conteúdo (imagens, texto) ofensivo, ilegal ou que viole direito de terceiros;</li>
           <li>Usar o serviço de forma que sobrecarregue ou prejudique sua disponibilidade pra outros usuários.</li>
@@ -105,7 +114,7 @@ export function TermosContent() {
       </LegalSection>
 
       <LegalSection title="13. Contato">
-        <p>Dúvidas sobre estes Termos: [e-mail de contato a definir].</p>
+        <p>Dúvidas sobre estes Termos: brunavarela1@hotmail.com.</p>
       </LegalSection>
     </>
   );
@@ -116,15 +125,16 @@ export function PrivacidadeContent() {
     <>
       <LegalSection title="1. Quem controla seus dados">
         <p>
-          O callout é operado por [razão social / CNPJ a definir — ver LAUNCH.md §3.3]. Enquanto essa estrutura não
-          existe formalmente, trate esse controlador como a pessoa responsável pelo desenvolvimento do callout.
+          O callout é operado por <strong>Bruna Varela</strong>, pessoa física responsável pelo desenvolvimento da
+          ferramenta. Ainda não existe uma pessoa jurídica formal (CNPJ) por trás do produto — se isso mudar, essa
+          seção é atualizada.
         </p>
       </LegalSection>
 
       <LegalSection title="2. Quais dados coletamos">
         <ul style={{ margin: 0, paddingLeft: 20, display: 'flex', flexDirection: 'column', gap: 6 }}>
           <li><strong>Do cadastro</strong>: nome, data de nascimento, email e senha (guardada de forma criptografada, nunca em texto puro).</li>
-          <li><strong>Da Riot</strong> (informado e verificado no cadastro — §4 dos Termos): Riot ID (nome#tag), puuid, região, histórico de partidas e estatísticas.</li>
+          <li><strong>Da Riot</strong> (informado por você no cadastro — §4 dos Termos): Riot ID (nome#tag), puuid, região, histórico de partidas e estatísticas.</li>
           <li><strong>Que você mesmo cria</strong>: foto de perfil opcional, respostas sobre pra que você usa o callout, estratégias, spots, imagens enviadas, recados, preferências de tema.</li>
           <li><strong>Técnicos</strong>: endereço IP e dados de acesso em log do servidor, cookie de sessão.</li>
         </ul>
@@ -140,9 +150,17 @@ export function PrivacidadeContent() {
 
       <LegalSection title="4. Com quem compartilhamos">
         <p>
-          Dentro do callout, membros da <strong>mesma equipe</strong> veem uns dos outros: nome, estatísticas,
-          função, estratégias e spots da equipe. Ninguém de fora da sua equipe tem acesso a esses dados pela
-          ferramenta.
+          Histórico de partidas e estatísticas (KDA, ACS, rank etc.) podem ser vistos por qualquer usuário logado no
+          callout que pesquisar o RiotID correspondente — não é um dado restrito à sua equipe, já que ele já é
+          visível aos demais jogadores de cada partida dentro do próprio jogo. O que continua restrito a quem é
+          membro da <strong>mesma equipe</strong> é o conteúdo criado dentro da ferramenta: estratégias, spots e
+          recados.
+        </p>
+        <p>
+          Se o seu RiotID for pesquisado por outra pessoa mesmo sem você ter conta no callout, guardamos um registro
+          mínimo (RiotID, puuid, histórico de partidas) só pra exibir esse painel a quem pesquisou — sem email, senha
+          ou qualquer outro dado de cadastro associado. Você pode pedir a remoção desse registro mesmo sem ter uma
+          conta ativa, pelo mesmo contato do §7.
         </p>
         <p>Usamos os seguintes prestadores técnicos pra operar o serviço, cada um com acesso só ao que precisa pra sua função:</p>
         <ul style={{ margin: 0, paddingLeft: 20, display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -157,6 +175,7 @@ export function PrivacidadeContent() {
 
       <LegalSection title="5. Por quanto tempo guardamos">
         <p>Enquanto sua conta e sua equipe existirem. Ao excluir a equipe ou pedir exclusão da conta, os dados correspondentes são removidos — histórico de partida cacheado, estratégias e spots incluídos.</p>
+        <p>Registros mínimos de RiotID pesquisado por outra pessoa (§4, quando você nunca teve conta no callout) ficam guardados enquanto forem úteis pra exibir esse painel a quem pesquisar, e são removidos a pedido (§7), a qualquer momento.</p>
       </LegalSection>
 
       <LegalSection title="6. Seus direitos (LGPD)">
@@ -172,7 +191,7 @@ export function PrivacidadeContent() {
       </LegalSection>
 
       <LegalSection title="7. Como exercer esses direitos">
-        <p>[e-mail de contato a definir]. Vamos responder dentro de um prazo razoável.</p>
+        <p>brunavarela1@hotmail.com. Vamos responder dentro de um prazo razoável.</p>
       </LegalSection>
 
       <LegalSection title="8. Segurança">

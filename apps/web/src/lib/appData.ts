@@ -19,13 +19,22 @@ import type {
 } from '@callout/shared';
 import { apiFetch, ApiError } from './api';
 
-// Querystring comum aos 3 endpoints de /dashboard*: filtro de modo + mapa +,
-// quando alguém troca o filtro "ver painel de outro membro", o userId do
-// membro selecionado (ausente = o próprio usuário logado).
+// Querystring comum aos 4 endpoints de /dashboard* usados pelo painel
+// individual (Dashboard.tsx/Matches.tsx): filtro de modo + mapa +, quando
+// alguém pesquisa um RiotID (ver searchRiotId), o userId resolvido (ausente
+// = o próprio usuário logado). `free=1` avisa o back que esse userId não
+// precisa ser membro da equipe de quem pesquisou — decisão de produto de
+// 21/09/2026, ver LAUNCH.md/memória do projeto: o painel individual virou
+// "espiar qualquer jogador", diferente do painel da equipe (EquipePainel.tsx,
+// que continua restrito a membro da mesma equipe e por isso NÃO manda esse
+// parâmetro — ver resolveTarget em apps/api/src/routes/dashboard.ts).
 function dashboardQuery(modo: MatchModeFilter, memberId: string | null, mapId: string | null, extra?: Record<string, string>): string {
   const params = new URLSearchParams(extra);
   if (modo !== 'all') params.set('modo', modo);
-  if (memberId) params.set('userId', memberId);
+  if (memberId) {
+    params.set('userId', memberId);
+    params.set('free', '1');
+  }
   if (mapId) params.set('mapId', mapId);
   const qs = params.toString();
   return qs ? `?${qs}` : '';
@@ -62,7 +71,19 @@ export function useAppData(user: SessionUser | null) {
   const [matchCountFilter, setMatchCountFilterState] = useState<MatchCountFilter>(20);
 
   // Filtro "ver painel de outro membro" — null = o próprio usuário logado.
+  // Desde 21/09/2026 esse id não é mais só de membro de equipe: pode ser
+  // qualquer jogador pesquisado por RiotID (ver searchRiotId/searchedTarget
+  // abaixo) — Dashboard.tsx troca a busca por RiotID, Matches.tsx segue com
+  // o seletor de membro (que é um subconjunto de "qualquer usuário").
   const [selectedMemberId, setSelectedMemberIdState] = useState<string | null>(null);
+
+  // Nome/tag de exibição de quem foi pesquisado por RiotID — só existe pra
+  // popular "Espiando fulano#tag" quando o alvo não é membro da equipe (e
+  // por isso não aparece em equipe.members). Null quando selectedMemberId é
+  // um membro da equipe ou quando voltou pra "você".
+  const [searchedTarget, setSearchedTarget] = useState<{ riotName: string; riotTag: string } | null>(null);
+  const [searchError, setSearchError] = useState<string | null>(null);
+  const [searchLoading, setSearchLoading] = useState(false);
 
   // Filtro de mapa — null = todos os mapas. É o mapId (MapAsset), não o nome,
   // pra bater direto com a coluna Match.mapId no filtro do backend.
@@ -147,7 +168,10 @@ export function useAppData(user: SessionUser | null) {
       setSeasonOverviewLoading(true);
       try {
         const params = new URLSearchParams();
-        if (memberId) params.set('userId', memberId);
+        if (memberId) {
+          params.set('userId', memberId);
+          params.set('free', '1');
+        }
         params.set('matches', String(matchCount));
         if (mapId) params.set('mapId', mapId);
         if (agent) params.set('agent', agent);
@@ -172,7 +196,10 @@ export function useAppData(user: SessionUser | null) {
       setSeasonMatchesLoading(true);
       try {
         const params = new URLSearchParams();
-        if (memberId) params.set('userId', memberId);
+        if (memberId) {
+          params.set('userId', memberId);
+          params.set('free', '1');
+        }
         if (mapId) params.set('mapId', mapId);
         if (agent) params.set('agent', agent);
         if (modo) params.set('modo', modo);
@@ -203,12 +230,34 @@ export function useAppData(user: SessionUser | null) {
   // mesmo motivo — a página 3 de um filtro pode nem existir no outro.
   const setSelectedMemberId = useCallback((memberId: string | null) => {
     setSelectedMemberIdState(memberId);
+    setSearchedTarget(null);
+    setSearchError(null);
     setMapFilterState(null);
     setSeasonMapFilterState(null);
     setSeasonAgentFilterState(null);
     setSeasonModoFilterState(null);
     setSeasonMatchesPageNumberState(1);
   }, []);
+
+  // Busca livre por RiotID (painel individual) — resolve/cria o usuário-alvo
+  // no back (POST implícito: se for a 1ª vez que alguém pesquisa esse
+  // jogador, /dashboard/buscar já dispara a sincronização) e troca o alvo do
+  // painel pra ele, igual escolher um membro da equipe.
+  const searchRiotId = useCallback(async (riotId: string) => {
+    setSearchLoading(true);
+    setSearchError(null);
+    try {
+      const result = await apiFetch<{ userId: string; riotName: string | null; riotTag: string | null }>(
+        `/dashboard/buscar?riotId=${encodeURIComponent(riotId)}`,
+      );
+      setSelectedMemberId(result.userId);
+      setSearchedTarget(result.riotName && result.riotTag ? { riotName: result.riotName, riotTag: result.riotTag } : null);
+    } catch (err) {
+      setSearchError(err instanceof ApiError ? err.message : 'Falha ao pesquisar esse RiotID.');
+    } finally {
+      setSearchLoading(false);
+    }
+  }, [setSelectedMemberId]);
 
   const setMapFilter = useCallback((mapId: string | null) => {
     setMapFilterState(mapId);
@@ -532,6 +581,10 @@ export function useAppData(user: SessionUser | null) {
     rrHistoryLoading,
     selectedMemberId,
     setSelectedMemberId,
+    searchedTarget,
+    searchError,
+    searchLoading,
+    searchRiotId,
     mapFilter,
     setMapFilter,
     strategies,
