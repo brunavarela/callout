@@ -623,8 +623,15 @@ export function SeasonOverviewSection({
 
   // `ratio` é só uma referência visual (não um recorde real) pra dar noção
   // de "cheio"/"vazio" na barrinha de cada stat -- ADR/K/D/KDA usam um teto
-  // razoável pro jogo, as que já são % usam a própria %.
-  const heroStats: Array<{ label: string; value: string; explain: string; ratio: number }> = [
+  // razoável pro jogo, as que já são % usam a própria %. Os totais (Abates/
+  // Mortes/Assistências/First bloods/Aces) escalam o teto pelo número de
+  // partidas do período (`data.matchesCount`) -- sem isso, um teto fixo não
+  // faria sentido nem pra "últimas 7" nem pra "todas" ao mesmo tempo.
+  // Unificado numa lista só em 21/09/2026 (pedido explícito) -- antes eram
+  // duas fileiras (hero maior com barra, mini menor sem barra); agora os 13
+  // ficam iguais, numa fileira só.
+  const matches = Math.max(1, data.matchesCount);
+  const allStats: Array<{ label: string; value: string; explain: string; ratio: number }> = [
     { label: 'ADR', value: String(data.adr), explain: 'Dano médio causado por round no período.', ratio: Math.min(1, data.adr / 300) },
     {
       label: 'K/D',
@@ -640,24 +647,26 @@ export function SeasonOverviewSection({
       ratio: Math.min(1, data.winratePercent / 100),
     },
     { label: 'KDA', value: fmtNum(data.kda, 1), explain: 'Abates mais assistências divididos pelas mortes, por partida em média.', ratio: Math.min(1, data.kda / 3) },
+    { label: 'ACS', value: String(data.acs), explain: 'Pontuação de combate por round, considerando todo o ato.', ratio: Math.min(1, data.acs / 350) },
+    {
+      label: 'DDΔ/round',
+      value: fmtDelta(data.ddPerRound, 1),
+      explain: 'Quanto de dano a mais (ou a menos) você fez por round, comparado à média dos outros 9 jogadores das mesmas partidas.',
+      ratio: Math.min(1, Math.abs(data.ddPerRound) / 50),
+    },
+    { label: 'Abates', value: String(data.kills), explain: 'Total de abates no período.', ratio: Math.min(1, data.kills / (matches * 20)) },
+    { label: 'Mortes', value: String(data.deaths), explain: 'Total de mortes no período.', ratio: Math.min(1, data.deaths / (matches * 15)) },
+    { label: 'Assistências', value: String(data.assists), explain: 'Total de assistências no período.', ratio: Math.min(1, data.assists / (matches * 10)) },
+    { label: 'First bloods', value: String(data.firstBloods), explain: 'Primeiro abate da rodada, contando só as vezes que foi você.', ratio: Math.min(1, data.firstBloods / (matches * 3)) },
+    { label: 'Aces', value: String(data.aces), explain: 'Rodadas em que você fez os 5 abates da equipe adversária sozinho.', ratio: Math.min(1, data.aces / Math.max(1, matches * 0.5)) },
     { label: 'V/D', value: `${data.wins}V–${data.losses}D`, explain: 'Vitórias e derrotas somadas no período.', ratio: Math.min(1, data.winratePercent / 100) },
-  ];
-
-  const miniStats: Array<{ label: string; value: string; explain: string }> = [
-    { label: 'ACS', value: String(data.acs), explain: 'Pontuação de combate por round, considerando todo o ato.' },
-    { label: 'DDΔ/round', value: fmtDelta(data.ddPerRound, 1), explain: 'Quanto de dano a mais (ou a menos) você fez por round, comparado à média dos outros 9 jogadores das mesmas partidas.' },
-    { label: 'Abates', value: String(data.kills), explain: 'Total de abates no período.' },
-    { label: 'Mortes', value: String(data.deaths), explain: 'Total de mortes no período.' },
-    { label: 'Assistências', value: String(data.assists), explain: 'Total de assistências no período.' },
-    { label: 'First bloods', value: String(data.firstBloods), explain: 'Primeiro abate da rodada, contando só as vezes que foi você.' },
-    { label: 'Aces', value: String(data.aces), explain: 'Rodadas em que você fez os 5 abates da equipe adversária sozinho.' },
   ];
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <div style={{ ...cardStyle, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 14 }}>
         <div className="kpi-hero-row">
-          {heroStats.map((s, i) => (
+          {allStats.map((s, i) => (
             <div
               key={s.label}
               style={{
@@ -665,30 +674,19 @@ export function SeasonOverviewSection({
                 flexDirection: 'column',
                 gap: 8,
                 minWidth: 0,
-                flex: '1 1 140px',
-                paddingRight: i < heroStats.length - 1 ? 20 : 0,
-                borderRight: i < heroStats.length - 1 ? '1px solid var(--divider)' : 'none',
+                flex: '1 1 100px',
+                paddingRight: i < allStats.length - 1 ? 16 : 0,
+                borderRight: i < allStats.length - 1 ? '1px solid var(--divider)' : 'none',
               }}
             >
-              <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: 600, letterSpacing: '.04em', textTransform: 'uppercase', color: 'var(--pos, #18AAB7)' }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 10.5, fontWeight: 600, letterSpacing: '.04em', textTransform: 'uppercase', color: 'var(--pos, #18AAB7)', whiteSpace: 'nowrap' }}>
                 {s.label}
                 <InfoDot text={s.explain} />
               </span>
-              <span style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 700, fontSize: 28, letterSpacing: '-.02em' }}>{s.value}</span>
+              <span style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 700, fontSize: 19, letterSpacing: '-.02em' }}>{s.value}</span>
               <div style={{ height: 4, borderRadius: 2, background: 'var(--track)', position: 'relative' }}>
                 <div style={{ position: 'absolute', inset: '0 auto 0 0', width: `${s.ratio * 100}%`, borderRadius: 2, background: 'var(--pos, #18AAB7)' }} />
               </div>
-            </div>
-          ))}
-        </div>
-        <div className="kpi-mini-row">
-          {miniStats.map((s) => (
-            <div key={s.label} style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
-              <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 10.5, color: 'var(--text-faint)', whiteSpace: 'nowrap' }}>
-                {s.label}
-                <InfoDot text={s.explain} />
-              </span>
-              <span style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 15 }}>{s.value}</span>
             </div>
           ))}
         </div>
@@ -706,7 +704,7 @@ export function SeasonOverviewSection({
             min-width:560 do modo Detalhado da lista de partidas), fazendo a
             COLUNA inteira crescer pra caber, em vez de travar na largura
             disponível e deixar só o .scroll-x-mobile (por dentro do card)
-            rolar de lado -- ver comentário em .app-shell-grid/.app-main no
+            rolar de lado -- ver comentário em .app-shell-flat/.app-main no
             index.css pra a mesma ideia aplicada no nível de página. */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: SEASON_CARD_GAP, minWidth: 0 }}>
           <SeasonMatchesList
