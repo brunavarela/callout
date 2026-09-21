@@ -5,9 +5,8 @@ import { requireAuth } from "../lib/session.js";
 import { buildDashboardSummary } from "../lib/dashboard.js";
 import { buildRrAndInsights, buildSidesBreakdown } from "../lib/insights.js";
 import { buildSeasonOverview, buildSeasonMatchesPage } from "../lib/seasonOverview.js";
-import { resolveDashboardTarget } from "../lib/equipe.js";
+import { resolveViewTarget } from "../lib/equipe.js";
 import { resolveOrCreateSearchTarget } from "../lib/publicSearch.js";
-import { prisma } from "../lib/prisma.js";
 import { RIOT_ID_REGEX } from "../lib/authCodes.js";
 import { HenrikDevError } from "../lib/henrikdev.js";
 
@@ -21,12 +20,7 @@ import { HenrikDevError } from "../lib/henrikdev.js";
 //   só membro da MESMA equipe pode ser alvo (resolveDashboardTarget).
 async function resolveTarget(request: { user?: User; query: unknown }, reply: FastifyReply): Promise<User | null> {
   const { userId: targetUserId, free } = request.query as { userId?: string; free?: string };
-  const target =
-    free === "1"
-      ? targetUserId
-        ? await prisma.user.findUnique({ where: { id: targetUserId } })
-        : request.user!
-      : await resolveDashboardTarget(request.user!, targetUserId);
+  const target = await resolveViewTarget(request.user!, targetUserId, free === "1");
   if (!target) {
     reply.code(404).send({ error: "Usuário não encontrado." });
     return null;

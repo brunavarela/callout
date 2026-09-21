@@ -196,9 +196,22 @@ export function AppShell() {
   const { user, loading } = useSession();
   const { theme } = useTheme();
   const appData = useAppData(user);
-  const { equipe, equipeError, equipeNaoTemNenhuma, seasonOverviewLoading } = appData;
+  const { equipe, equipeError, equipeNaoTemNenhuma, seasonOverviewLoading, selectedMemberId, setSelectedMemberId } = appData;
   const [settingsOpen, setSettingsOpen] = useState(false);
   const accountMenuRef = useRef<HTMLDivElement>(null);
+
+  // Modo "espiar" (busca livre de RiotID / ver painel de outro membro) só
+  // faz sentido dentro do painel individual (Painel/Partidas) -- decisão de
+  // produto de 21/09/2026. Trocar pra qualquer outra aba (Equipe,
+  // Estratégia, Spots, Competições) volta sozinho pro próprio RiotID, pra
+  // não carregar o alvo espiado escondido pra uma tela onde isso não devia
+  // aparecer.
+  useEffect(() => {
+    if (!selectedMemberId) return;
+    const stayOnTarget = location.pathname === '/' || location.pathname === '/partidas';
+    if (!stayOnTarget) setSelectedMemberId(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.pathname]);
 
   // Tela de "estamos preparando tudo" logo depois de cadastro/criar-equipe/
   // entrar-em-equipe (ver lib/entrada.ts) -- some assim que os dados

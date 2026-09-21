@@ -111,17 +111,32 @@ export async function syncUserMatches(userId: string, puuid: string, region: str
     const rrByMatchId = new Map<string, number>();
     const rankTierByMatchId = new Map<string, number>();
     let mmrHistory: Awaited<ReturnType<typeof getMmrHistory>> = [];
-    // Dado de segurança temporário (até migrar pra API oficial da Riot): 1
-    // retry antes de desistir (falha isolada não deve perder rr/rankTierId
-    // da rodada inteira), e se mesmo assim falhar, cai pro último
-    // mmr-history que funcionou (cacheado em User na vez anterior que essa
-    // chamada teve sucesso) em vez de deixar tudo null.
+    // Dado de segurança temporário (até migrar pra API oficial da Riot): até
+    // 3 tentativas (com um respiro entre elas — falha costuma ser rate limit
+    // de rajada, não indisponibilidade de verdade) antes de desistir, e se
+    // mesmo assim falhar, cai pro último mmr-history que funcionou (cacheado
+    // em User na vez anterior que essa chamada teve sucesso). Pra um usuário
+    // "fantasma" recém-criado pela busca livre (publicSearch.ts), esse cache
+    // não existe ainda -- é a 1ª sincronização dele -- por isso as tentativas
+    // extras importam mais aqui do que pra alguém que já sincroniza faz
+    // tempo (CONTEXT.md §5.2: HenrikDev é instável, sem SLA).
+    const MMR_HISTORY_ATTEMPTS = 3;
+    const MMR_HISTORY_RETRY_DELAY_MS = 400;
     try {
-      try {
-        mmrHistory = await getMmrHistory(region, puuid);
-      } catch {
-        mmrHistory = await getMmrHistory(region, puuid);
+      let lastErr: unknown;
+      for (let attempt = 0; attempt < MMR_HISTORY_ATTEMPTS; attempt++) {
+        try {
+          mmrHistory = await getMmrHistory(region, puuid);
+          lastErr = undefined;
+          break;
+        } catch (err) {
+          lastErr = err;
+          if (attempt < MMR_HISTORY_ATTEMPTS - 1) {
+            await new Promise((resolve) => setTimeout(resolve, MMR_HISTORY_RETRY_DELAY_MS));
+          }
+        }
       }
+      if (lastErr) throw lastErr;
       for (const h of mmrHistory) {
         rrByMatchId.set(h.match_id, h.last_change);
         rankTierByMatchId.set(h.match_id, h.tier.id);

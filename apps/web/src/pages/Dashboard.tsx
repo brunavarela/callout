@@ -96,7 +96,7 @@ export function Dashboard() {
         resultCount={seasonMatchesPage && plural(seasonMatchesPage.total, 'resultado')}
       />
 
-      {seasonOverviewLoading ? (
+      {seasonOverviewLoading || searchLoading ? (
         <LoadingFill />
       ) : seasonOverviewError && !seasonOverview ? (
         <div style={{ ...cardStyle, padding: 22, display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'flex-start' }}>

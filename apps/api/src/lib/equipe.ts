@@ -75,6 +75,19 @@ export async function resolveDashboardTarget(authUser: User, targetUserId: strin
   return prisma.user.findUnique({ where: { id: targetUserId } });
 }
 
+// Mesma ideia de resolveDashboardTarget, mas usada por toda rota que o
+// painel individual (busca livre de RiotID, ver publicSearch.ts) também
+// precisa resolver -- /dashboard*, /matches/:id. `free=true` pula a
+// restrição de equipe (qualquer usuário existente vale, real ou "fantasma"
+// criado pela busca); sem isso, cai na mesma regra de sempre (só membro da
+// mesma equipe). Ver resolveTarget em routes/dashboard.ts pro contrato de
+// query string (`userId`/`free`) que decide qual dos dois modos usar.
+export async function resolveViewTarget(authUser: User, targetUserId: string | undefined, free: boolean): Promise<User | null> {
+  if (!free) return resolveDashboardTarget(authUser, targetUserId);
+  if (!targetUserId || targetUserId === authUser.id) return authUser;
+  return prisma.user.findUnique({ where: { id: targetUserId } });
+}
+
 export async function buildEquipeOverview(equipeId: string): Promise<EquipeOverview | null> {
   const equipe = await prisma.equipe.findUnique({
     where: { id: equipeId },

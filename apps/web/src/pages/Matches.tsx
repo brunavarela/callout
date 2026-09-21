@@ -2,7 +2,7 @@ import { useOutletContext, useSearchParams } from 'react-router-dom';
 import type { OutletContext } from '../components/AppShell';
 import { LoadingFill } from '../components/Spinner';
 import { SeasonMatchesList } from '../components/SeasonMatchesList';
-import { MemberFilterSelect, SeasonMapFilterSelect, SeasonAgentFilterSelect, SeasonModoFilterSelect } from '../components/SeasonFilters';
+import { RiotIdSearchFilter, SeasonMapFilterSelect, SeasonAgentFilterSelect, SeasonModoFilterSelect } from '../components/SeasonFilters';
 import { useCardStyle, plural } from '../components/statsPrimitives';
 import { PageHeaderCard, HeaderSubtitle } from '../components/PageHeaderCard';
 
@@ -24,6 +24,10 @@ export function Matches() {
     equipe,
     selectedMemberId,
     setSelectedMemberId,
+    searchedTarget,
+    searchError,
+    searchLoading,
+    searchRiotId,
     seasonMapFilter,
     setSeasonMapFilter,
     seasonAgentFilter,
@@ -35,14 +39,27 @@ export function Matches() {
   const [searchParams] = useSearchParams();
   const expandMatchId = searchParams.get('expand');
 
+  // Mesma lógica de "de quem é esse painel" do Dashboard.tsx -- membro da
+  // equipe (aparece em equipe.members) ou jogador pesquisado por RiotID
+  // (searchedTarget) no painel individual.
+  const selectedMember = selectedMemberId ? (equipe?.members.find((m) => m.userId === selectedMemberId) ?? null) : null;
+  const isSelf = !selectedMemberId;
+  const subject = selectedMember?.name ?? (searchedTarget ? `${searchedTarget.riotName}#${searchedTarget.riotTag}` : 'você');
+
   return (
     <div style={{ padding: 26, display: 'flex', flexDirection: 'column', gap: 16 }}>
       <PageHeaderCard
         title="Partidas"
-        subtitle={<HeaderSubtitle>Suas partidas do ato — clique numa pra ver os detalhes</HeaderSubtitle>}
+        subtitle={<HeaderSubtitle>{isSelf ? 'Suas partidas do ato' : `Partidas de ${subject}`} — clique numa pra ver os detalhes</HeaderSubtitle>}
         filters={
           <>
-            <MemberFilterSelect equipe={equipe} selectedMemberId={selectedMemberId} setSelectedMemberId={setSelectedMemberId} />
+            <RiotIdSearchFilter
+              activeLabel={isSelf ? null : subject}
+              searchLoading={searchLoading}
+              searchError={searchError}
+              onSearch={searchRiotId}
+              onClear={() => setSelectedMemberId(null)}
+            />
             {seasonOverview && (
               <>
                 <SeasonAgentFilterSelect topAgents={seasonOverview.topAgents} agentFilter={seasonAgentFilter} setAgentFilter={setSeasonAgentFilter} />
@@ -71,6 +88,7 @@ export function Matches() {
           setPage={setSeasonMatchesPageNumber}
           expandable
           autoExpandMatchId={expandMatchId}
+          viewUserId={selectedMemberId}
         />
       )}
     </div>

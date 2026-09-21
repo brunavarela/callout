@@ -152,6 +152,7 @@ function SeasonMatchRow({
   expandable,
   autoExpand,
   basePath,
+  viewUserId,
 }: {
   m: SeasonMatchSummary;
   agentIcon: string | null;
@@ -159,6 +160,11 @@ function SeasonMatchRow({
   expandable: boolean;
   autoExpand: boolean;
   basePath: string;
+  // Quem está sendo visto (painel individual em modo "espiar", ver
+  // Matches.tsx/appData.ts) -- sem isso, /matches/:id confere a MatchPlayer
+  // de quem está LOGADO, e uma partida de quem você está espiando (que você
+  // mesma não jogou) sempre dava 404 (bug achado em 21/09/2026).
+  viewUserId?: string | null;
 }) {
   const navigate = useNavigate();
   const resultColor = m.result === 'V' ? WIN : m.result === 'D' ? LOSS : DRAW;
@@ -172,7 +178,8 @@ function SeasonMatchRow({
     if (detail || detailLoading) return;
     setDetailLoading(true);
     setDetailError(null);
-    apiFetch<MatchDetail>(`/matches/${m.id}`)
+    const query = viewUserId ? `?userId=${viewUserId}&free=1` : '';
+    apiFetch<MatchDetail>(`/matches/${m.id}${query}`)
       .then(setDetail)
       .catch(() => setDetailError('Não foi possível carregar essa partida.'))
       .finally(() => setDetailLoading(false));
@@ -311,6 +318,7 @@ export function SeasonMatchesList({
   autoExpandMatchId = null,
   basePath = '/partidas',
   height,
+  viewUserId = null,
 }: {
   matchesPage: SeasonMatchesPage | null;
   loading: boolean;
@@ -332,6 +340,10 @@ export function SeasonMatchesList({
   // faz só a lista de partidas rolar por dentro -- usado na Visão do ato,
   // onde essa coluna precisa bater com a altura de RR logo abaixo.
   height?: number;
+  // Repassado pra SeasonMatchRow -- ver comentário lá. Só o painel
+  // individual (Matches.tsx) usa isso hoje; EquipePartidas.tsx não passa
+  // (continua resolvendo pela MatchPlayer de quem está logado).
+  viewUserId?: string | null;
 }) {
   const navigate = useNavigate();
   const cardStyle = useCardStyle();
@@ -376,6 +388,7 @@ export function SeasonMatchesList({
                     expandable={expandable}
                     autoExpand={expandable && m.id === autoExpandMatchId}
                     basePath={basePath}
+                    viewUserId={viewUserId}
                   />
                 ))}
               </div>
