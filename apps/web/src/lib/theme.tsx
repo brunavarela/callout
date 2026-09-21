@@ -116,7 +116,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   return (
     <ThemeContext.Provider value={{ theme, setTheme }}>
       <div style={cssVars}>
-        {/* Fundo de mapa -- fixed + z-index baixo (ver .app-shell-grid no
+        {/* Fundo de mapa -- fixed + z-index baixo (ver .app-shell-flat no
             index.css, que sobe pra z-index:1) pra ficar atrás de todo o
             conteúdo em qualquer tela, sem empurrar layout (position:fixed
             não ocupa espaço no fluxo). Gradiente com a mesma cor duas vezes

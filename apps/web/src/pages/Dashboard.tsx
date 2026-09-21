@@ -1,4 +1,4 @@
-import { useNavigate, useOutletContext } from 'react-router-dom';
+import { useOutletContext } from 'react-router-dom';
 import type { SessionUser } from '@callout/shared';
 import type { OutletContext } from '../components/AppShell';
 import { LoadingFill } from '../components/Spinner';
@@ -14,7 +14,6 @@ function firstName(user: SessionUser | null): string {
 }
 
 export function Dashboard() {
-  const navigate = useNavigate();
   const {
     seasonOverview,
     seasonOverviewLoading,
@@ -70,12 +69,25 @@ export function Dashboard() {
           )
         }
         actions={
-          <button className="btn-secondary" style={{ display: 'flex', alignItems: 'center', padding: '9px 14px', fontSize: 12.5 }} onClick={() => navigate('/board')}>
-            Abrir estratégia
-          </button>
-        }
-        filters={
           <>
+            {/* Centralizado no eixo X do headerpage inteiro (não só do
+                espaço sobrando depois do título) -- por isso sai do fluxo
+                normal do flex de ações, igual fizemos com a nav do header
+                principal. PageHeaderCard já é position:relative, então
+                ancora nele. "Encontre jogadores" fica de fora, continua
+                empurrado pro fim pelo marginLeft:auto do próprio container
+                de ações (pedido de 21/09/2026: filtro centralizado, botão
+                de busca fica onde estava). */}
+            <div style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+              {seasonOverview && (
+                <>
+                  <SeasonAgentFilterSelect topAgents={seasonOverview.topAgents} agentFilter={seasonAgentFilter} setAgentFilter={setSeasonAgentFilter} />
+                  <SeasonMapFilterSelect topMaps={seasonOverview.topMaps} mapFilter={seasonMapFilter} setMapFilter={setSeasonMapFilter} />
+                  <SeasonModoFilterSelect availableModos={seasonOverview.availableModos} modoFilter={seasonModoFilter} setModoFilter={setSeasonModoFilter} />
+                </>
+              )}
+              <MatchCountFilterSelect matchCountFilter={matchCountFilter} setMatchCountFilter={setMatchCountFilter} />
+            </div>
             <RiotIdSearchFilter
               activeLabel={isSelf ? null : subject}
               searchLoading={searchLoading}
@@ -83,17 +95,8 @@ export function Dashboard() {
               onSearch={searchRiotId}
               onClear={() => setSelectedMemberId(null)}
             />
-            {seasonOverview && (
-              <>
-                <SeasonAgentFilterSelect topAgents={seasonOverview.topAgents} agentFilter={seasonAgentFilter} setAgentFilter={setSeasonAgentFilter} />
-                <SeasonMapFilterSelect topMaps={seasonOverview.topMaps} mapFilter={seasonMapFilter} setMapFilter={setSeasonMapFilter} />
-                <SeasonModoFilterSelect availableModos={seasonOverview.availableModos} modoFilter={seasonModoFilter} setModoFilter={setSeasonModoFilter} />
-              </>
-            )}
-            <MatchCountFilterSelect matchCountFilter={matchCountFilter} setMatchCountFilter={setMatchCountFilter} />
           </>
         }
-        resultCount={seasonMatchesPage && plural(seasonMatchesPage.total, 'resultado')}
       />
 
       {seasonOverviewLoading || searchLoading ? (

@@ -4,10 +4,12 @@ import { useTheme } from '../lib/theme';
 import { glassSurfaceStyle } from './statsPrimitives';
 
 // Rodapé enxuto, em linha — aparece no fim de toda página (AppShell.tsx
-// pras telas logadas, LoginShell.tsx pras telas de login). Termos/
-// Privacidade são rascunho interno ainda sem revisão jurídica formal (ver
-// LAUNCH.md §3.4/§12) — os links já existem pra não ter que replicar essa
-// mudança depois, mas as próprias páginas deixam isso avisado.
+// pras telas logadas, LoginShell.tsx pras telas de login, LegalPageShell.tsx
+// pras próprias Termos/Privacidade/Sobre/Ajuda). Termos/Privacidade ainda
+// não passaram por revisão jurídica formal (ver LAUNCH.md §3.4/§12) — os
+// links já existem pra não ter que replicar essa mudança depois, mas as
+// próprias páginas deixam isso avisado. Sobre/Ajuda entraram aqui em
+// 21/09/2026 (pedido explícito de deixar num lugar só, em toda página).
 export function Footer() {
   const year = new Date().getFullYear();
   const { theme } = useTheme();
@@ -34,7 +36,13 @@ export function Footer() {
               © {year} callout. Todos os direitos reservados.
             </span>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
+            <Link to="/sobre" className="link-quiet" style={{ color: 'var(--text-faint)' }}>
+              Sobre
+            </Link>
+            <Link to="/ajuda" className="link-quiet" style={{ color: 'var(--text-faint)' }}>
+              Precisa de ajuda?
+            </Link>
             <Link to="/termos" className="link-quiet" style={{ color: 'var(--text-faint)' }}>
               Termos de Uso
             </Link>

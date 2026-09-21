@@ -1,15 +1,17 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { Navigate, NavLink, Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Swords, Users, PenTool, MapPin, Trophy, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { Navigate, NavLink, Outlet, useLocation } from 'react-router-dom';
+import { LayoutDashboard, Swords, Users, PenTool, MapPin, Trophy } from 'lucide-react';
 import { useSession } from '../lib/session';
 import { useAppData, type AppData } from '../lib/appData';
 import { useTheme } from '../lib/theme';
 import { routeForStep } from '../lib/onboarding';
 import { AccountMenu } from './AccountMenu';
-import { Logo, LogoMark } from './Logo';
+import { Logo } from './Logo';
 import { CardStyleProvider, glassSurfaceStyle } from './statsPrimitives';
 import { EntradaOverlay } from './EntradaOverlay';
 import { lerEntrando, limparEntrando } from '../lib/entrada';
+import { Footer } from './Footer';
 
 const BASE_NAV_ITEMS = [
   { to: '/', label: 'Painel', icon: LayoutDashboard, match: (p: string) => p === '/' },
@@ -25,133 +27,6 @@ function initialsOf(name: string) {
   return name.slice(0, 2).toUpperCase();
 }
 
-interface SearchResult {
-  id: string;
-  label: string;
-  sub: string;
-  to: string;
-}
-
-interface SearchGroup {
-  title: string;
-  results: SearchResult[];
-}
-
-function SearchBar({ appData }: { appData: AppData }) {
-  const navigate = useNavigate();
-  const { theme } = useTheme();
-  const { dashboard, strategies } = appData;
-  const [query, setQuery] = useState('');
-  const [open, setOpen] = useState(false);
-
-  const groups: SearchGroup[] = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return [];
-
-    const matches: SearchResult[] = (dashboard?.recentMatches ?? [])
-      .filter((m) => m.map.toLowerCase().includes(q) || m.agent.toLowerCase().includes(q))
-      .slice(0, 5)
-      .map((m) => ({ id: m.id, label: `${m.map} · ${m.agent}`, sub: `${m.result === 'V' ? 'Vitória' : 'Derrota'} · ${m.score}`, to: `/partida/${m.id}` }));
-
-    const strats: SearchResult[] = (strategies ?? [])
-      .filter((s) => s.title.toLowerCase().includes(q) || s.mapName.toLowerCase().includes(q))
-      .slice(0, 5)
-      .map((s) => ({ id: s.id, label: s.title, sub: s.mapName, to: `/board/${s.id}` }));
-
-    const out: SearchGroup[] = [];
-    if (matches.length > 0) out.push({ title: 'Partidas', results: matches });
-    if (strats.length > 0) out.push({ title: 'Estratégias', results: strats });
-    return out;
-  }, [query, dashboard, strategies]);
-
-  function pick(to: string) {
-    navigate(to);
-    setQuery('');
-    setOpen(false);
-  }
-
-  const showDropdown = open && query.trim() !== '';
-
-  return (
-    <div
-      style={{ position: 'relative', flex: 1, maxWidth: 520 }}
-      onBlur={(e) => {
-        if (!e.currentTarget.contains(e.relatedTarget as Node)) setOpen(false);
-      }}
-    >
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 10,
-          background: 'var(--control-bg)',
-          border: '1px solid var(--surface-border)',
-          borderRadius: 'var(--radius-md)',
-          padding: '10px 14px',
-          ...(theme.glassCards ? glassSurfaceStyle : {}),
-        }}
-      >
-        <span style={{ width: 14, height: 14, borderRadius: '50%', border: '1.5px solid #5A5D61', display: 'block', flex: 'none' }} />
-        <input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          onFocus={() => setOpen(true)}
-          placeholder="Buscar partida, mapa ou estratégia…"
-          style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', color: 'var(--text)', fontSize: 13 }}
-        />
-      </div>
-      {showDropdown && (
-        <div
-          style={{
-            position: 'absolute',
-            top: 'calc(100% + 6px)',
-            left: 0,
-            right: 0,
-            background: 'var(--surface)',
-            border: '1px solid var(--surface-border)',
-            borderRadius: 'var(--radius-md)',
-            boxShadow: '0 12px 28px rgba(0,0,0,.4)',
-            padding: 8,
-            maxHeight: 360,
-            overflow: 'auto',
-            zIndex: 40,
-          }}
-        >
-          {groups.length === 0 && <div style={{ padding: '10px 8px', fontSize: 12.5, color: 'var(--text-muted)' }}>Nenhum resultado.</div>}
-          {groups.map((group) => (
-            <div key={group.title} style={{ marginBottom: 6 }}>
-              <div style={{ padding: '6px 8px 2px', fontSize: 10, letterSpacing: '.12em', color: 'var(--text-dim)' }}>{group.title.toUpperCase()}</div>
-              {group.results.map((r) => (
-                <button
-                  key={r.id}
-                  onClick={() => pick(r.to)}
-                  style={{
-                    display: 'block',
-                    width: '100%',
-                    textAlign: 'left',
-                    padding: '8px 8px',
-                    borderRadius: 8,
-                    background: 'transparent',
-                    border: 'none',
-                    color: 'var(--text-2)',
-                    cursor: 'pointer',
-                  }}
-                  className="strat-item"
-                >
-                  <div style={{ fontSize: 13 }}>{r.label}</div>
-                  <div style={{ fontSize: 11, color: 'var(--text-faint)', marginTop: 1 }}>{r.sub}</div>
-                </button>
-              ))}
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-const SIDEBAR_COLLAPSED_KEY = 'callout:sidebar-collapsed';
-
 // Elo atual + nível da conta — fica fixo no header global (não só na página
 // do painel) porque é "quem você é" agora, não um dado específico do ato
 // selecionado. Vem de seasonOverview (mesma chamada de MMR que já
@@ -162,10 +37,26 @@ function RankLevelChip({ appData }: { appData: AppData }) {
   const { currentRank, peakRank, accountLevel } = seasonOverview;
   if (!currentRank && accountLevel === null) return null;
 
+  // Ordem invertida em 21/09/2026 (pedido explícito): level primeiro,
+  // depois elo -- antes era elo então level.
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 'none' }}>
+      {accountLevel !== null && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+          <span style={{ fontSize: 9, letterSpacing: '.1em', color: 'var(--text-dim)' }}>LEVEL</span>
+          <span style={{ fontSize: 15, fontWeight: 700, fontFamily: 'Poppins,sans-serif', lineHeight: 1 }}>{accountLevel}</span>
+        </div>
+      )}
       {currentRank && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            paddingLeft: accountLevel !== null ? 10 : 0,
+            borderLeft: accountLevel !== null ? '1px solid var(--divider)' : 'none',
+          }}
+        >
           {currentRank.iconUrl ? (
             <img src={currentRank.iconUrl} alt="" style={{ width: 28, height: 28, objectFit: 'contain', flex: 'none' }} />
           ) : (
@@ -177,12 +68,6 @@ function RankLevelChip({ appData }: { appData: AppData }) {
             </span>
             {peakRank && <span style={{ fontSize: 10.5, color: 'var(--text-dim)' }}>Máx: {peakRank.tierLabel}</span>}
           </div>
-        </div>
-      )}
-      {accountLevel !== null && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 1, paddingLeft: currentRank ? 10 : 0, borderLeft: currentRank ? '1px solid var(--divider)' : 'none' }}>
-          <span style={{ fontSize: 9, letterSpacing: '.1em', color: 'var(--text-dim)' }}>LEVEL</span>
-          <span style={{ fontSize: 15, fontWeight: 700, fontFamily: 'Poppins,sans-serif', lineHeight: 1 }}>{accountLevel}</span>
         </div>
       )}
     </div>
@@ -197,6 +82,12 @@ export function AppShell() {
   const { equipe, equipeError, equipeNaoTemNenhuma, seasonOverviewLoading, selectedMemberId, setSelectedMemberId } = appData;
   const [settingsOpen, setSettingsOpen] = useState(false);
   const accountMenuRef = useRef<HTMLDivElement>(null);
+  // Painel do menu de conta agora vai por portal direto no <body> (ver
+  // accountTrigger/createPortal abaixo) -- precisa de um segundo ref só pra
+  // ele, pro clique-fora não fechar o menu ao clicar dentro do próprio
+  // painel (que não é mais descendente de accountMenuRef no DOM).
+  const accountPanelRef = useRef<HTMLDivElement>(null);
+  const [panelPos, setPanelPos] = useState<{ top: number; right: number } | null>(null);
 
   // Modo "espiar" (busca livre de RiotID / ver painel de outro membro) só
   // faz sentido dentro do painel individual (Painel/Partidas) -- decisão de
@@ -229,26 +120,24 @@ export function AppShell() {
   useEffect(() => {
     if (!settingsOpen) return;
     function onPointerDown(e: PointerEvent) {
-      if (accountMenuRef.current && !accountMenuRef.current.contains(e.target as Node)) setSettingsOpen(false);
+      const target = e.target as Node;
+      if (accountMenuRef.current?.contains(target)) return;
+      if (accountPanelRef.current?.contains(target)) return;
+      setSettingsOpen(false);
     }
     document.addEventListener('pointerdown', onPointerDown);
     return () => document.removeEventListener('pointerdown', onPointerDown);
   }, [settingsOpen]);
-  const [collapsed, setCollapsed] = useState(() => {
-    try {
-      return localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === '1';
-    } catch {
-      return false;
-    }
-  });
 
-  function toggleCollapsed() {
-    setCollapsed((prev) => {
+  // Abre o menu já com a posição calculada a partir do botão de verdade --
+  // precisa disso pro portal (renderiza fora da árvore do header, ver
+  // accountTrigger) saber onde flutuar.
+  function toggleSettings() {
+    setSettingsOpen((prev) => {
       const next = !prev;
-      try {
-        localStorage.setItem(SIDEBAR_COLLAPSED_KEY, next ? '1' : '0');
-      } catch {
-        // sem localStorage (modo privado etc.) — só não persiste, sidebar continua funcionando
+      if (next && accountMenuRef.current) {
+        const rect = accountMenuRef.current.getBoundingClientRect();
+        setPanelPos({ top: rect.bottom + 8, right: window.innerWidth - rect.right });
       }
       return next;
     });
@@ -266,194 +155,194 @@ export function AppShell() {
     ...BASE_NAV_ITEMS.slice(1),
   ];
 
-  return (
-    <div className="app-shell-grid" style={{ '--sidebar-w': collapsed ? '76px' : '232px' } as React.CSSProperties}>
-      <aside className={`app-sidebar${collapsed ? ' app-sidebar-collapsed' : ''}`} style={theme.glassCards ? glassSurfaceStyle : undefined}>
-        {/* Clipada só nesse wrapper (não na aside inteira) — a aside precisa
-            de overflow visível pra tooltip dos ícones (recolhida) escapar. */}
-        <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none' }}>
+  // Botão de perfil — o painel (AccountMenu) vai por portal direto no
+  // <body> (ver createPortal abaixo), não mais aninhado dentro do header.
+  // Isso saiu de vez de um bug achado em 21/09/2026: o painel, aninhado no
+  // novo header horizontal, aparecia com conteúdo da própria página
+  // (PageHeaderCard) visível "por cima"/misturado com os itens do menu --
+  // com o header virando ele próprio um elemento posicionado
+  // (position:relative + z-index, ver .app-topbar no CSS) achei que
+  // resolveria, mas não resolveu de vez; portal elimina o problema na
+  // raiz, sem depender de entender a causa exata de stacking/overflow.
+  const accountTrigger = (
+    <div ref={accountMenuRef}>
+      <button
+        className="header-profile-trigger"
+        onClick={toggleSettings}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 10,
+          background: 'transparent',
+          border: '1px solid var(--surface-border)',
+          borderRadius: 'var(--radius-md)',
+          padding: '6px 12px 6px 6px',
+          cursor: 'pointer',
+        }}
+      >
+        {user.avatarUrl ? (
+          <img src={user.avatarUrl} alt="" style={{ width: 32, height: 32, borderRadius: 9, flex: 'none', objectFit: 'cover' }} />
+        ) : (
           <div
             style={{
-              position: 'absolute',
-              top: -140,
-              left: -90,
-              width: 340,
-              height: 340,
-              borderRadius: '50%',
-              background: 'radial-gradient(circle, var(--acc18, rgba(239,73,88,.18)) 0%, transparent 70%)',
+              width: 32,
+              height: 32,
+              flex: 'none',
+              borderRadius: 9,
+              background: 'var(--avatar-bg)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: 11.5,
+              fontWeight: 600,
+              color: 'var(--text-muted)',
             }}
-          />
+          >
+            {initialsOf(user.nome)}
+          </div>
+        )}
+        <div className="header-profile-text" style={{ minWidth: 0, textAlign: 'left' }}>
+          <div style={{ fontSize: 12.5, fontWeight: 500 }}>
+            {riotId.name}#{riotId.tag}
+          </div>
+          <div style={{ fontSize: 10.5, color: 'var(--text-dim)' }}>{user.nome}</div>
         </div>
-        <div className="app-sidebar-header" style={{ position: 'relative', padding: '24px 16px 16px' }}>
-          <div className="sidebar-fade sidebar-fade--col" style={{ minWidth: 0, color: 'var(--text)' }}>
-            <Logo height={28} />
-            <div style={{ fontSize: 10, letterSpacing: '.12em', color: 'var(--text-muted)', marginTop: 5, whiteSpace: 'nowrap' }}>
-              {equipe ? `${equipe.name.toUpperCase()} · ${equipe.memberCount} MEMBRO${equipe.memberCount === 1 ? '' : 'S'}` : equipeNaoTemNenhuma ? 'SEM EQUIPE AINDA' : '…'}
-            </div>
-          </div>
-          {/* Mesma marca do favicon.svg, sem fundo — só aparece com a
-              sidebar recolhida (fade cruzado via CSS, cor herdada de
-              .sidebar-brand-mark). */}
-          <div className="sidebar-brand-mark">
-            <LogoMark size={26} />
-          </div>
+        <span className="header-profile-text" style={{ color: 'var(--text-faint)' }}>
+          ›
+        </span>
+      </button>
+      {settingsOpen &&
+        panelPos &&
+        createPortal(
+          <div ref={accountPanelRef} className="header-profile-panel" style={{ top: panelPos.top, right: panelPos.right }}>
+            <AccountMenu className="" onClose={() => setSettingsOpen(false)} />
+          </div>,
+          document.body,
+        )}
+    </div>
+  );
+
+  return (
+    <div className="app-shell-flat">
+      <header className="app-topbar" style={theme.glassCards ? glassSurfaceStyle : undefined}>
+        {/* Esquerda: só a logo agora -- busca de jogador (21/09/2026) saiu
+            pro headerpage do Painel/Partidas (RiotIdSearchFilter), e nome
+            da equipe/contagem de membro virou uma "flag" (foto da equipe)
+            direto no item "Equipe" da nav (ver abaixo), então esse bloco
+            não precisa mais de nada além da logo. */}
+        <div className="app-topbar-left">
+          <Logo height={26} />
         </div>
 
-        <nav className="app-sidebar-nav" style={{ position: 'relative', padding: '10px 12px', gap: 4 }}>
+        {/* Nav horizontal -- centralizada no eixo X do header inteiro
+            (position:absolute + translateX, ver .app-topbar-nav no CSS),
+            não só "no meio do espaço sobrando" -- por isso sai do fluxo
+            normal em vez de ficar entre os outros dois blocos. Era a lista
+            vertical da sidebar (sidebar saiu de vez, pedido de 21/09/2026);
+            .nav-item continua o mesmo, só muda a orientação de quem
+            envolve. Some em mobile, vira .app-bottom-nav fixo embaixo. */}
+        <nav className="app-topbar-nav">
           {navItems.map((item) => {
             const active = item.match(location.pathname);
             const Icon = item.icon;
+            const isEquipeItem = item.to === '/equipe';
             return (
               <NavLink
                 key={item.label}
                 to={item.to}
                 className="nav-item"
-                aria-label={collapsed ? item.label : undefined}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: collapsed ? 'center' : 'flex-start',
-                  gap: collapsed ? 0 : 11,
-                  padding: '11px 12px',
+                  gap: 9,
+                  padding: '9px 14px',
                   borderRadius: 'var(--radius-md)',
                   fontSize: 14,
                   fontWeight: active ? 600 : 400,
-                  // Só fixa o background quando ativo — deixando undefined no
-                  // resto, a regra .nav-item:hover do CSS consegue aplicar
-                  // (inline sempre vence a cascata, então um "transparent"
-                  // fixo aqui mascarava o hover por completo).
+                  whiteSpace: 'nowrap',
                   background: active ? 'var(--acc18, rgba(239,73,88,.16))' : undefined,
                   color: active ? 'var(--text)' : 'var(--text-muted)',
                 }}
               >
-                <Icon
-                  size={18}
-                  strokeWidth={active ? 2.25 : 1.75}
-                  color={active ? 'var(--acc, #EF4958)' : 'var(--text-faint)'}
-                  style={{ flex: 'none' }}
-                />
-                <span className="sidebar-fade sidebar-fade--col" style={{ minWidth: 0 }}>
-                  <span style={{ whiteSpace: 'nowrap' }}>{item.label}</span>
-                </span>
-                {collapsed && <span className="nav-item-tooltip">{item.label}</span>}
+                <Icon size={17} strokeWidth={active ? 2.25 : 1.75} color={active ? 'var(--acc, #EF4958)' : 'var(--text-faint)'} style={{ flex: 'none' }} />
+                {isEquipeItem ? (
+                  <span style={{ position: 'relative', display: 'inline-flex' }}>
+                    {item.label}
+                    {/* "Flag" de que já tem equipe -- foto dela (ou
+                        iniciais, sem foto), flutuando na diagonal superior
+                        direita da última letra em vez de solta do lado
+                        (pedido de 21/09/2026, ajuste em seguida). */}
+                    {equipe && (
+                      <span
+                        title={`${equipe.name} · ${equipe.memberCount} membro${equipe.memberCount === 1 ? '' : 's'}`}
+                        style={{
+                          position: 'absolute',
+                          top: -13,
+                          right: -17,
+                          width: 20,
+                          height: 20,
+                          borderRadius: '50%',
+                          flex: 'none',
+                          overflow: 'hidden',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          background: 'var(--avatar-bg)',
+                          border: '1.5px solid var(--surface)',
+                          fontSize: 9,
+                          fontWeight: 700,
+                          color: 'var(--text-muted)',
+                        }}
+                      >
+                        {equipe.imagemUrl ? (
+                          <img src={equipe.imagemUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        ) : (
+                          initialsOf(equipe.name)
+                        )}
+                      </span>
+                    )}
+                  </span>
+                ) : (
+                  item.label
+                )}
               </NavLink>
             );
           })}
         </nav>
 
-        <div style={{ position: 'relative', marginTop: 'auto', borderTop: '1px solid var(--divider)' }}>
-          {/* Recolhida, o rodapé inteiro (sidebar-fade--row abaixo) encolhe
-              pra 0 -- sem isso a sidebar terminava "cortada", sem nada no
-              rodapé. Esse "© 2026" ocupa o lugar só nesse estado (oposto do
-              fade normal, por isso não usa sidebar-fade). */}
-          {collapsed && (
-            <div style={{ padding: '14px 0', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, fontSize: 10, color: 'var(--text-faint)' }}>
-              <span>© {new Date().getFullYear()}</span>
-              <LogoMark size={13} weight={0} />
-            </div>
-          )}
-          <div className="app-sidebar-promo sidebar-fade sidebar-fade--row">
-            <div style={{ padding: '14px 18px 0', display: 'flex', flexDirection: 'column', gap: 6 }}>
-              <Link to="/sobre" style={{ fontSize: 13, color: 'var(--text-muted)' }}>
-                Sobre
-              </Link>
-              <Link to="/ajuda" style={{ fontSize: 13, color: 'var(--text-muted)' }}>
-                Precisa de ajuda?
-              </Link>
-            </div>
-            <div style={{ padding: '14px 18px', display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 7, color: 'var(--text-faint)' }}>
-                <LogoMark size={13} weight={0} />
-                <span style={{ fontSize: 10.5 }}>© {new Date().getFullYear()} callout</span>
-              </div>
-              <div style={{ fontSize: 10.5, color: 'var(--text-faint)', lineHeight: 1.5 }}>
-                Ferramenta independente. Sem vínculo com a Riot Games. Dados de partida vindos de API pública não-oficial.
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                <Link to="/termos" style={{ fontSize: 11, color: 'var(--text-faint)', textDecoration: 'underline' }}>
-                  Termos de Uso
-                </Link>
-                <Link to="/privacidade" style={{ fontSize: 11, color: 'var(--text-faint)', textDecoration: 'underline' }}>
-                  Política de Privacidade
-                </Link>
-              </div>
-            </div>
-          </div>
+        {/* Direita: level, elo, conta. */}
+        <div className="app-topbar-actions">
+          <RankLevelChip appData={appData} />
+          {accountTrigger}
         </div>
-      </aside>
-
-      <button
-        className="sidebar-edge-toggle"
-        onClick={toggleCollapsed}
-        title={collapsed ? 'Expandir menu' : 'Recolher menu'}
-        style={{ left: 'var(--sidebar-w)' }}
-      >
-        {collapsed ? <ChevronRight size={13} strokeWidth={2} /> : <ChevronLeft size={13} strokeWidth={2} />}
-      </button>
+      </header>
 
       {/* overflowX travado: sem isso, qualquer elemento um pouco mais largo
           que a tela (ex.: um label sem quebra de linha num grid apertado)
           arrasta a página inteira de lado em vez de só o card culpado --
           scroll lateral deve ficar contido em quem já opta por ele
           (.scroll-x-mobile), nunca no painel inteiro. */}
-      <main className="app-main" style={{ minWidth: 0, height: '100%', display: 'flex', flexDirection: 'column', overflowY: 'auto', overflowX: 'hidden' }}>
-        <header className="app-header" style={{ padding: '16px 26px', borderBottom: '1px solid var(--divider)' }}>
-          <RankLevelChip appData={appData} />
-          <SearchBar appData={appData} />
-          <div ref={accountMenuRef} style={{ marginLeft: 'auto', position: 'relative' }}>
-            {settingsOpen && <AccountMenu className="header-profile-panel" onClose={() => setSettingsOpen(false)} />}
-            <button
-              className="header-profile-trigger"
-              onClick={() => setSettingsOpen((v) => !v)}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 10,
-                background: 'transparent',
-                border: '1px solid var(--surface-border)',
-                borderRadius: 'var(--radius-md)',
-                padding: '6px 12px 6px 6px',
-                cursor: 'pointer',
-              }}
-            >
-              {user.avatarUrl ? (
-                <img src={user.avatarUrl} alt="" style={{ width: 32, height: 32, borderRadius: 9, flex: 'none', objectFit: 'cover' }} />
-              ) : (
-                <div
-                  style={{
-                    width: 32,
-                    height: 32,
-                    flex: 'none',
-                    borderRadius: 9,
-                    background: 'var(--avatar-bg)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: 11.5,
-                    fontWeight: 600,
-                    color: 'var(--text-muted)',
-                  }}
-                >
-                  {initialsOf(user.nome)}
-                </div>
-              )}
-              <div className="header-profile-text" style={{ minWidth: 0, textAlign: 'left' }}>
-                <div style={{ fontSize: 12.5, fontWeight: 500 }}>
-                  {riotId.name}#{riotId.tag}
-                </div>
-                <div style={{ fontSize: 10.5, color: 'var(--text-dim)' }}>{user.nome}</div>
-              </div>
-              <span className="header-profile-text" style={{ color: 'var(--text-faint)' }}>
-                ›
-              </span>
-            </button>
-          </div>
-        </header>
-
+      <main className="app-main" style={{ minWidth: 0, display: 'flex', flexDirection: 'column', overflowY: 'auto', overflowX: 'hidden' }}>
         <CardStyleProvider glass={theme.glassCards}>
           <Outlet context={appData satisfies OutletContext} />
         </CardStyleProvider>
+        <Footer />
       </main>
+
+      {/* Barra de navegação de mobile (<900px) -- só existe no CSS pra essa
+          faixa de tela, mesmos navItems do header de desktop. */}
+      <nav className="app-bottom-nav">
+        {navItems.map((item) => {
+          const active = item.match(location.pathname);
+          const Icon = item.icon;
+          return (
+            <NavLink key={item.label} to={item.to} className="nav-item" style={{ color: active ? 'var(--text)' : 'var(--text-muted)', fontWeight: active ? 600 : 400 }}>
+              <Icon size={18} strokeWidth={active ? 2.25 : 1.75} color={active ? 'var(--acc, #EF4958)' : 'var(--text-faint)'} />
+              {item.label}
+            </NavLink>
+          );
+        })}
+      </nav>
     </div>
   );
 }

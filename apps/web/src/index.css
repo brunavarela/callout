@@ -557,30 +557,18 @@ button {
 }
 
 /* KPIs da Visão do ato — tira densa (não "cards" separados, um retângulo
-   só). Linha de destaque (ADR/K:D/Headshot%/Win%/KDA/V-D) espalhada pela
-   largura inteira do card (space-between) — cada item só ocupa a largura
-   do próprio conteúdo, mas a distância entre eles cresce/encolhe com o
-   card em vez de ficar tudo colado à esquerda com um vazio à direita.
-   `gap` é só o mínimo, pra não colar quando quebra linha em telas estreitas. */
+   só). Uma fileira só com todos os 13 stats (unificado em 21/09/2026 --
+   antes tinha uma 2ª fileira "mini", menor e sem barra, pros totais tipo
+   Abates/Mortes) espalhada pela largura inteira do card (space-between) --
+   cada item só ocupa a largura do próprio conteúdo, mas a distância entre
+   eles cresce/encolhe com o card em vez de ficar tudo colado à esquerda com
+   um vazio à direita. `gap` é só o mínimo, pra não colar quando quebra
+   linha em telas estreitas. */
 .kpi-hero-row {
   display: flex;
   flex-wrap: wrap;
   justify-content: space-between;
   gap: 16px 28px;
-}
-
-.kpi-mini-row {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(84px, 1fr));
-  gap: 12px;
-  padding-top: 12px;
-  border-top: 1px solid var(--divider);
-}
-@media (max-width: 640px) {
-  .kpi-mini-row {
-    grid-template-columns: repeat(3, 1fr);
-    row-gap: 14px;
-  }
 }
 
 /* Botão "?" ao lado do título de cada stat — passa o mouse (ou foca via
@@ -874,9 +862,14 @@ button {
 /* Shell do app: sidebar fixa de 232px (recolhível pra 72px) vira barra de
    navegação inferior no mobile. --sidebar-w controlado via inline style
    pelo AppShell, grid-template-columns anima liso entre os dois estados. */
-.app-shell-grid {
-  display: grid;
-  grid-template-columns: var(--sidebar-w, 232px) 1fr;
+/* Layout achatado desde 21/09/2026 -- a sidebar vertical saiu de vez, virou
+   header horizontal (.app-topbar) + conteúdo (.app-main, com o rodapé
+   dentro, rolando junto) + barra de navegação fixa embaixo só em mobile
+   (.app-bottom-nav). Antes disso era um grid de 2 colunas (sidebar + main)
+   com --sidebar-w controlando recolher/expandir -- não existe mais. */
+.app-shell-flat {
+  display: flex;
+  flex-direction: column;
   height: 100vh;
   overflow: hidden;
   position: relative;
@@ -884,184 +877,136 @@ button {
      em lib/theme.tsx), que fica atrás de toda tela quando a pessoa escolhe
      um. */
   z-index: 1;
-  transition: grid-template-columns 0.24s ease;
 }
 @media (max-width: 900px) {
-  .app-shell-grid {
-    grid-template-columns: 1fr;
+  .app-shell-flat {
     height: 100dvh;
   }
 }
 
-.app-sidebar {
+/* Header de topo, 3 blocos (pedido de 21/09/2026): esquerda (logo + busca de
+   jogador + nome da equipe, .app-topbar-left), centro (nav, .app-topbar-nav,
+   centralizada de verdade no eixo X do header via position:absolute) e
+   direita (level/elo + conta, .app-topbar-actions, empurrada pro fim via
+   margin-left:auto). */
+.app-topbar {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  /* 46px = os 26px de padding de toda página (`padding: 26` em cada
+     pages/*.tsx) + os 20px de padding horizontal do PageHeaderCard
+     (`padding: '14px 20px'`) -- sem somar os dois, o conteúdo dos cards
+     (título, filtros, ações) começava mais pra dentro que o header,
+     desalinhado (achado em 21/09/2026). Esquerdo ficou menor (36px) --
+     mesmo com a conta batendo, a logo ainda parecia mais recuada que o
+     card por baixo (ajuste fino visual, pedido em seguida). */
+  padding: 14px 46px 14px 36px;
   background: var(--surface);
-  display: flex;
-  flex-direction: column;
+  /* Sem border-bottom -- teste de 21/09/2026 "colando" o header no
+     headerpage da página (ver .app-main > div:first-child logo abaixo).
+     Reverter: `border-bottom: 1px solid var(--surface-border);`. */
+  flex: none;
+  /* Garante que o header inteiro (e o dropdown de conta, absoluto dentro
+     dele) empilha acima do conteúdo da página, que é irmão dele no DOM
+     (.app-main) -- sem position+z-index aqui, os dois eram elementos
+     "normais" (position:static) e a ordem entre eles dependia de detalhes
+     de stacking context em vez de ficar garantida (achado em 21/09/2026,
+     o menu de conta aparecia com conteúdo da página vazando por cima). */
   position: relative;
-  height: 100%;
-  /* Sem overflow:hidden aqui de propósito — o brilho decorativo do topo
-     tem seu próprio wrapper clipado (ver AppShell.tsx), pra deixar a
-     tooltip dos ícones (sidebar recolhida) escapar sem ser cortada. */
-  border-right: 1px solid var(--surface-border);
+  z-index: 2;
 }
-.app-sidebar-header,
-.app-sidebar-promo {
-  display: block;
-}
-.app-sidebar-nav {
+.app-topbar-left {
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  flex: none;
+}
+/* Centralizada no eixo X do header inteiro, não só do espaço sobrando entre
+   .app-topbar-left/.app-topbar-actions -- por isso sai do fluxo (absolute +
+   translateX(-50%) em vez de só "ficar no meio" via flex). Pedido de
+   21/09/2026: busca e nome de equipe saíram do lado direito e foram pro
+   esquerdo, perto da logo, exatamente pra abrir espaço pra isso. */
+.app-topbar-nav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+}
+.app-topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  margin-left: auto;
+  min-width: 0;
 }
 .nav-item {
   position: relative;
   transition: background 0.15s ease, gap 0.2s ease, padding 0.2s ease;
 }
-
-/* Legenda flutuante do ícone com a sidebar recolhida — só existe no DOM
-   quando `collapsed` (AppShell.tsx), então isso é só o estilo/hover. */
-.nav-item-tooltip {
-  position: absolute;
-  left: calc(100% + 10px);
-  top: 50%;
-  transform: translateY(-50%) translateX(-4px);
-  background: var(--surface);
-  border: 1px solid var(--surface-border);
-  color: var(--text);
-  font-size: 12px;
-  font-weight: 500;
-  padding: 6px 10px;
-  border-radius: var(--radius-md);
-  white-space: nowrap;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.15s ease, transform 0.15s ease;
-  z-index: 50;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
-}
-.nav-item:hover .nav-item-tooltip {
-  opacity: 1;
-  transform: translateY(-50%) translateX(0);
-}
-
-/* Conteúdo que só faz sentido com a sidebar aberta (nome do time, rótulos
-   dos itens, card de promo) some com um fade/collapse suave em vez de
-   sumir de repente — grid-template-rows/columns 0fr anima altura/largura
-   "auto" sem precisar medir nada em JS. */
-.sidebar-fade {
-  display: grid;
-  transition: grid-template-rows 0.22s ease, grid-template-columns 0.22s ease, opacity 0.16s ease;
-  opacity: 1;
-}
-.sidebar-fade > * {
-  overflow: hidden;
-  min-height: 0;
-  min-width: 0;
-}
-.sidebar-fade--row {
-  grid-template-rows: 1fr;
-}
-.sidebar-fade--col {
-  grid-template-columns: 1fr;
-}
-.app-sidebar-collapsed .sidebar-fade--row {
-  grid-template-rows: 0fr;
-  opacity: 0;
-}
-.app-sidebar-collapsed .sidebar-fade--col {
-  grid-template-columns: 0fr;
-  opacity: 0;
-}
-
-.sidebar-brand-mark {
-  position: absolute;
-  top: 24px;
-  left: 50%;
-  transform: translateX(-50%);
-  color: var(--text);
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.16s ease;
-}
-.app-sidebar-collapsed .sidebar-brand-mark {
-  opacity: 1;
-  transition-delay: 0.1s;
-}
-
-/* Setinha flutuante ancorada exatamente na borda direita da sidebar —
-   posicionada em relação ao grid (não à aside, que tem overflow:hidden),
-   meio do eixo Y, ponta direita da sidebar no eixo X. `left` acompanha
-   --sidebar-w com a mesma transição do grid, então desliza junto. */
-.sidebar-edge-toggle {
-  position: absolute;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  background: var(--surface);
-  border: 1px solid var(--surface-border);
-  color: var(--text-faint);
-  cursor: pointer;
-  z-index: 30;
-  transition: left 0.24s ease, background 0.15s ease, color 0.15s ease;
-}
-.sidebar-edge-toggle:hover {
-  background: var(--card-hover-bg, rgba(255, 255, 255, 0.045));
-  color: var(--text-muted);
-}
 @media (max-width: 900px) {
-  .sidebar-edge-toggle,
-  .nav-item-tooltip {
+  .app-topbar-nav {
     display: none;
   }
+  .app-topbar {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .app-topbar-actions {
+    flex: 1;
+  }
+}
+
+/* Barra de navegação fixa no rodapé, só em mobile -- substitui a sidebar
+   virada bottom-nav de antes. Mesmos navItems do header de desktop. */
+.app-bottom-nav {
+  display: none;
 }
 @media (max-width: 900px) {
-  .app-sidebar {
+  .app-bottom-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
     position: fixed;
     inset: auto 0 0 0;
     height: 64px;
-    flex-direction: row;
-    align-items: center;
-    border-right: none;
+    padding: 6px;
+    background: var(--surface);
     border-top: 1px solid var(--surface-border);
     z-index: 40;
   }
-  .app-sidebar-header,
-  .app-sidebar-promo {
-    display: none;
-  }
-  .app-sidebar-nav {
-    flex-direction: row;
-    flex: 1;
-    align-self: stretch;
-    align-items: center;
-    justify-content: space-around;
-    padding: 6px !important;
-    gap: 0 !important;
-  }
-  .app-sidebar-nav .nav-item {
+  .app-bottom-nav .nav-item {
+    display: flex;
     flex-direction: column;
-    gap: 3px !important;
-    padding: 6px 4px !important;
-    font-size: 9.5px !important;
+    align-items: center;
+    gap: 3px;
+    padding: 6px 4px;
+    font-size: 9.5px;
     text-align: center;
     white-space: nowrap;
-  }
-  /* Barra inferior no mobile ignora o estado de recolher/expandir da
-     sidebar de desktop — sempre mostra ícone + rótulo normalmente. */
-  .app-sidebar-collapsed .sidebar-fade--row,
-  .app-sidebar-collapsed .sidebar-fade--col {
-    grid-template-rows: 1fr;
-    grid-template-columns: 1fr;
-    opacity: 1;
+    border-radius: var(--radius-md);
   }
 }
 
 .app-main {
   min-width: 0;
+  flex: 1;
+  min-height: 0;
+}
+/* Teste (21/09/2026): "cola" o headerpage (PageHeaderCard) no header
+   principal -- tira o respiro de cima da página e o arredondado de cima do
+   card, pra virar uma superfície só, sem emenda visível. Cada página tem um
+   único div raiz com `padding: 26` (padrão em todo pages/*.tsx) cujo 1º
+   filho é sempre o PageHeaderCard -- por isso os seletores por posição
+   dão conta sem precisar editar cada página. Reverter: tirar essas duas
+   regras e o border-bottom de .app-topbar volta (ver comentário lá). */
+.app-main > div:first-child {
+  padding-top: 0 !important;
+}
+.app-main > div:first-child > :first-child {
+  border-top-left-radius: 0 !important;
+  border-top-right-radius: 0 !important;
 }
 @media (max-width: 900px) {
   .app-main {
@@ -1070,27 +1015,32 @@ button {
 }
 
 /* Botão de perfil no header (avatar + nick + seta), abre o painel de
-   tema/logout. Em desktop o painel cai como dropdown ancorado no botão;
-   no mobile ele flutua fixo acima da barra de navegação inferior, já que
-   o botão de perfil pode ficar estreito demais pra ancorar um dropdown. */
+   tema/logout. Renderiza por portal direto no <body> (ver createPortal em
+   AppShell.tsx) -- position:fixed porque não tem mais um ancestral
+   posicionado por perto pra ancorar um position:absolute; top/right exatos
+   vêm de inline style, calculados a partir do retângulo do botão
+   (panelPos). Em mobile ele flutua fixo acima da barra de navegação
+   inferior em vez de seguir o botão, já que o botão de perfil pode ficar
+   estreito demais pra ancorar um dropdown ali perto. */
 .header-profile-trigger:hover {
   border-color: var(--acc, #ef4958);
 }
 .header-profile-panel {
-  position: absolute;
-  top: calc(100% + 8px);
-  right: 0;
+  position: fixed;
   width: 300px;
-  z-index: 50;
+  z-index: 1000;
 }
 @media (max-width: 900px) {
+  /* !important pra vencer o top/right inline (panelPos, calculado a partir
+     do botão) -- no mobile a posição é sempre fixa perto do rodapé,
+     ignorando de propósito onde o botão realmente está. */
   .header-profile-panel {
     position: fixed;
-    top: auto;
-    left: 12px;
-    right: 12px;
-    bottom: 76px;
-    width: auto;
+    top: auto !important;
+    left: 12px !important;
+    right: 12px !important;
+    bottom: 76px !important;
+    width: auto !important;
   }
 }
 @media (max-width: 420px) {
@@ -1099,27 +1049,6 @@ button {
   }
   .header-profile-trigger {
     padding: 6px !important;
-  }
-}
-
-/* Cabeçalho do main: elo/level à esquerda, busca, conta à direita. Grid de
-   3 colunas (1fr / até 520px / 1fr) em vez de flex -- com flex, a busca
-   ficava colada logo depois do elo/level (que tem largura variável),
-   puxada pra esquerda; com as duas colunas externas em 1fr (largura igual
-   entre si, venha o que vier de conteúdo), a coluna do meio fica realmente
-   centralizada no cabeçalho. Em telas estreitas, empilha (mesmo
-   comportamento de antes). */
-.app-header {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 520px) minmax(0, 1fr);
-  align-items: center;
-  gap: 16px;
-}
-@media (max-width: 640px) {
-  .app-header {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
   }
 }
 

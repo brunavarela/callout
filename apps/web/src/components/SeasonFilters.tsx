@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Search, X } from 'lucide-react';
 import type { EquipeOverview, MatchCountFilter } from '@callout/shared';
 import { Select } from './Select';
+import { PlayerSearchModal } from './PlayerSearchModal';
 import { formatSeasonShort } from '../lib/seasonFormat';
 
 // Só a largura -- o resto (sem caixa, sublinha no hover) vem da classe
@@ -57,50 +58,46 @@ export function RiotIdSearchFilter({
   onSearch: (riotId: string) => void;
   onClear: () => void;
 }) {
-  const [value, setValue] = useState('');
+  const [modalOpen, setModalOpen] = useState(false);
 
+  // Estilo de botão de verdade (borda/fundo), não o link discreto dos
+  // outros filtros ao lado -- fica junto de ações como "Abrir estratégia"
+  // no headerpage (pedido de 21/09/2026), não é um seletor de valor.
   if (activeLabel) {
     return (
       <button
-        className="filter-select"
-        style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: 'var(--acc, #ef4958)', padding: '4px 0' }}
+        className="btn-secondary"
+        style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 14px', fontSize: 12.5, color: 'var(--acc, #ef4958)', borderColor: 'var(--acc, #ef4958)' }}
         onClick={onClear}
         title="Voltar pro seu próprio painel"
       >
-        <X size={13} strokeWidth={2} />
+        <X size={14} strokeWidth={2} />
         {activeLabel}
       </button>
     );
   }
 
   return (
-    <form
-      onSubmit={(e) => {
-        e.preventDefault();
-        const trimmed = value.trim();
-        if (trimmed) onSearch(trimmed);
-      }}
-      style={{ display: 'flex', alignItems: 'center', gap: 6 }}
-      title="Pesquisar o painel de qualquer jogador pelo RiotID"
-    >
-      <Search size={13} strokeWidth={2} color="var(--text-faint)" />
-      <input
-        value={value}
-        onChange={(e) => setValue(e.target.value)}
-        placeholder="Pesquisar RiotID (nome#tag)"
-        disabled={searchLoading}
-        style={{
-          background: 'none',
-          border: 'none',
-          outline: 'none',
-          fontSize: 13,
-          fontWeight: 600,
-          color: 'var(--text-2)',
-          width: 180,
-        }}
-      />
-      {searchError && <span style={{ fontSize: 11.5, color: 'var(--danger, #ef4958)' }}>{searchError}</span>}
-    </form>
+    <>
+      <button
+        type="button"
+        className="btn-secondary"
+        style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 14px', fontSize: 12.5 }}
+        onClick={() => setModalOpen(true)}
+        title="Pesquisar o painel de qualquer jogador pelo RiotID"
+      >
+        <Search size={14} strokeWidth={2} />
+        Encontre jogadores
+      </button>
+      {modalOpen && (
+        // Sem fechar manualmente no sucesso -- quando a busca acha o
+        // jogador, activeLabel deixa de ser null (ver Dashboard.tsx/
+        // Matches.tsx) e esse componente inteiro troca pro branch de cima
+        // (botão "X nome"), desmontando esse modal sozinho. Erro mantém o
+        // modal aberto mostrando searchError, pra poder tentar de novo.
+        <PlayerSearchModal onClose={() => setModalOpen(false)} onSearch={onSearch} loading={searchLoading} error={searchError} />
+      )}
+    </>
   );
 }
 
