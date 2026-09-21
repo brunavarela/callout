@@ -191,7 +191,6 @@ function RankLevelChip({ appData }: { appData: AppData }) {
 
 export function AppShell() {
   const location = useLocation();
-  const navigate = useNavigate();
   const { user, loading } = useSession();
   const { theme } = useTheme();
   const appData = useAppData(user);
