@@ -9,7 +9,7 @@ import { Footer } from './Footer';
 // próprio fluxo de cadastro (a pessoa aceita esses Termos pra criar conta) e
 // travava a submissão ao Riot Developer Portal. Revisão formal por advogado
 // continua pendente antes da Fase D (cobrança) -- ver LAUNCH.md §3.4.
-export function LegalPageShell({ title, updatedAtLabel, children }: { title: string; updatedAtLabel: string; children: ReactNode }) {
+export function LegalPageShell({ title, updatedAtLabel, children }: { title: string; updatedAtLabel?: string; children: ReactNode }) {
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: 'var(--bg)', color: 'var(--text)' }}>
       <div style={{ flex: 1, padding: '32px 26px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
@@ -18,10 +18,10 @@ export function LegalPageShell({ title, updatedAtLabel, children }: { title: str
             <Logo height={24} />
           </Link>
 
-          <h1 style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 700, fontSize: 30, letterSpacing: '-.02em', margin: '0 0 6px' }}>
+          <h1 style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 700, fontSize: 30, letterSpacing: '-.02em', margin: updatedAtLabel ? '0 0 6px' : '0 0 28px' }}>
             {title}
           </h1>
-          <div style={{ fontSize: 12.5, color: 'var(--text-dim)', marginBottom: 28 }}>Última atualização: {updatedAtLabel}</div>
+          {updatedAtLabel && <div style={{ fontSize: 12.5, color: 'var(--text-dim)', marginBottom: 28 }}>Última atualização: {updatedAtLabel}</div>}
 
           <div style={{ fontSize: 14, lineHeight: 1.7, color: 'var(--text-2)', display: 'flex', flexDirection: 'column', gap: 22 }}>
             {children}

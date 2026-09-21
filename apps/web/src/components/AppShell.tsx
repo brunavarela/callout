@@ -354,6 +354,14 @@ export function AppShell() {
             </div>
           )}
           <div className="app-sidebar-promo sidebar-fade sidebar-fade--row">
+            <div style={{ padding: '14px 18px 0', display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <Link to="/sobre" style={{ fontSize: 13, color: 'var(--text-muted)' }}>
+                Sobre
+              </Link>
+              <Link to="/ajuda" style={{ fontSize: 13, color: 'var(--text-muted)' }}>
+                Precisa de ajuda?
+              </Link>
+            </div>
             <div style={{ padding: '14px 18px', display: 'flex', flexDirection: 'column', gap: 8 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 7, color: 'var(--text-faint)' }}>
                 <LogoMark size={13} weight={0} />

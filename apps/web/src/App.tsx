@@ -19,6 +19,8 @@ import { Competitions } from './pages/Competitions';
 import { CompetitionDetail } from './pages/CompetitionDetail';
 import { Termos } from './pages/Termos';
 import { Privacidade } from './pages/Privacidade';
+import { Sobre } from './pages/Sobre';
+import { Ajuda } from './pages/Ajuda';
 
 function App() {
   return (
@@ -32,6 +34,8 @@ function App() {
       <Route path="/login/equipe" element={<LoginEquipe />} />
       <Route path="/termos" element={<Termos />} />
       <Route path="/privacidade" element={<Privacidade />} />
+      <Route path="/sobre" element={<Sobre />} />
+      <Route path="/ajuda" element={<Ajuda />} />
 
       <Route element={<AppShell />}>
         <Route path="/" element={<Dashboard />} />
