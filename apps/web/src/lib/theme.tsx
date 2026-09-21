@@ -7,7 +7,7 @@ import { apiFetch } from './api';
 // Rotas públicas (fora do AppShell, ver App.tsx) -- o fundo de mapa é só
 // pro site logado, nunca aqui, mesmo que a pessoa já tenha sessão válida
 // (ex.: voltou pro /login com o cookie ainda ativo).
-const ROTAS_SEM_FUNDO_DE_MAPA = ['/login', '/cadastro', '/esqueci-senha', '/termos', '/privacidade'];
+const ROTAS_SEM_FUNDO_DE_MAPA = ['/login', '/cadastro', '/esqueci-senha', '/termos', '/privacidade', '/sobre', '/ajuda'];
 
 export { THEME_MODES, THEME_PALETTE };
 

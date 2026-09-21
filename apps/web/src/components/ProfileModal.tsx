@@ -32,7 +32,7 @@ function FieldSection({ label, status, children, last }: { label: string; status
   return (
     <div style={{ paddingBottom: last ? 0 : 22, marginBottom: last ? 0 : 22, borderBottom: last ? 'none' : '1px solid var(--surface-border)' }}>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 10, flexWrap: 'wrap' }}>
-        <span style={{ fontWeight: 600, fontSize: 13.5 }}>{label}</span>
+        <span style={{ fontWeight: 600, fontSize: 12 }}>{label}</span>
         {status && <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{status}</span>}
       </div>
       {children}
@@ -439,14 +439,8 @@ function SenhaSection() {
   return (
     <FieldSection label="Senha" last>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-        <div style={{ display: 'flex', gap: 10 }}>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <PasswordField value={senhaAtual} onChange={setSenhaAtual} placeholder="Senha atual" disabled={saving} autoComplete="current-password" />
-          </div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <PasswordField value={novaSenha} onChange={setNovaSenha} placeholder="Senha nova" disabled={saving} autoComplete="new-password" />
-          </div>
-        </div>
+        <PasswordField value={senhaAtual} onChange={setSenhaAtual} placeholder="Senha atual" disabled={saving} autoComplete="current-password" />
+        <PasswordField value={novaSenha} onChange={setNovaSenha} placeholder="Senha nova" disabled={saving} autoComplete="new-password" />
         {novaSenha.length > 0 && <PasswordRequirements senha={novaSenha} />}
         <PasswordField value={confirmarNovaSenha} onChange={setConfirmarNovaSenha} placeholder="Confirmar senha nova" disabled={saving} autoComplete="new-password" />
         <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
