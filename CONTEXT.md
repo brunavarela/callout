@@ -81,20 +81,28 @@ Por ora: **Neon + Prisma + auth próprio via Discord**.
 
 ## 5. Dados: a parte crítica
 
-### 5.1 A API oficial da Riot está fora
+### 5.1 A API oficial da Riot — pedido de produção em análise (22/09/2026)
 
 Os endpoints existem (`VAL-MATCH-V1`, `VAL-RANKED-V1`, `VAL-CONTENT-V1`,
-`VAL-STATUS-V1`) mas o acesso não. Fatos verificados na documentação oficial:
+`VAL-STATUS-V1`), o acesso ainda não — mas o processo pra ter chave de
+produção já foi aberto. Fatos verificados na documentação oficial:
 
 - Personal keys **não são suportadas** para VALORANT. Só chave de produção.
 - Chave de produção exige mostrar fluxo de usuário, site/protótipo funcional e
   integração com RSO (Riot Sign On) para opt-in do jogador.
 - A lista oficial de casos de uso **não aprovados** inclui, textualmente, "apps que
-  não são públicos e são feitos apenas para uso pessoal".
+  não são públicos e são feitos apenas para uso pessoal" — deixou de ser o
+  caso do callout desde que virou produto público (ver LAUNCH.md).
 
-Ou seja: um site fechado para 10 amigos é exatamente o perfil recusado. **Não
-gaste tempo tentando esse caminho.** Se o projeto um dia virar público, aí sim
-vale reabrir a discussão.
+Esse caminho, que antes estava descartado por o callout ser "um site fechado
+pra 10 amigos" (perfil explicitamente recusado pela Riot), foi reaberto
+quando o produto virou público. **Status atual: pedido de chave de produção
+submetido ao Riot Developer Portal, App ID 883626, "Pending Review".**
+Detalhe completo (pergunta sobre monetização feita na aplicação, prazo de
+30 dias pra implementar RSO depois da aprovação) em LAUNCH.md §3.1/§5.1 —
+ler lá antes de mexer em qualquer coisa relacionada a auth ou fonte de dado
+de partida. Até a aprovação sair, a fonte de dado continua sendo a
+HenrikDev (não-oficial, §5.2).
 
 ### 5.2 Fonte de dados de partida: HenrikDev API (não-oficial)
 
@@ -164,23 +172,34 @@ roubo de conta, quebra o ToS da Riot e mata o projeto. Se em algum momento uma
 tarefa parecer pedir isso, pare e levante a questão.
 
 O RSO (OAuth2 oficial da Riot) é o caminho certo assim que existir chave de
-produção — ver LAUNCH.md §5.1 pro spec completo (bloqueado até a Riot
-aprovar o produto).
+produção — pedido de chave já **submetido e em análise** (App ID 883626,
+22/09/2026), ver LAUNCH.md §3.1/§5.1 pro spec completo e o prazo de 30 dias
+pra implementar RSO que corre a partir da aprovação.
 
-Fluxo adotado:
+**Discord OAuth2 saiu do login por completo em 03/09/2026** — a linha
+abaixo (Discord → equipe → RiotID) descrevia o fluxo antigo do grupo
+fechado e não existe mais no código. Fluxo atual:
 
-1. Login via **Discord OAuth2**, aberto — desde 01/09/2026 não exige mais
-   pertencer a um servidor específico (`scope=identify`, sem `guilds`). O
-   controle de acesso é por **equipe**: criar uma nova ou entrar numa
-   existente via código de convite (`Equipe.codigoConvite`, só admin vê).
-2. Depois do Discord, o usuário cria/entra numa equipe (`/login/equipe`).
-3. Então informa o Riot ID no formato `nome#tag`; backend valida chamando a
-   HenrikDev, guarda o `puuid` e usa ele daí em diante.
+1. **Cadastro próprio** (`POST /auth/cadastro`): nome, data de nascimento,
+   email, senha, e o Riot ID (`nome#tag`) já nessa etapa — backend resolve
+   o `puuid` chamando a HenrikDev. A prova de posse do RiotID (trocar a tag
+   da conta temporariamente) **saiu do funil em 18/09/2026** — sem acesso à
+   API oficial da Riot pra validar de verdade, o atrito extra não
+   compensava. Verificação de **email** (código por email, via Resend)
+   continua obrigatória.
+2. Login por email+senha ou RiotID+senha depois disso.
+3. Criar/entrar numa equipe é **opcional** — só faz parte do funil
+   obrigatório de quem marcou o intuito "administrar equipe" no cadastro
+   (ver `apps/api/src/lib/onboarding.ts`). Quem não marcou usa o dashboard
+   individual livremente e cria/entra numa equipe depois, quando quiser.
 
-A modelagem é `usuário → puuid`. Se um dia migrarmos pra RSO, só a etapa 3
-muda. Visibilidade de dado nunca dependeu do Discord — `resolveDashboardTarget`
-(`apps/api/src/lib/equipe.ts`) só deixa ver o painel de outro usuário se ele
-for membro da MESMA equipe, isso vale igual antes e depois dessa mudança.
+A modelagem é `usuário → puuid`. Se um dia migrarmos pra RSO, a etapa 1
+muda (a Riot devolve a identidade já verificada, dispensa o Riot ID digitado
+à mão). Visibilidade de dado nunca dependeu do provedor de login —
+`resolveDashboardTarget`/`resolveViewTarget` (`apps/api/src/lib/equipe.ts`)
+só deixa ver o painel de outro usuário se ele for membro da MESMA equipe,
+ou via busca livre de RiotID no painel individual (qualquer jogador, desde
+21/09/2026 — ver PROGRESS.md).
 
 ---
 

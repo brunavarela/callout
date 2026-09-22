@@ -10,6 +10,11 @@
 > Ponto de partida informado, não uma sentença — se algo aqui não fizer mais
 > sentido durante o trabalho, ajuste e siga.
 
+> **Atualização 22/09/2026:** o pedido de chave de produção VALORANT foi
+> **submetido ao Riot Developer Portal e está em análise** (status "Pending
+> Review"). Ver §3.1 pro detalhe completo (App ID, o que foi perguntado, o
+> prazo que corre a partir da aprovação).
+
 ---
 
 ## 1. A visão
@@ -91,11 +96,40 @@ suposição. Achados:
   Fontes: [Riot Games Developer Policies (geral)](https://developer.riotgames.com/policies/general),
   [VALORANT — Riot Developer Portal](https://developer.riotgames.com/docs/valorant).
 
-- [ ] **Ação decorrente**: registrar o callout no Riot Developer Portal e
-      abrir o processo de chave de produção + RSO assim que a Fase A
-      (arquitetura pública) estiver perto do fim — não precisa esperar o
-      produto estar 100% pronto, o processo de aprovação da Riot pode
-      demorar e pode rodar em paralelo.
+- ✅ **Feito (22/09/2026): registrado no Riot Developer Portal, pedido de
+  chave de produção submetido.**
+  - **App ID: 883626** · Status no envio: **Pending Review**.
+  - Product URL: `https://callout.app.br` (verificação de domínio feita via
+    `apps/web/public/riot.txt`, servindo o código que a Riot pediu).
+  - Product Game Focus: VALORANT. "Are you organizing tournaments?": **No**
+    (uma futura aba de divulgação de torneio amador organizado por fora não
+    usa a Tournaments API da Riot — só contaria "Yes" se o callout um dia
+    gerenciasse lobby/chaveamento pela API deles de verdade).
+  - **Pergunta em aberto, feita direto na Product Description da
+    aplicação** (o formulário não tinha campo separado de "App Note"):
+    pedimos confirmação explícita se o modelo de monetização do PRO (§4)
+    é compatível. Motivo: a página de "General Policies" do portal (com
+    cara de política legada de League of Legends) proíbe, sem ressalva,
+    "charge money for your app or provide exclusive access... to specific
+    users" — o que bate de frente com o paywall do PRO. A política
+    específica de VALORANT (achados abaixo) permite assinatura com camada
+    grátis + conteúdo "transformative", mas **não dá pra tratar isso como
+    resolvido até a Riot responder**. Se a resposta for negativa, o modelo
+    de monetização do §4 precisa ser revisto antes de implementar o
+    paywall técnico (§5 item 5).
+  - **Prazo crítico que só começa a contar depois da aprovação**: a
+    aplicação exige confirmar que "you may not collect player info or
+    show match history/player stats without implementing OAuth with RSO"
+    — e a doc de onboarding da Riot é explícita: **falha em implementar
+    RSO em até 30 dias após a aprovação da chave de produção derruba a
+    chave**. Isso muda a urgência do §5.1: assim que vier a aprovação, RSO
+    vira prioridade máxima e sem folga, não dá pra enrolar mesmo que o
+    resto do produto ainda tenha coisa pra terminar.
+  - Acompanhar resposta pela aba "Messages" do App ID 883626 no portal.
+  - Fonte adicional consultada nesta rodada: a própria página "Getting
+    Started" do Developer Portal (texto completo do processo de
+    registro/aprovação de produto e diferença entre chave pessoal/
+    produção), além das já listadas abaixo.
 
 ### 3.2 HenrikDev (API não-oficial) — **não achei um ToS formal claro**
 
@@ -217,9 +251,11 @@ Ordem sugerida — cada item destrava o próximo:
    da mesma equipe, isso não mudou. Código de convite passou a só ir pro
    admin (`GET /equipe` zera o campo pra quem não é — proteção no backend,
    não só a UI escondendo), com botão de olhinho pra mostrar/esconder.
-3. **Migração de fonte de dado** (ver §3.1): abrir processo de chave de
-   produção Riot + RSO em paralelo ao resto; manter HenrikDev como fallback
-   até a chave oficial sair, com fila/backoff e mensagem clara de
+3. 🔶 **Migração de fonte de dado — em andamento** (ver §3.1): processo de
+   chave de produção Riot **submetido em 22/09/2026 (App ID 883626,
+   Pending Review)**; RSO só pode ser pedido depois da chave aprovada.
+   HenrikDev continua sendo a fonte de dado real até a chave oficial
+   sair — manter como fallback, com fila/backoff e mensagem clara de
    "sincronização atrasada" em vez de tela quebrada.
 4. ✅ **Observabilidade mínima** (feito 2026-09-01) — `@sentry/node` no
    backend (`Sentry.setupFastifyErrorHandler`) e `@sentry/react` no front
@@ -264,6 +300,12 @@ que a política exige (§3.1) na mesma tela, sem precisar do passo manual de
   pra construir nem testar o fluxo de verdade antes disso — não é falta de
   tempo, é falta de credencial. Por isso "deixar pronto" aqui significa
   **especificação completa**, não código funcionando.
+- **Status (22/09/2026)**: pedido de chave de produção submetido (App ID
+  883626, Pending Review — ver §3.1). RSO ainda não pode ser solicitado
+  (só depois da chave aprovada). **Assim que a aprovação vier, o prazo pra
+  ter RSO implementado de verdade é de 30 dias corridos** — a especificação
+  abaixo precisa estar pronta pra virar código rápido, sem retrabalho de
+  desenho nessa hora.
 - **Fluxo previsto** (adaptável quando a credencial sair; o Discord OAuth
   que servia de referência aqui foi removido em 03/09/2026 junto com a
   opção (a) — ver `apps/api/src/routes/auth.ts` pro padrão de cookie/estado
@@ -321,8 +363,9 @@ Fontes: mesmas de §3.1 ([Riot Games Developer Policies](https://developer.riotg
   (`MAX_EQUIPE_MATCHES` em `packages/shared/src/domain.ts`,
   `MAX_SIDES_MATCHES` em `apps/api/src/lib/insights.ts`) — ver o comentário
   em `MAX_EQUIPE_MATCHES` pra conta de memória por requisição.
-- Domínio: comprar (checar disponibilidade + ausência de conflito de marca
-  no INPI antes de registrar) e apontar DNS.
+- ✅ **Feito:** Domínio `callout.app.br` comprado e ativo em produção
+  (Vercel pro front + Railway pra API, DNS apontado). Ver memória do
+  projeto (`project_dominio_callout_app_br`).
 - Trabalho desta frente inteiro na branch `dev` até validado.
 
 ---
@@ -362,9 +405,8 @@ Fontes: mesmas de §3.1 ([Riot Games Developer Policies](https://developer.riotg
 
 ## 11. Perguntas em aberto — em ordem do que precisa ser resolvido primeiro
 
-1. **Nome/domínio candidato?** Bloqueia: checagem de marca no INPI, compra
-   de domínio, identidade visual, registro no Riot Developer Portal (o
-   produto precisa de nome pra ser cadastrado lá).
+1. ~~Nome/domínio candidato?~~ **Resolvido**: `callout` / `callout.app.br`,
+   comprado, ativo, e já usado no registro do Riot Developer Portal (§3.1).
 2. **Já existe CNPJ/MEI utilizável, ou abre um novo?** Não bloqueia o
    desenvolvimento (Fase A/B/C), mas precisa estar resolvido **antes** da
    Fase D — vale já direcionar com um contador em paralelo, sem pressa.
@@ -425,11 +467,17 @@ público e não assume compromisso com terceiros:
       aparece no fim de toda página, logada ou não. Ainda falta a revisão
       jurídica formal de verdade antes de tirar o aviso.
 - [ ] Planejar canais de divulgação (§8) — sem contatar ninguém ainda.
+- ✅ **Feito (21/09/2026):** Termos de Uso e Política de Privacidade
+      finalizados como páginas reais — o aviso de "rascunho, sem revisão
+      jurídica formal" saiu do topo (ver `LegalPageShell.tsx`). Revisão
+      formal por advogado (§3.4) continua pendente, mas o texto deixou de
+      contradizer o próprio fluxo de cadastro/submissão pra Riot.
 
-Fora dessa lista (tem custo e/ou implicação jurídica, mesmo que pequena):
-registrar no Riot Developer Portal (aceita um contrato de desenvolvedor,
-mesmo sendo grátis), comprar domínio, abrir MEI/CNPJ, publicar Termos/
-Privacidade de verdade, integrar gateway de pagamento.
+Itens que tinham custo/implicação jurídica e **já foram feitos**: comprar
+domínio (`callout.app.br`, ativo), registrar no Riot Developer Portal e
+submeter o pedido de chave de produção (§3.1, App ID 883626, em análise),
+publicar Termos/Privacidade de verdade. Ainda em aberto: abrir MEI/CNPJ,
+integrar gateway de pagamento.
 
 ---
 
@@ -437,5 +485,8 @@ Privacidade de verdade, integrar gateway de pagamento.
 
 - [Riot Games Developer Policies (geral)](https://developer.riotgames.com/policies/general)
 - [VALORANT — Riot Developer Portal](https://developer.riotgames.com/docs/valorant)
+- Riot Developer Portal — página "Getting Started" (processo de registro de
+  produto, diferença entre chave pessoal/produção, requisitos de aprovação)
+  e as telas do próprio formulário de "New Product Application" (22/09/2026)
 - [HenrikDev API docs](https://docs.henrikdev.xyz/valorant/general)
 - [Limite de faturamento MEI 2026 — Contabilizei](https://www.contabilizei.com.br/contabilidade-online/faturamento-mei-2026/)
