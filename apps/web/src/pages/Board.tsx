@@ -11,6 +11,7 @@ import { ConfirmModal } from '../components/ConfirmModal';
 import { LoadingFill } from '../components/Spinner';
 import { Select } from '../components/Select';
 import { useCardStyle } from '../components/statsPrimitives';
+import { PageHeaderCard, HeaderSubtitle, SegmentedTabs } from '../components/PageHeaderCard';
 
 const TOOLS = [
   { id: 'agente', icon: 'AG', title: 'Agente' },
@@ -409,25 +410,36 @@ export function Board() {
     }
   }
 
-  // Toggle Equipe/Individual -- só existe pra quem tem equipe (sem equipe,
-  // só a aba individual faz sentido, não precisa de seletor pra escolher
-  // entre uma opção só).
-  const scopeToggle = equipe && (
-    <div style={{ display: 'flex', gap: 6, marginBottom: 16 }}>
-      <button className={scope === 'equipe' ? 'btn-primary' : 'btn-secondary'} style={{ padding: '8px 16px', fontSize: 12.5 }} onClick={() => setScope('equipe')}>
-        Equipe
-      </button>
-      <button className={scope === 'individual' ? 'btn-primary' : 'btn-secondary'} style={{ padding: '8px 16px', fontSize: 12.5 }} onClick={() => setScope('individual')}>
-        Individual
-      </button>
-    </div>
+  // Header padrão (PageHeaderCard) -- toggle Equipe/Individual só existe
+  // pra quem tem equipe (sem equipe, só a aba individual faz sentido, não
+  // precisa de seletor pra escolher entre uma opção só). Mesmo formato do
+  // header de Spots.
+  const header = (
+    <PageHeaderCard
+      title="Estratégia"
+      subtitle={
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <HeaderSubtitle>{scope === 'equipe' ? 'Estratégias da equipe, visíveis pra todo o time' : 'Suas estratégias individuais'}</HeaderSubtitle>
+          {equipe && (
+            <SegmentedTabs
+              value={scope}
+              onChange={setScope}
+              options={[
+                { key: 'equipe', label: 'Equipe' },
+                { key: 'individual', label: 'Individual' },
+              ]}
+            />
+          )}
+        </div>
+      }
+    />
   );
 
   if (strategiesError && !strategies) {
     const semEquipe = strategiesError === 'Você ainda não tem uma equipe.';
     return (
-      <div style={{ padding: 26 }}>
-        {scopeToggle}
+      <div style={{ padding: 26, display: 'flex', flexDirection: 'column', gap: 16 }}>
+        {header}
         <div style={{ ...cardStyle, padding: 22, display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'flex-start' }}>
           <div style={{ fontSize: 14, color: 'var(--text-3)' }}>{strategiesError}</div>
           <button className="btn-secondary" onClick={semEquipe ? () => navigate('/equipe') : () => loadStrategies(scope)}>
@@ -440,7 +452,8 @@ export function Board() {
 
   if (!strategies) {
     return (
-      <div style={{ padding: 26, display: 'flex', flexDirection: 'column' }}>
+      <div style={{ padding: 26, display: 'flex', flexDirection: 'column', gap: 16 }}>
+        {header}
         <LoadingFill />
       </div>
     );
@@ -449,8 +462,8 @@ export function Board() {
   if (!strategy) {
     const podeCriar = scope === 'individual' || canManageEquipe;
     return (
-      <div style={{ padding: 26 }}>
-        {scopeToggle}
+      <div style={{ padding: 26, display: 'flex', flexDirection: 'column', gap: 16 }}>
+        {header}
         <div style={{ ...cardStyle, padding: 40, textAlign: 'center', color: 'var(--text-muted)', fontSize: 14, display: 'flex', flexDirection: 'column', gap: 14, alignItems: 'center' }}>
           {scope === 'equipe' ? 'Nenhuma estratégia da equipe salva ainda.' : 'Nenhuma estratégia individual sua salva ainda.'}
           {podeCriar ? (
@@ -471,8 +484,8 @@ export function Board() {
   const podeCriar = scope === 'individual' || canManageEquipe;
 
   return (
-    <div style={{ padding: 26, display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
-      {scopeToggle}
+    <div style={{ padding: 26, display: 'flex', flexDirection: 'column', gap: 16, flex: 1, minHeight: 0 }}>
+      {header}
       <div className="grid-responsive-board" style={{ flex: 1, minHeight: 0 }}>
       <div style={{ borderRadius: 'var(--radius-lg)', position: 'relative', overflow: 'hidden', background: 'var(--surface-sunken)', border: '1px solid var(--surface-border)' }}>
         <div

@@ -17,6 +17,7 @@ import { Board } from './pages/Board';
 import { Spots } from './pages/Spots';
 import { Competitions } from './pages/Competitions';
 import { CompetitionDetail } from './pages/CompetitionDetail';
+import { CompetitionBracket } from './pages/CompetitionBracket';
 import { Termos } from './pages/Termos';
 import { Privacidade } from './pages/Privacidade';
 import { Sobre } from './pages/Sobre';
@@ -50,6 +51,7 @@ function App() {
         <Route path="/spots" element={<Spots />} />
         <Route path="/competicoes" element={<Competitions />} />
         <Route path="/competicoes/:id" element={<CompetitionDetail />} />
+        <Route path="/competicoes/:id/chaveamento" element={<CompetitionBracket />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />

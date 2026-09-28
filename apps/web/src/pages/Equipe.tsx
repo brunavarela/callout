@@ -89,7 +89,8 @@ export function Equipe() {
 
   if (equipeError && !equipe) {
     return (
-      <div style={{ padding: 26 }}>
+      <div style={{ padding: 26, display: 'flex', flexDirection: 'column', gap: 20 }}>
+        <PageHeaderCard title="Equipe" />
         <div style={{ ...cardStyle, padding: 22, display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'flex-start' }}>
           <div style={{ fontSize: 14, color: 'var(--text-3)' }}>{equipeError}</div>
           <button className="btn-secondary" onClick={reloadEquipe}>
@@ -105,7 +106,8 @@ export function Equipe() {
   // mesmo formulário de criar/entrar do onboarding, não um erro.
   if (equipeNaoTemNenhuma) {
     return (
-      <div style={{ padding: 26, display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <div style={{ padding: 26, display: 'flex', flexDirection: 'column', gap: 20 }}>
+        <PageHeaderCard title="Equipe" />
         <div style={{ ...cardStyle, padding: 26, maxWidth: 420 }}>
           <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 700, fontSize: 22, marginBottom: 8 }}>Você ainda não tem uma equipe</div>
           <div style={{ fontSize: 13.5, color: 'var(--text-muted)', marginBottom: 20, lineHeight: 1.5 }}>
@@ -119,7 +121,8 @@ export function Equipe() {
 
   if (!equipe) {
     return (
-      <div style={{ padding: 26, display: 'flex', flexDirection: 'column' }}>
+      <div style={{ padding: 26, display: 'flex', flexDirection: 'column', gap: 20 }}>
+        <PageHeaderCard title="Equipe" />
         <LoadingFill />
       </div>
     );

@@ -1,4 +1,4 @@
-import type { Confronto } from '@callout/shared';
+import type { Competicao, Confronto } from '@callout/shared';
 
 // "Ao vivo" não precisa de admin nem de job rodando de hora em hora — é só
 // comparar a hora atual do navegador com o horário do confronto. A `data`
@@ -35,4 +35,23 @@ export function calcularRodadas(confrontos: readonly Confronto[]): Map<string, n
   }
   for (const c of confrontos) rodadaDe(c.id);
   return memo;
+}
+
+// Status da competição pra exibição. O admin nem sempre lembra de trocar o
+// status salvo de "agendada" pra "em_andamento" quando o 1º jogo começa
+// (aconteceu com o Champions) -- então, se algum confronto já começou
+// (horário passou ou já tem placar/status diferente de agendada), trata
+// como em andamento. "encerrada" continua vindo só do banco.
+export function statusCompeticaoEfetivo(competicao: Competicao): Competicao['status'] {
+  if (competicao.status !== 'agendada') return competicao.status;
+  const comecou = competicao.confrontos.some((c) => statusEfetivo(c) !== 'agendada' || c.placarA !== null || c.placarB !== null);
+  return comecou ? 'em_andamento' : 'agendada';
+}
+
+// Data do último confronto cadastrado -- usada pra ordenar as competições
+// da mais atual pra mais antiga. Sem confrontos ainda = datas a definir,
+// que na prática é competição futura, então vai pro topo.
+export function ultimaDataCompeticao(competicao: Competicao): number {
+  if (competicao.confrontos.length === 0) return Number.POSITIVE_INFINITY;
+  return Math.max(...competicao.confrontos.map((c) => new Date(c.data).getTime()));
 }

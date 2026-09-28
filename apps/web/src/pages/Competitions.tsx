@@ -1,13 +1,16 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { resolverLado, type CategoriaCompeticao, type Competicao, type Time } from '@callout/shared';
 import { apiFetch } from '../lib/api';
 import { LoadingFill } from '../components/Spinner';
 import { PageHeaderCard, HeaderSubtitle, SegmentedTabs } from '../components/PageHeaderCard';
 import { useCardStyle } from '../components/statsPrimitives';
-import { statusEfetivo } from '../lib/competicoesUtil';
+import { statusEfetivo, statusCompeticaoEfetivo, ultimaDataCompeticao } from '../lib/competicoesUtil';
 
-const FILTROS: Array<{ key: CategoriaCompeticao; label: string }> = [
+type FiltroCompeticao = CategoriaCompeticao | 'todas';
+
+const FILTROS: Array<{ key: FiltroCompeticao; label: string }> = [
+  { key: 'todas', label: 'Todas' },
   { key: 'inclusiva', label: 'Inclusivas' },
   { key: 'mista', label: 'Mistas' },
 ];
@@ -25,9 +28,12 @@ const STATUS_BADGE: Record<StatusExibicao, { label: string; color: string; bg: s
 // no banco) quando algum confronto tá rolando agora de verdade (ver
 // statusEfetivo) -- senão toda competição em andamento ficaria com a
 // mesma badge o tempo inteiro, mesmo nos intervalos entre partidas.
+// statusCompeticaoEfetivo cobre o caso de a competição já ter começado mas
+// continuar "agendada" no banco.
 function statusExibicaoCompeticao(competicao: Competicao): StatusExibicao {
-  if (competicao.status === 'encerrada') return 'encerrada';
-  if (competicao.status === 'agendada') return 'em_breve';
+  const status = statusCompeticaoEfetivo(competicao);
+  if (status === 'encerrada') return 'encerrada';
+  if (status === 'agendada') return 'em_breve';
   const aoVivo = competicao.confrontos.some((c) => statusEfetivo(c) === 'ao_vivo');
   return aoVivo ? 'ao_vivo' : 'em_andamento';
 }
@@ -130,32 +136,34 @@ function CompetitionCard({ competicao, onClick }: { competicao: Competicao; onCl
   );
 }
 
-function FiltroCategorias({ filtro, setFiltro }: { filtro: CategoriaCompeticao; setFiltro: (f: CategoriaCompeticao) => void }) {
+function FiltroCategorias({ filtro, setFiltro }: { filtro: FiltroCompeticao; setFiltro: (f: FiltroCompeticao) => void }) {
   return <SegmentedTabs value={filtro} onChange={setFiltro} options={FILTROS} />;
 }
 
 // Só pra saber pra qual aba (filtro) voltar quando alguém sai do detalhe
-// de uma competição específica (ver CompetitionDetail -- o breadcrumb lê
-// isso de volta via query string).
-const CATEGORIAS_VALIDAS = new Set<string>(FILTROS.map((f) => f.key));
-function filtroDaUrl(valor: string | null): CategoriaCompeticao {
-  return valor && CATEGORIAS_VALIDAS.has(valor) ? (valor as CategoriaCompeticao) : 'inclusiva';
+// de uma competição específica (ver CompetitionDetail -- o link do card
+// passa a query string atual no state da navegação, e o breadcrumb volta
+// com ela).
+const FILTROS_VALIDOS = new Set<string>(FILTROS.map((f) => f.key));
+function filtroDaUrl(valor: string | null): FiltroCompeticao {
+  return valor && FILTROS_VALIDOS.has(valor) ? (valor as FiltroCompeticao) : 'todas';
 }
 
 export function Competitions() {
   const navigate = useNavigate();
+  const location = useLocation();
   const cardStyle = useCardStyle();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [filtro, setFiltroState] = useState<CategoriaCompeticao>(() => filtroDaUrl(searchParams.get('filtro')));
+  const [filtro, setFiltroState] = useState<FiltroCompeticao>(() => filtroDaUrl(searchParams.get('filtro')));
   const [dados, setDados] = useState<Competicao[] | null>(null);
   const [erro, setErro] = useState<string | null>(null);
 
   // Guarda o filtro atual na URL (?filtro=mista) -- é assim que o
   // breadcrumb de volta em CompetitionDetail sabe pra qual aba retornar,
   // em vez de sempre cair na aba padrão.
-  function setFiltro(f: CategoriaCompeticao) {
+  function setFiltro(f: FiltroCompeticao) {
     setFiltroState(f);
-    setSearchParams(f === 'inclusiva' ? {} : { filtro: f }, { replace: true });
+    setSearchParams(f === 'todas' ? {} : { filtro: f }, { replace: true });
   }
 
   useEffect(() => {
@@ -172,14 +180,13 @@ export function Competitions() {
     };
   }, []);
 
-  // Encerradas por último (da esquerda pra direita, já que o grid preenche
-  // nessa ordem) -- sort é estável, então dentro de "encerrada"/"não
-  // encerrada" a ordem original (a que já veio da API) se mantém.
+  // Mais atual -> mais antiga (da esquerda pra direita, já que o grid
+  // preenche nessa ordem), pela data do último confronto de cada uma.
   const filtradas = useMemo(
     () =>
       (dados ?? [])
-        .filter((c) => c.categorias.includes(filtro))
-        .sort((a, b) => Number(statusExibicaoCompeticao(a) === 'encerrada') - Number(statusExibicaoCompeticao(b) === 'encerrada')),
+        .filter((c) => filtro === 'todas' || c.categorias.includes(filtro))
+        .sort((a, b) => ultimaDataCompeticao(b) - ultimaDataCompeticao(a)),
     [dados, filtro],
   );
 
@@ -200,7 +207,7 @@ export function Competitions() {
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 16 }}>
           {filtradas.map((competicao) => (
-            <CompetitionCard key={competicao.id} competicao={competicao} onClick={() => navigate(`/competicoes/${competicao.id}`)} />
+            <CompetitionCard key={competicao.id} competicao={competicao} onClick={() => navigate(`/competicoes/${competicao.id}`, { state: { voltarPara: location.search } })} />
           ))}
         </div>
       )}

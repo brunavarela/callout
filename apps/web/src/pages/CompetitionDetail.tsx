@@ -1,12 +1,13 @@
-import { useEffect, useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, ChevronDown, ChevronUp, Pencil } from 'lucide-react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import { ChevronDown, ChevronUp, GitFork, Pencil } from 'lucide-react';
 import { resolverLado, type Competicao, type Confronto, type Time } from '@callout/shared';
 import { apiFetch } from '../lib/api';
 import { useSession } from '../lib/session';
 import { LoadingFill } from '../components/Spinner';
 import { Select } from '../components/Select';
-import { statusEfetivo, formatDataConfronto, calcularRodadas } from '../lib/competicoesUtil';
+import { PageHeaderCard, HeaderSubtitle } from '../components/PageHeaderCard';
+import { statusEfetivo, statusCompeticaoEfetivo, formatDataConfronto, calcularRodadas } from '../lib/competicoesUtil';
 import { useCardStyle } from '../components/statsPrimitives';
 
 const WIN = 'var(--pos, #18AAB7)';
@@ -443,7 +444,9 @@ function FaseDeGrupos({
   );
 }
 
-function Chaveamento({
+// Mata-mata (chave superior/inferior + grande final) -- também usado na
+// tela de Chaveamento (CompetitionBracket.tsx), abaixo da fase de grupos.
+export function Chaveamento({
   competicao,
   editavel,
   onSalvar,
@@ -479,50 +482,84 @@ function Chaveamento({
   );
 }
 
-function ResumoCompeticao({ competicao }: { competicao: Competicao }) {
-  const cardStyle = useCardStyle();
-  const proximo = competicao.confrontos
+// Header da página (PageHeaderCard, mesmo padrão das outras telas) com o
+// resumo da competição: capa, nome, formato, onde assistir, fase, próximo
+// jogo, botão de troca de visão e status. Sem competição carregada ainda
+// (ou com erro) fica só o título + voltar. Compartilhado com a tela de
+// Chaveamento (CompetitionBracket.tsx) -- lá o botão é "Tabela", aqui é
+// "Chaveamento", um leva pro outro.
+export function CabecalhoCompeticao({
+  competicao,
+  voltarPara,
+  acao,
+}: {
+  competicao: Competicao | null;
+  voltarPara: string;
+  acao?: { label: string; icon: ReactNode; onClick: () => void };
+}) {
+  const status = competicao ? statusCompeticaoEfetivo(competicao) : null;
+  const proximo = competicao?.confrontos
     .filter((c) => c.status !== 'encerrada')
     .sort((a, b) => a.data.localeCompare(b.data))[0];
 
   return (
-    <div style={{ ...cardStyle, padding: '18px 20px', display: 'flex', alignItems: 'center', gap: 20, flexWrap: 'wrap' }}>
-      {competicao.capaUrl ? (
-        <img src={competicao.capaUrl} alt="" style={{ width: 40, height: 40, borderRadius: 10, objectFit: 'cover', flex: 'none' }} />
-      ) : (
-        <div style={{ width: 40, height: 40, borderRadius: 10, background: 'var(--avatar-bg)', flex: 'none' }} />
-      )}
-      <div style={{ flex: 1, minWidth: 200 }}>
-        <div style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 600, fontSize: 17 }}>{competicao.nome}</div>
-        <div style={{ fontSize: 12.5, color: 'var(--text-dim)', marginTop: 3 }}>{competicao.formato}</div>
-      </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 24, flexWrap: 'wrap' }}>
-        <AssistaLinks competicao={competicao} />
-        <div>
-          <div style={{ fontSize: 9.5, letterSpacing: '.08em', color: 'var(--text-faint)' }}>FASE</div>
-          <div style={{ fontSize: 13, fontWeight: 600, marginTop: 3 }}>{competicao.fase}</div>
-        </div>
-        {proximo && (
-          <div>
-            <div style={{ fontSize: 9.5, letterSpacing: '.08em', color: 'var(--text-faint)' }}>PRÓXIMO JOGO</div>
-            <div style={{ fontSize: 13, fontWeight: 600, marginTop: 3, color: 'var(--acc, #EF4958)' }}>{formatDataConfronto(proximo.data)}</div>
+    <PageHeaderCard
+      backTo={`/competicoes${voltarPara}`}
+      backLabel="Competições"
+      leading={
+        competicao &&
+        (competicao.capaUrl ? (
+          <img src={competicao.capaUrl} alt="" style={{ width: 40, height: 40, borderRadius: 10, objectFit: 'cover', flex: 'none' }} />
+        ) : (
+          <div style={{ width: 40, height: 40, borderRadius: 10, background: 'var(--avatar-bg)', flex: 'none' }} />
+        ))
+      }
+      title={competicao?.nome ?? 'Competição'}
+      titleAdornment={
+        status && (
+          <span
+            style={{
+              padding: '4px 11px',
+              borderRadius: 'var(--radius-pill)',
+              fontSize: 11.5,
+              fontWeight: 600,
+              flex: 'none',
+              background: status === 'em_andamento' ? 'var(--acc18, rgba(239,73,88,.16))' : 'var(--track)',
+              color: status === 'em_andamento' ? 'var(--acc, #EF4958)' : 'var(--text-muted)',
+            }}
+          >
+            {STATUS_COMPETICAO_LABEL[status]}
+          </span>
+        )
+      }
+      subtitle={competicao && <HeaderSubtitle>{competicao.formato}</HeaderSubtitle>}
+      actions={
+        competicao &&
+        status && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 20, flexWrap: 'wrap' }}>
+            <AssistaLinks competicao={competicao} />
+            <div>
+              <div style={{ fontSize: 9.5, letterSpacing: '.08em', color: 'var(--text-faint)' }}>FASE</div>
+              <div style={{ fontSize: 13, fontWeight: 600, marginTop: 3 }}>{competicao.fase}</div>
+            </div>
+            {proximo && (
+              <div>
+                <div style={{ fontSize: 9.5, letterSpacing: '.08em', color: 'var(--text-faint)' }}>PRÓXIMO JOGO</div>
+                <div style={{ fontSize: 13, fontWeight: 600, marginTop: 3, color: 'var(--acc, #EF4958)' }}>{formatDataConfronto(proximo.data)}</div>
+              </div>
+            )}
+            {acao && (
+              // btn-primary (cor de destaque) em vez de btn-secondary --
+              // btn-secondary não é flex, o ícone ficava desalinhado do texto.
+              <button type="button" className="btn-primary" onClick={acao.onClick} style={{ flex: 'none', gap: 8, padding: '10px 16px', fontSize: 13 }}>
+                {acao.icon}
+                {acao.label}
+              </button>
+            )}
           </div>
-        )}
-      </div>
-      <span
-        style={{
-          padding: '6px 13px',
-          borderRadius: 'var(--radius-pill)',
-          fontSize: 11.5,
-          fontWeight: 600,
-          flex: 'none',
-          background: competicao.status === 'em_andamento' ? 'var(--acc18, rgba(239,73,88,.16))' : 'var(--track)',
-          color: competicao.status === 'em_andamento' ? 'var(--acc, #EF4958)' : 'var(--text-muted)',
-        }}
-      >
-        {STATUS_COMPETICAO_LABEL[competicao.status]}
-      </span>
-    </div>
+        )
+      }
+    />
   );
 }
 
@@ -533,8 +570,13 @@ function ResumoCompeticao({ competicao }: { competicao: Competicao }) {
 export function CompetitionDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const cardStyle = useCardStyle();
   const { adminMode } = useSession();
+  // Query string da listagem de onde a pessoa veio (ex.: "?filtro=mista"),
+  // passada pelo card em Competitions.tsx -- o voltar retorna pro mesmo
+  // filtro. Link direto (sem state) cai em "Todas".
+  const voltarPara = (location.state as { voltarPara?: string } | null)?.voltarPara ?? '';
   const [dados, setDados] = useState<Competicao[] | null>(null);
   const [erro, setErro] = useState<string | null>(null);
 
@@ -567,19 +609,19 @@ export function CompetitionDetail() {
 
   return (
     <div style={{ padding: 26, display: 'flex', flexDirection: 'column', gap: 16 }}>
-      <button
-        onClick={() => {
-          // Volta pra aba (mista/inclusiva) que essa competição pertence,
-          // não sempre a aba padrão -- senão sair de uma competição mista
-          // te jogava de volta na aba de inclusivas.
-          const filtro = competicao?.categorias.find((c) => c === 'mista' || c === 'inclusiva');
-          navigate(filtro && filtro !== 'inclusiva' ? `/competicoes?filtro=${filtro}` : '/competicoes');
-        }}
-        style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontSize: 13, fontWeight: 600, color: 'var(--text-muted)', alignSelf: 'flex-start' }}
-      >
-        <ArrowLeft size={15} strokeWidth={2} />
-        Competições
-      </button>
+      <CabecalhoCompeticao
+        competicao={competicao}
+        voltarPara={voltarPara}
+        acao={
+          competicao?.confrontos.some((c) => c.chave === 'grupos')
+            ? {
+                label: 'Chaveamento',
+                icon: <GitFork size={15} strokeWidth={2} style={{ transform: 'rotate(-90deg)', flex: 'none' }} />,
+                onClick: () => navigate(`/competicoes/${competicao.id}/chaveamento`, { state: { voltarPara } }),
+              }
+            : undefined
+        }
+      />
 
       {erro ? (
         <div style={{ ...cardStyle, padding: 40, textAlign: 'center', color: 'var(--text-muted)', fontSize: 14 }}>{erro}</div>
@@ -589,7 +631,6 @@ export function CompetitionDetail() {
         <div style={{ ...cardStyle, padding: 40, textAlign: 'center', color: 'var(--text-muted)', fontSize: 14 }}>Essa competição não existe (ou não tá mais disponível).</div>
       ) : (
         <>
-          <ResumoCompeticao competicao={competicao} />
           <FaseDeGrupos competicao={competicao} editavel={adminMode} onSalvar={salvarConfronto} />
           {competicao.confrontos.some((c) => c.chave !== 'grupos') && (
             <Chaveamento competicao={competicao} editavel={adminMode} onSalvar={salvarConfronto} />

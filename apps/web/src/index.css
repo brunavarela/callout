@@ -1098,11 +1098,15 @@ button {
    único div raiz com `padding: 26` (padrão em todo pages/*.tsx) cujo 1º
    filho é sempre o PageHeaderCard -- por isso os seletores por posição
    dão conta sem precisar editar cada página. Reverter: tirar essas duas
-   regras e o border-bottom de .app-topbar volta (ver comentário lá). */
-.app-main > div:first-child {
+   regras e o border-bottom de .app-topbar volta (ver comentário lá).
+   Só vale quando o 1º filho É mesmo o PageHeaderCard (.page-header-card)
+   -- página que começa com outra coisa (ex.: o "← Competições" do detalhe
+   de competição) ficava grudada no header sem respiro nenhum (achado em
+   28/09/2026), então essas mantêm o padding de cima normal. */
+.app-main > div:first-child:has(> .page-header-card:first-child) {
   padding-top: 0 !important;
 }
-.app-main > div:first-child > :first-child {
+.app-main > div:first-child > .page-header-card:first-child {
   border-top-left-radius: 0 !important;
   border-top-right-radius: 0 !important;
 }
@@ -1117,7 +1121,7 @@ button {
   .app-main > div:first-child {
     padding-top: 18px !important;
   }
-  .app-main > div:first-child > :first-child {
+  .app-main > div:first-child > .page-header-card:first-child {
     border-top-left-radius: var(--radius-lg) !important;
     border-top-right-radius: var(--radius-lg) !important;
   }

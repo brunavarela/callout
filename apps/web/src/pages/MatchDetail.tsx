@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import type { MatchDetail as MatchDetailDTO } from '@callout/shared';
 import { apiFetch } from '../lib/api';
 import { LoadingFill } from '../components/Spinner';
+import { PageHeaderCard } from '../components/PageHeaderCard';
 import { useCardStyle } from '../components/statsPrimitives';
 
 const scoreCols = '1fr 100px 62px 54px 54px 54px 62px';
@@ -13,7 +14,6 @@ function fmtKda(v: number) {
 
 export function MatchDetail() {
   const { id } = useParams();
-  const navigate = useNavigate();
   const cardStyle = useCardStyle();
   const [match, setMatch] = useState<MatchDetailDTO | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -29,9 +29,12 @@ export function MatchDetail() {
       .finally(() => setLoading(false));
   }, [id]);
 
+  const header = <PageHeaderCard backTo="/partidas" backLabel="Voltar pras partidas" title="Detalhes da partida" />;
+
   if (loading) {
     return (
       <div style={{ padding: 26, display: 'flex', flexDirection: 'column', gap: 16 }}>
+        {header}
         <LoadingFill />
       </div>
     );
@@ -40,9 +43,7 @@ export function MatchDetail() {
   if (error || !match) {
     return (
       <div style={{ padding: 26, display: 'flex', flexDirection: 'column', gap: 16 }}>
-        <button className="btn-secondary" style={{ alignSelf: 'flex-start' }} onClick={() => navigate('/partidas')}>
-          ← Voltar pras partidas
-        </button>
+        {header}
         <div style={{ ...cardStyle, padding: 40, textAlign: 'center', color: 'var(--text-muted)', fontSize: 14 }}>
           {error ?? 'Partida não encontrada.'}
         </div>
@@ -61,9 +62,7 @@ export function MatchDetail() {
 
   return (
     <div style={{ padding: 26, display: 'flex', flexDirection: 'column', gap: 16 }}>
-      <button className="btn-secondary" style={{ alignSelf: 'flex-start' }} onClick={() => navigate('/partidas')}>
-        ← Voltar pras partidas
-      </button>
+      {header}
 
       <div style={{ ...cardStyle, padding: '22px 24px', display: 'flex', alignItems: 'center', gap: 32, flexWrap: 'wrap', position: 'relative', overflow: 'hidden' }}>
         <div

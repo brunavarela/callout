@@ -331,7 +331,8 @@ export function EquipeConfiguracoes() {
 
   if (equipeError && !equipe) {
     return (
-      <div style={{ padding: 26 }}>
+      <div style={{ padding: 26, display: 'flex', flexDirection: 'column', gap: 20 }}>
+        <PageHeaderCard backTo="/equipe" backLabel="Voltar pra equipe" title="Configurações da equipe" />
         <div style={{ ...cardStyle, padding: 22, display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'flex-start' }}>
           <div style={{ fontSize: 14, color: 'var(--text-3)' }}>{equipeError}</div>
           <button className="btn-secondary" onClick={reloadEquipe}>
@@ -344,7 +345,8 @@ export function EquipeConfiguracoes() {
 
   if (!equipe) {
     return (
-      <div style={{ padding: 26, display: 'flex', flexDirection: 'column' }}>
+      <div style={{ padding: 26, display: 'flex', flexDirection: 'column', gap: 20 }}>
+        <PageHeaderCard backTo="/equipe" backLabel="Voltar pra equipe" title="Configurações da equipe" />
         <LoadingFill />
       </div>
     );

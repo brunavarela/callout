@@ -55,7 +55,7 @@ export function PageHeaderCard({
     // ficava preso atrás do conteúdo da página que vem depois no DOM
     // (cards do painel etc.), mesmo com z-index alto -- o z-index dele só
     // valia dentro desse contexto, nunca contra os irmãos do header.
-    <div style={{ ...cardStyle, ...(theme.glassCards ? glassHeaderStyle : {}), padding: '14px 20px', position: 'relative', zIndex: 20 }}>
+    <div className="page-header-card" style={{ ...cardStyle, ...(theme.glassCards ? glassHeaderStyle : {}), padding: '14px 20px', position: 'relative', zIndex: 20 }}>
       <div className="headerpage-row" style={{ display: 'flex', alignItems: subtitle ? 'flex-start' : 'center', gap: 14, flexWrap: 'wrap' }}>
         {backTo && (
           <button onClick={() => navigate(backTo)} title={backLabel} className="btn-icon" style={{ width: 34, height: 34, borderRadius: '50%', flex: 'none' }}>
