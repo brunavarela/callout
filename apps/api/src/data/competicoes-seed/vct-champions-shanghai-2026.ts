@@ -9,15 +9,20 @@ import type { Competicao } from "@callout/shared";
 // (print da fase de grupos) — Bruna confirma/corrige depois.
 //
 // Datas/horas corrigidas em 21/09/2026 a partir do cronograma oficial (print
-// da Bruna) -- o chute inicial errava tanto o dia quanto a hora. Rodada de
-// abertura (24-27/09) é 100% confirmada pelos nomes de time no print. Rodada
-// 2 e decisiva (29/09-04/10) vieram como "TBD" no print (sem rótulo de
-// grupo), então a ordem de grupo por dia foi INFERIDA repetindo a mesma
-// ordem da abertura (C, D, B, A) -- conferir com a Bruna quando os confrontos
-// da rodada 2 tiverem time definido. Corrigir também exige rodar
-// `npm run fix:vct-champions-dates` contra o banco (não só editar aqui) --
-// seedCompeticoes.ts é idempotente e pula confronto já existente, ver
-// scripts/fixVctChampionsDates.ts.
+// da Bruna) -- o chute inicial errava tanto o dia quanto a hora. Em
+// 29/09/2026 a rodada 2 foi corrigida de novo com o cronograma oficial já
+// com os times definidos: a ordem de grupo por dia que tinha sido INFERIDA
+// (C, D, B, A) estava errada. O certo é:
+//   29/09  06h C4 G2 x PRX      09h D4 KC x NRG
+//   30/09  06h B4 LOUD x VIT    09h A4 FUT x 100T
+//   01/10  06h C3 TL x TYL      09h D3 NS x XLG
+//   02/10  06h B3 EDG x GE      09h A3 JDG x T1
+//   03/10  06h C5 TBD x G2      09h D5 TBD x TBD
+//   04/10  B5/A5 -- ainda não confirmado pelo print, mantido o inferido.
+// ladoA/ladoB seguem a ordem em que o cronograma oficial mostra os times.
+// Corrigir também exige rodar `npm run fix:vct-champions-dates` contra o
+// banco (não só editar aqui) -- seedCompeticoes.ts é idempotente e pula
+// confronto já existente, ver scripts/fixVctChampionsDates.ts.
 //
 // Fase eliminatória (mata-mata, a partir de 07/10) e o evento separado "Game
 // Changers Championship" (22-24/10, visto no mesmo print) ainda NÃO estão
@@ -57,36 +62,33 @@ export const vctChampionsShanghai2026: Competicao = {
     { id: "nrg", nome: "NRG", sigla: "NRG", cor: "#9B59B6", logoUrl: "/img/competicoes/nrg.png" },
   ],
   confrontos: [
-    // Grupo A — abertura em 27/09 (era 24/09), corrigido em 21/09/2026 a
-    // partir do cronograma oficial (print da Bruna). Rodada 2/decisiva
-    // (29/09-04/10) seguem a MESMA ordem de grupo por dia da abertura
-    // (C, D, B, A) -- INFERIDO, o print não rotula grupo nos jogos "TBD",
-    // só confirma dia+hora. Confirmar com a Bruna antes de bater 100%.
+    // Grupo A — abertura em 27/09 (era 24/09). Rodada 2 corrigida em
+    // 29/09/2026 pelo cronograma oficial (ver cabeçalho).
     { id: "A1", chave: "grupos", grupo: "A", data: "2026-09-27T06:00", status: "agendada", ladoA: { tipo: "time", timeId: "100t" }, ladoB: { tipo: "time", timeId: "t1" }, placarA: null, placarB: null },
     { id: "A2", chave: "grupos", grupo: "A", data: "2026-09-27T09:00", status: "agendada", ladoA: { tipo: "time", timeId: "jdg" }, ladoB: { tipo: "time", timeId: "fut" }, placarA: null, placarB: null },
-    { id: "A4", chave: "grupos", grupo: "A", data: "2026-10-02T06:00", status: "agendada", ladoA: { tipo: "vencedor", confrontoId: "A1" }, ladoB: { tipo: "vencedor", confrontoId: "A2" }, placarA: null, placarB: null },
-    { id: "A3", chave: "grupos", grupo: "A", data: "2026-10-02T09:00", status: "agendada", ladoA: { tipo: "perdedor", confrontoId: "A1" }, ladoB: { tipo: "perdedor", confrontoId: "A2" }, placarA: null, placarB: null },
+    { id: "A4", chave: "grupos", grupo: "A", data: "2026-09-30T09:00", status: "agendada", ladoA: { tipo: "vencedor", confrontoId: "A2" }, ladoB: { tipo: "vencedor", confrontoId: "A1" }, placarA: null, placarB: null },
+    { id: "A3", chave: "grupos", grupo: "A", data: "2026-10-02T09:00", status: "agendada", ladoA: { tipo: "perdedor", confrontoId: "A2" }, ladoB: { tipo: "perdedor", confrontoId: "A1" }, placarA: null, placarB: null },
     { id: "A5", chave: "grupos", grupo: "A", data: "2026-10-04T09:00", status: "agendada", ladoA: { tipo: "perdedor", confrontoId: "A4" }, ladoB: { tipo: "vencedor", confrontoId: "A3" }, placarA: null, placarB: null },
 
     // Grupo B — abertura em 26/09 (era 25/09).
     { id: "B1", chave: "grupos", grupo: "B", data: "2026-09-26T06:00", status: "agendada", ladoA: { tipo: "time", timeId: "ge" }, ladoB: { tipo: "time", timeId: "vit" }, placarA: null, placarB: null },
     { id: "B2", chave: "grupos", grupo: "B", data: "2026-09-26T09:00", status: "agendada", ladoA: { tipo: "time", timeId: "loud" }, ladoB: { tipo: "time", timeId: "edg" }, placarA: null, placarB: null },
-    { id: "B4", chave: "grupos", grupo: "B", data: "2026-10-01T06:00", status: "agendada", ladoA: { tipo: "vencedor", confrontoId: "B1" }, ladoB: { tipo: "vencedor", confrontoId: "B2" }, placarA: null, placarB: null },
-    { id: "B3", chave: "grupos", grupo: "B", data: "2026-10-01T09:00", status: "agendada", ladoA: { tipo: "perdedor", confrontoId: "B1" }, ladoB: { tipo: "perdedor", confrontoId: "B2" }, placarA: null, placarB: null },
+    { id: "B4", chave: "grupos", grupo: "B", data: "2026-09-30T06:00", status: "agendada", ladoA: { tipo: "vencedor", confrontoId: "B2" }, ladoB: { tipo: "vencedor", confrontoId: "B1" }, placarA: null, placarB: null },
+    { id: "B3", chave: "grupos", grupo: "B", data: "2026-10-02T06:00", status: "agendada", ladoA: { tipo: "perdedor", confrontoId: "B2" }, ladoB: { tipo: "perdedor", confrontoId: "B1" }, placarA: null, placarB: null },
     { id: "B5", chave: "grupos", grupo: "B", data: "2026-10-04T06:00", status: "agendada", ladoA: { tipo: "perdedor", confrontoId: "B4" }, ladoB: { tipo: "vencedor", confrontoId: "B3" }, placarA: null, placarB: null },
 
     // Grupo C — abertura em 24/09 (era 26/09) — vira o 1º dia da fase de grupos.
     { id: "C1", chave: "grupos", grupo: "C", data: "2026-09-24T09:00", status: "agendada", ladoA: { tipo: "time", timeId: "tyl" }, ladoB: { tipo: "time", timeId: "g2" }, placarA: null, placarB: null },
     { id: "C2", chave: "grupos", grupo: "C", data: "2026-09-24T06:00", status: "agendada", ladoA: { tipo: "time", timeId: "tl" }, ladoB: { tipo: "time", timeId: "prx" }, placarA: null, placarB: null },
     { id: "C4", chave: "grupos", grupo: "C", data: "2026-09-29T06:00", status: "agendada", ladoA: { tipo: "vencedor", confrontoId: "C1" }, ladoB: { tipo: "vencedor", confrontoId: "C2" }, placarA: null, placarB: null },
-    { id: "C3", chave: "grupos", grupo: "C", data: "2026-09-29T09:00", status: "agendada", ladoA: { tipo: "perdedor", confrontoId: "C1" }, ladoB: { tipo: "perdedor", confrontoId: "C2" }, placarA: null, placarB: null },
-    { id: "C5", chave: "grupos", grupo: "C", data: "2026-10-03T06:00", status: "agendada", ladoA: { tipo: "perdedor", confrontoId: "C4" }, ladoB: { tipo: "vencedor", confrontoId: "C3" }, placarA: null, placarB: null },
+    { id: "C3", chave: "grupos", grupo: "C", data: "2026-10-01T06:00", status: "agendada", ladoA: { tipo: "perdedor", confrontoId: "C2" }, ladoB: { tipo: "perdedor", confrontoId: "C1" }, placarA: null, placarB: null },
+    { id: "C5", chave: "grupos", grupo: "C", data: "2026-10-03T06:00", status: "agendada", ladoA: { tipo: "vencedor", confrontoId: "C3" }, ladoB: { tipo: "perdedor", confrontoId: "C4" }, placarA: null, placarB: null },
 
     // Grupo D — abertura em 25/09 (era 27/09).
     { id: "D1", chave: "grupos", grupo: "D", data: "2026-09-25T09:00", status: "agendada", ladoA: { tipo: "time", timeId: "kc" }, ladoB: { tipo: "time", timeId: "xlg" }, placarA: null, placarB: null },
     { id: "D2", chave: "grupos", grupo: "D", data: "2026-09-25T06:00", status: "agendada", ladoA: { tipo: "time", timeId: "ns" }, ladoB: { tipo: "time", timeId: "nrg" }, placarA: null, placarB: null },
-    { id: "D4", chave: "grupos", grupo: "D", data: "2026-09-30T06:00", status: "agendada", ladoA: { tipo: "vencedor", confrontoId: "D1" }, ladoB: { tipo: "vencedor", confrontoId: "D2" }, placarA: null, placarB: null },
-    { id: "D3", chave: "grupos", grupo: "D", data: "2026-09-30T09:00", status: "agendada", ladoA: { tipo: "perdedor", confrontoId: "D1" }, ladoB: { tipo: "perdedor", confrontoId: "D2" }, placarA: null, placarB: null },
+    { id: "D4", chave: "grupos", grupo: "D", data: "2026-09-29T09:00", status: "agendada", ladoA: { tipo: "vencedor", confrontoId: "D1" }, ladoB: { tipo: "vencedor", confrontoId: "D2" }, placarA: null, placarB: null },
+    { id: "D3", chave: "grupos", grupo: "D", data: "2026-10-01T09:00", status: "agendada", ladoA: { tipo: "perdedor", confrontoId: "D2" }, ladoB: { tipo: "perdedor", confrontoId: "D1" }, placarA: null, placarB: null },
     { id: "D5", chave: "grupos", grupo: "D", data: "2026-10-03T09:00", status: "agendada", ladoA: { tipo: "perdedor", confrontoId: "D4" }, ladoB: { tipo: "vencedor", confrontoId: "D3" }, placarA: null, placarB: null },
   ],
 };
