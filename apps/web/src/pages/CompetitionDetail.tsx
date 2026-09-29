@@ -486,8 +486,8 @@ export function Chaveamento({
 // resumo da competição: capa, nome, formato, onde assistir, fase, próximo
 // jogo, botão de troca de visão e status. Sem competição carregada ainda
 // (ou com erro) fica só o título + voltar. Compartilhado com a tela de
-// Chaveamento (CompetitionBracket.tsx) -- lá o botão é "Tabela", aqui é
-// "Chaveamento", um leva pro outro.
+// Chaveamento (CompetitionBracket.tsx) -- lá o botão é "Grupos", aqui é
+// "Eliminatórias", um leva pro outro.
 export function CabecalhoCompeticao({
   competicao,
   voltarPara,
@@ -615,7 +615,7 @@ export function CompetitionDetail() {
         acao={
           competicao?.confrontos.some((c) => c.chave === 'grupos')
             ? {
-                label: 'Chaveamento',
+                label: 'Eliminatórias',
                 icon: <GitFork size={15} strokeWidth={2} style={{ transform: 'rotate(-90deg)', flex: 'none' }} />,
                 onClick: () => navigate(`/competicoes/${competicao.id}/chaveamento`, { state: { voltarPara } }),
               }

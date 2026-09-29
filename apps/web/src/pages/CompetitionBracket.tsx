@@ -191,7 +191,7 @@ function GrupoChave({ nome, confrontos, competicao }: { nome: string; confrontos
   );
 }
 
-// Tela de chaveamento de uma competição (botão "Chaveamento" no detalhe):
+// Tela de chaveamento de uma competição (botão "Eliminatórias" no detalhe):
 // fase de grupos em formato de chave (como a arte oficial) + mata-mata,
 // se já tiver. Só leitura -- edição de placar continua no detalhe.
 export function CompetitionBracket() {
@@ -236,7 +236,7 @@ export function CompetitionBracket() {
         competicao={competicao}
         voltarPara={voltarPara}
         acao={{
-          label: 'Tabela',
+          label: 'Grupos',
           icon: <Table2 size={15} strokeWidth={2} style={{ flex: 'none' }} />,
           onClick: () => navigate(`/competicoes/${id}`, { state: { voltarPara } }),
         }}
